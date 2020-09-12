@@ -9,7 +9,7 @@ describe('SqlOrm', function() {
       let orm = new SqlOrm(schema)
       let criteria = { a: 'a', b: 1 }
       let query = orm.buildSelectQuery('TableAB', criteria)
-      expect(query.mysql()).to.equal('SELECT a, b FROM TableAB WHERE a = ? AND b = ?;')
+      expect(query.mysql()).to.equal('SELECT TableAB.a TableAB__a, TableAB.b TableAB__b FROM TableAB TableAB WHERE TableAB.a = ? AND TableAB.b = ?;')
     })
   
     it('should handle inter table relationships', function() {
@@ -29,15 +29,15 @@ describe('SqlOrm', function() {
       let query = orm.buildSelectQuery('Table1', criteria)
   
       expect(query._selects.length).to.equal(7)
-      expect(query._selects[0]).to.equal('id')
-      expect(query._selects[1]).to.equal('column1')
-      expect(query._selects[2]).to.equal('many.table1Id many__table1Id')
-      expect(query._selects[3]).to.equal('many.table2Id many__table2Id')
-      expect(query._selects[4]).to.equal('many.column1 many__column1')
-      expect(query._selects[5]).to.equal('many__table2.id many__table2__id')
-      expect(query._selects[6]).to.equal('many__table2.column1 many__table2__column1')
+      expect(query._selects[0]).to.equal('Table1.id Table1__id')
+      expect(query._selects[1]).to.equal('Table1.column1 Table1__column1')
+      expect(query._selects[2]).to.equal('Table1__many.table1Id Table1__many__table1Id')
+      expect(query._selects[3]).to.equal('Table1__many.table2Id Table1__many__table2Id')
+      expect(query._selects[4]).to.equal('Table1__many.column1 Table1__many__column1')
+      expect(query._selects[5]).to.equal('Table1__many__table2.id Table1__many__table2__id')
+      expect(query._selects[6]).to.equal('Table1__many__table2.column1 Table1__many__table2__column1')
   
-      expect(query.mysql()).to.equal('SELECT id, column1, many.table1Id many__table1Id, many.table2Id many__table2Id, many.column1 many__column1, many__table2.id many__table2__id, many__table2.column1 many__table2__column1 FROM Table1 INNER JOIN TableMany many ON id = many.table1Id INNER JOIN Table2 many__table2 ON many.table2Id = many__table2.id WHERE id = ? AND column1 = ? AND many.column1 = ? AND many__table2.column1 = ?;')
+      expect(query.mysql()).to.equal('SELECT Table1.id Table1__id, Table1.column1 Table1__column1, Table1__many.table1Id Table1__many__table1Id, Table1__many.table2Id Table1__many__table2Id, Table1__many.column1 Table1__many__column1, Table1__many__table2.id Table1__many__table2__id, Table1__many__table2.column1 Table1__many__table2__column1 FROM Table1 Table1 INNER JOIN TableMany Table1__many ON Table1.id = Table1__many.table1Id INNER JOIN Table2 Table1__many__table2 ON Table1__many.table2Id = Table1__many__table2.id WHERE Table1.id = ? AND Table1.column1 = ? AND Table1__many.column1 = ? AND Table1__many__table2.column1 = ?;')
     })
   })
   
@@ -47,14 +47,14 @@ describe('SqlOrm', function() {
 
       let rows = [
         {
-          id: 1,
-          column1: 'a',
-          somethingElse: '?'
+          Table1__id: 1,
+          Table1__column1: 'a',
+          Table1__somethingElse: '?'
         },
         {
-          id: 2,
-          column1: 'b',
-          somethingElse: '?'
+          Table1__id: 2,
+          Table1__column1: 'b',
+          Table1__somethingElse: '?'
         }
       ]
 
@@ -68,27 +68,27 @@ describe('SqlOrm', function() {
       expect(instances[1]).to.deep.equal({ id: 2, column1: 'b' })
     })
 
-    it.only('should create objects from a simple select query', function() {
+    it('should create objects from a simple select query', function() {
       let orm = new SqlOrm(schema)
 
       let rows = [
         {
-          id: 1,
-          column1: 'a',
-          many__table1Id: 1,
-          many__table2Id: 1,
-          many__column1: 'b',
-          many__table2__id: 1,
-          many__table2__column1: 'c'
+          Table1__id: 1,
+          Table1__column1: 'a',
+          Table1__many__table1Id: 1,
+          Table1__many__table2Id: 1,
+          Table1__many__column1: 'b',
+          Table1__many__table2__id: 1,
+          Table1__many__table2__column1: 'c'
         },
         {
-          id: 2,
-          column1: 'd',
-          many__table1Id: 2,
-          many__table2Id: 2,
-          many__column1: 'e',
-          many__table2__id: 2,
-          many__table2__column1: 'f'
+          Table1__id: 2,
+          Table1__column1: 'd',
+          Table1__many__table1Id: 2,
+          Table1__many__table2Id: 2,
+          Table1__many__column1: 'e',
+          Table1__many__table2__id: 2,
+          Table1__many__table2__column1: 'f'
         }
       ]
 

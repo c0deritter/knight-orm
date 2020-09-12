@@ -25,10 +25,10 @@ export class SqlOrm {
     }
 
     let query = new Query
-    query.from(tableName)
+    query.from(tableName, tableName)
 
     fillReadCriteria(query, criteria, this.schema[tableName].columns)
-    joinRelationships(tableName, this.schema, query, criteria)
+    joinRelationships(tableName, this.schema, query, criteria, tableName)
     selectAllColumnsExplicitly(this.schema, query)
 
     return query
@@ -42,10 +42,10 @@ export class SqlOrm {
     }
 
     let query = new Query
-    query.from(tableName).select('COUNT(*)')
+    query.from(tableName, tableName).select('COUNT(*)')
 
     fillReadCriteria(query, criteria, this.schema[tableName].columns)
-    joinRelationships(tableName, this.schema, query, criteria)
+    joinRelationships(tableName, this.schema, query, criteria, tableName)
 
     return query
   }
@@ -57,6 +57,8 @@ export class SqlOrm {
     // console.debug('tableName', tableName)
     // console.debug('alias', alias)
     // console.debug('rowFilter', rowFilter)
+
+    alias = alias != undefined ? alias : tableName + '__'
 
     let table = this.schema[tableName]
     // console.debug('table', table)
