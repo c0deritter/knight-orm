@@ -1,5 +1,5 @@
 import { Criteria, ReadCriteria } from 'mega-nice-criteria'
-import sql, { Query } from 'mega-nice-sql'
+import { Query } from 'mega-nice-sql'
 import { fillReadCriteria, fillCriteria } from 'mega-nice-sql-criteria-filler'
 import { Schema, Table, relationshipsOnly } from './Schema'
 
@@ -50,7 +50,7 @@ export class SqlOrm {
     return query
   }
 
-  rowsToInstances(rows: any[], criteria: ReadCriteria, tableName: string, alias?: string, rowFilter?: any): any[]  {
+  rowsToInstances(tableName: string, rows: any[], criteria: ReadCriteria, alias?: string, rowFilter?: any): any[]  {
     // console.debug('Entering rowsToInstances...')
     // console.debug('rows', rows)
     // console.debug('criteria', criteria)
@@ -118,7 +118,7 @@ export class SqlOrm {
         // console.debug('relationshipRowFilter', relationshipRowFilter)
         
         // console.debug('Determining all relationship instances. Going into recursion...')
-        let relationshipInstances = this.rowsToInstances(rows, criteria[relationshipName], relationshipTableName, relationshipAlias, relationshipRowFilter)
+        let relationshipInstances = this.rowsToInstances(relationshipTableName, rows, criteria[relationshipName], relationshipAlias, relationshipRowFilter)
         // console.debug('Coming back from recursion...', relationshipInstances)
 
         if (relationship.oneToMany != undefined) {

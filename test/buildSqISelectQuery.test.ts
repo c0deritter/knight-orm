@@ -59,7 +59,7 @@ describe('SqlOrm', function() {
       ]
 
       let criteria = { a: 'a', b: 1 }
-      let instances = orm.rowsToInstances(rows, criteria, 'Table1')
+      let instances = orm.rowsToInstances('Table1', rows, criteria)
 
       expect(instances.length).to.equal(2)
       expect(instances[0]).to.be.instanceOf(Table1)
@@ -103,7 +103,7 @@ describe('SqlOrm', function() {
         }
       }
 
-      let instances = orm.rowsToInstances(rows, criteria, 'Table1')
+      let instances = orm.rowsToInstances('Table1', rows, criteria)
 
       // expect(instances.length).to.equal(2)
       expect(instances[0]).to.be.instanceOf(Table1)
