@@ -6,7 +6,7 @@ export interface Table {
   name: string
   columns: string[]
   [ relationship: string ]: any|Relationship
-  rowToInstance: (row: any, alias: string) => any
+  rowToInstance: (row: any, alias?: string) => any
 }
 
 export interface Relationship {
