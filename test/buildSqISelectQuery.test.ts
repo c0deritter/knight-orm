@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import 'mocha'
-import { SqlOrm } from '../src/SqlOrm'
 import { Schema } from '../src/Schema'
+import { SqlOrm } from '../src/SqlOrm'
 
 describe('SqlOrm', function() {
   describe('buildSelectQuery', function() {
@@ -108,12 +108,12 @@ describe('SqlOrm', function() {
       // expect(instances.length).to.equal(2)
       expect(instances[0]).to.be.instanceOf(Table1)
       expect(instances[0].many).to.be.instanceOf(Array)
-      expect(instances[0].many[0]).to.be.instanceOf(Many)
+      expect(instances[0].many[0]).to.be.instanceOf(TableMany)
       expect(instances[0].many[0].table2).to.be.instanceOf(Table2)
       expect(instances[0]).to.deep.equal({ id: 1, column1: 'a', many: [{ table1Id: 1, table2Id: 1, column1: 'b', table2: { id: 1, column1: 'c' }}]})
       expect(instances[1]).to.be.instanceOf(Table1)
       expect(instances[1].many).to.be.instanceOf(Array)
-      expect(instances[1].many[0]).to.be.instanceOf(Many)
+      expect(instances[1].many[0]).to.be.instanceOf(TableMany)
       expect(instances[1].many[0].table2).to.be.instanceOf(Table2)
       expect(instances[1]).to.deep.equal({ id: 2, column1: 'd', many: [{ table1Id: 2, table2Id: 2, column1: 'e', table2: { id: 2, column1: 'f' }}]})
     })
@@ -123,16 +123,16 @@ describe('SqlOrm', function() {
 class Table1 {
   id?: number
   column1?: string
-  many?: Many[]
+  many?: TableMany[]
 }
 
 class Table2 {
   id?: number
   column1?: string
-  many?: Many[]
+  many?: TableMany[]
 }
 
-class Many {
+class TableMany {
   table1Id?: number
   table2Id?: number
   column1?: string
@@ -144,13 +144,20 @@ class Many {
 const schema = {
   'TableAB': {
     name: 'TableAB',
-    columns: [ 'a', 'b' ],
-    rowToInstance: (row: any, alias?: string) => {}
+    columns: {
+      'a': 'a',
+      'b': 'b'
+    },
+    rowToInstance: (row: any, alias: string) => {},
+    instanceToRow: (tableAB: any) => {}
   },
   
   'Table1': {
     name: 'Table1',
-    columns: [ 'id', 'column1' ],
+    columns: {
+      'id': 'id',
+      'column1': 'column1'
+    },
     many: {
       oneToMany: {
         thisId: 'id',
@@ -158,17 +165,21 @@ const schema = {
         otherId: 'table1Id'
       }
     },
-    rowToInstance: (row: any, alias?: string) => {
+    rowToInstance: (row: any, alias: string) => {
       let table1 = new Table1
       table1.id = row[alias + 'id']
       table1.column1 = row[alias + 'column1']
       return table1
-    }
+    },
+    instanceToRow: (table1: Table1) => {}
   },
   
   'Table2': {
     name: 'Table2',
-    columns: [ 'id', 'column1' ],
+    columns: {
+      'id': { property: 'id', id: true },
+      'column1': 'column1'
+    },
     many: {
       oneToMany: {
         thisId: 'id',
@@ -176,17 +187,22 @@ const schema = {
         otherId: 'table2Id'
       }
     },
-    rowToInstance: (row: any, alias?: string) => {
+    rowToInstance: (row: any, alias: string) => {
       let table2 = new Table2
       table2.id = row[alias + 'id']
       table2.column1 = row[alias + 'column1']
       return table2      
-    }
+    },
+    instanceToRow: (table2: Table2) => {}
   },
 
   'TableMany': {
     name: 'TableMany',
-    columns: [ 'table1Id', 'table2Id', 'column1' ],
+    columns: {
+      'table1Id': { property: 'table1Id', id: true },
+      'table2Id': { property: 'table2Id', id: true },
+      'column1': 'column1'
+    },
     table1: {
       manyToOne: {
         thisId: 'table1Id',
@@ -201,12 +217,13 @@ const schema = {
         otherId: 'id'
       }
     },
-    rowToInstance: (row: any, alias?: string) => {
-      let many = new Many
+    rowToInstance: (row: any, alias: string) => {
+      let many = new TableMany
       many.table1Id = row[alias + 'table1Id']
       many.table2Id = row[alias + 'table2Id']
       many.column1 = row[alias + 'column1']
       return many
-    }
+    },
+    instanceToRow: (tableMany: TableMany) => {}
   }
 } as Schema

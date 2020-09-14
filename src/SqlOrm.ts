@@ -1,7 +1,7 @@
 import { Criteria, ReadCriteria } from 'mega-nice-criteria'
 import { Query } from 'mega-nice-sql'
-import { fillReadCriteria, fillCriteria } from 'mega-nice-sql-criteria-filler'
-import { Schema, Table, relationshipsOnly } from './Schema'
+import { fillCriteria, fillReadCriteria } from 'mega-nice-sql-criteria-filler'
+import { relationshipsOnly, Schema, Table } from './Schema'
 
 export class SqlOrm {
 
@@ -27,7 +27,7 @@ export class SqlOrm {
     let query = new Query
     query.from(tableName, tableName)
 
-    fillReadCriteria(query, criteria, this.schema[tableName].columns)
+    fillReadCriteria(query, criteria, Object.keys(this.schema[tableName].columns))
     joinRelationships(tableName, this.schema, query, criteria, tableName)
     selectAllColumnsExplicitly(this.schema, query)
 
@@ -44,7 +44,7 @@ export class SqlOrm {
     let query = new Query
     query.from(tableName, tableName).select('COUNT(*)')
 
-    fillReadCriteria(query, criteria, this.schema[tableName].columns)
+    fillReadCriteria(query, criteria, Object.keys(this.schema[tableName].columns))
     joinRelationships(tableName, this.schema, query, criteria, tableName)
 
     return query
@@ -219,7 +219,7 @@ function joinRelationships(tableName: string, schema: Schema, query: Query, crit
     }
 
     // console.debug('Filling query with the relationship criteria')
-    fillCriteria(query, relationshipCriteria, otherTable.columns, joinAlias)
+    fillCriteria(query, relationshipCriteria, Object.keys(otherTable.columns), joinAlias)
     // console.debug('query', query)
 
     joinRelationships(otherTableName, schema, query, relationshipCriteria, joinAlias)
@@ -234,7 +234,7 @@ function selectAllColumnsExplicitly(schema: Schema, query: Query) {
       throw new Error('Table not contained in schema: ' + from.table)
     }
 
-    for (let column of fromTable.columns) {
+    for (let column of Object.keys(fromTable.columns)) {
       let alias = from.alias != undefined && from.alias.length > 0 ? from.alias : undefined
       query.select((alias != undefined ? alias + '.' : '' ) + column, (alias != undefined ? alias + '__' + column : undefined))
     }
@@ -247,7 +247,7 @@ function selectAllColumnsExplicitly(schema: Schema, query: Query) {
       throw new Error('Table not contained in schema: ' + join.table)
     }
 
-    for (let column of joinTable.columns) {
+    for (let column of Object.keys(joinTable.columns)) {
       let alias = join.alias != undefined && join.alias.length > 0 ? join.alias : undefined
       query.select((alias != undefined ? alias + '.' : '' ) + column, (alias != undefined ? alias + '__' + column : undefined))
     }
@@ -271,7 +271,7 @@ function isRowRelevant(row: any, filter: any): boolean {
 function instanceRelevantCells(row: any, table: Table, alias?: string) {
   let relevantCells: any = {}
 
-  for (let column of table.columns) {
+  for (let column of Object.keys(table.columns)) {
     let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column : column
     relevantCells[aliasedColumn] = row[aliasedColumn]
   }

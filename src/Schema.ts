@@ -4,21 +4,22 @@ export interface Schema {
 
 export interface Table {
   name: string
-  columns: string[]
+  columns: {[ name: string ]: string|{ property: string, id: boolean }}
   [ relationship: string ]: any|Relationship
-  rowToInstance: (row: any, alias?: string) => any
+  rowToInstance: (row: any, alias: string) => any
+  instanceToRow: (instance: any) => any
 }
 
 export interface Relationship {
   oneToMany?: {
     thisId: any
     otherTable: string
-    otherId: any  
+    otherId: any
   },
   manyToOne?: {
     thisId: any
     otherTable: string
-    otherId: any  
+    otherId: any
   }
 }
 
