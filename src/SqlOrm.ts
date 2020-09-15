@@ -1,7 +1,8 @@
 import { Criteria, ReadCriteria } from 'mega-nice-criteria'
 import { Query } from 'mega-nice-sql'
 import { fillCriteria, fillReadCriteria } from 'mega-nice-sql-criteria-filler'
-import { relationshipsOnly, Schema, Table } from './Schema'
+import { Schema, Table } from './Schema'
+import { relationshipsOnly } from './util'
 
 export class SqlOrm {
 
@@ -100,7 +101,7 @@ export class SqlOrm {
           continue
         }
 
-        let relationshipTableName = relationship.oneToMany != undefined ? relationship.oneToMany.otherTable : relationship.manyToOne!.otherTable
+        let relationshipTableName = relationship.otherTable
         let relationshipAlias = alias != undefined ? alias + relationshipName + '__' : relationshipName + '__'
 
         // console.debug('relationshipTableName', relationshipTableName)
@@ -168,25 +169,9 @@ function joinRelationships(tableName: string, schema: Schema, query: Query, crit
     // console.debug('relationship', relationship)
     // console.debug('relationshipCriteria', relationshipCriteria)
     
-    let thisId
-    let otherTableName
-    let otherId
-
-    if (typeof relationship.oneToMany == 'object' && relationship.oneToMay !== null) {
-      // console.debug('We have a oneToMany relationship')
-      thisId = relationship.oneToMany.thisId
-      otherTableName = relationship.oneToMany.otherTable
-      otherId = relationship.oneToMany.otherId
-    }
-    else if (typeof relationship.manyToOne == 'object' && relationship.manyToOne !== null) {
-      // console.debug('We have a manyToOne relationship')
-      thisId = relationship.manyToOne.thisId
-      otherTableName = relationship.manyToOne.otherTable
-      otherId = relationship.manyToOne.otherId
-    }
-    else {
-      throw new Error('Given criteria do not contain oneToMany nor manyToOne')
-    }
+    let thisId = relationship.thisId
+    let otherTableName = relationship.otherTable
+    let otherId = relationship.otherId
 
     if (typeof thisId != 'string' || thisId.length == 0) {
       throw new Error('Given relationship object does not contain property \'thisId\'')
