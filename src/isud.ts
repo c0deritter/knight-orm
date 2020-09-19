@@ -6,24 +6,44 @@ import { buildSelectQuery } from './queryTools'
 import { idsOnly, rowsToInstances } from './rowTools'
 import { getRelationshipNameByColumn, getRelationshipNames, Relationship, Schema } from './Schema'
 
-class InsertedRow {
-  constructor(public tableName: string, public row: any, public insertedRow: any) {}
-}
-
 class InserterdRows {
-  rows: InsertedRow[] = []
+  rows: { tableName: string, row: any, insertedRow: any }[] = []
 
-  containsRow(row: any): boolean {
+  add(tableName: string, row: any, insertedRow: any) {
+    this.rows.push({ tableName: tableName, row: row, insertedRow: insertedRow })
+  }
+
+  containsTableName(tableName: string): boolean {
     for (let insertedRow of this.rows) {
-      if (insertedRow.row === row) {
+      if (insertedRow.tableName === tableName) {
         return true
       }
     }
     return false
   }
+
+  containsRow(row: any): boolean {
+    return this.getByRow(row) != undefined
+  }
+
+  getByRow(row: any): { tableName: string, row: any, insertedRow: any } | undefined {
+    for (let insertedRow of this.rows) {
+      if (insertedRow.row === row) {
+        return insertedRow
+      }
+    }
+  }
 }
 
-export async function insert(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, row: any, allInsertedRows: any[] = [], insertedRow?: any, insertedRowInTableName?: string): Promise<any> {
+export async function insert(
+      schema: Schema, 
+      tableName: string, 
+      db: string, 
+      queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, row: any, 
+      alreadyInsertedRows: InserterdRows = new InserterdRows,
+      insertedRow?: any,
+      insertedRowIntoTableName?: string
+    ): Promise<any> {
   // console.debug('Entering insert...')
   // console.debug('tableName', tableName)
   // console.debug('db', db)
@@ -32,12 +52,11 @@ export async function insert(schema: Schema, tableName: string, db: string, quer
   // console.debug('insertedRow', insertedRow)
   // console.debug('insertedRowInTableName', insertedRowInTableName)
 
-  if (allInsertedRows.indexOf(row) != -1) {
-    // console.debug('Row already inserted. Returning...')
-    return
+  let alreadyInsertedRow = alreadyInsertedRows.getByRow(row)
+  if (alreadyInsertedRow != undefined) {
+    // console.debug('Row already inserted. Returning already inserted row...', alreadyInsertedRow)
+    return alreadyInsertedRow.insertedRow
   }
-
-  allInsertedRows.push(row)
 
   let table = schema[tableName]
 
@@ -55,17 +74,18 @@ export async function insert(schema: Schema, tableName: string, db: string, quer
   for (let columnName of Object.keys(table.columns)) {
     let relationshipName = getRelationshipNameByColumn(columnName, table)
 
-    // the id is missing
+    // the column is part of a relationship and its id is missing
     if (relationshipName != undefined && row[columnName] == undefined) {
       let relationship = table[relationshipName] as Relationship
       
-      // we found the relationship the id is part of. if there is none we cannot do anything about it.
-      if (relationship.manyToOne && relationship.thisId == columnName) {
+      // if the relationship is a many-to-one which should be the case anyway because otherwise there would not
+      // be a corresponding column with an id
+      if (relationship.manyToOne) {
         // console.debug('Found empty id', columnName)
 
         // at first check if the given inserted row is the one of the relationship and if so use 
         // the id from there
-        if (relationship.otherTable == insertedRowInTableName) {
+        if (relationship.otherTable == insertedRowIntoTableName) {
           // console.debug('The relationship was just inserted before. Retrieving id from given insertedRow', insertedRow)
           row[columnName] = insertedRow[relationship.otherId]
         }
@@ -73,7 +93,7 @@ export async function insert(schema: Schema, tableName: string, db: string, quer
         // first and then take the id from there
         else if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
           // console.debug('There is a relationship object. Inserting that one first. Going into recursion...', row[relationshipName])
-          let relationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], allInsertedRows)
+          let relationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows)
           // console.debug('Returning from recursion...')
           row[columnName] = relationshipRow[relationship.otherId]
           insertedRelationships[relationshipName] = relationshipRow
@@ -108,6 +128,8 @@ export async function insert(schema: Schema, tableName: string, db: string, quer
 
   insertedRow = insertedRows[0]
 
+  alreadyInsertedRows.add(tableName, row, insertedRow)
+
   // console.debug('Insert remaining relationships...')
 
   for (let relationshipName of getRelationshipNames(table)) {
@@ -115,7 +137,7 @@ export async function insert(schema: Schema, tableName: string, db: string, quer
     let relationship = table[relationshipName] as Relationship
 
     // if the relationship leads back to were we are coming from continue
-    if (relationship.otherTable == insertedRowInTableName) {
+    if (relationship.otherTable == insertedRowIntoTableName) {
       console.log('Relationship is the source. Continuing...')
       continue
     }
@@ -159,7 +181,7 @@ export async function insert(schema: Schema, tableName: string, db: string, quer
 
       if (relationship.manyToOne) {
         // console.debug('Many-to-one relationship. Inserting row. Going into recursion...')
-        await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], allInsertedRows, insertedRow, tableName)
+        await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows, insertedRow, tableName)
         // console.debug('Returning from recursion...')  
       }
       else if (row[relationshipName] instanceof Array) {
@@ -167,7 +189,7 @@ export async function insert(schema: Schema, tableName: string, db: string, quer
         
         for (let relationshipRow of row[relationshipName]) {
           // console.debug('Inserting relationshipRow. Going into Recursion...', relationshipRow)
-          await insert(schema, relationship.otherTable, db, queryFn, relationshipRow, allInsertedRows, insertedRow, tableName)
+          await insert(schema, relationship.otherTable, db, queryFn, relationshipRow, alreadyInsertedRows, insertedRow, tableName)
           // console.debug('Returning from recursion...')  
         }
       }
