@@ -1,0 +1,23 @@
+version: '3.7'
+services:
+  test:
+    image: 'node'
+    command: bash -c 'npm install && npx mocha -r ts-node/register "test/**/*.test.ts"'
+    working_dir: '/hostdir'
+    volumes:
+      - './:/hostdir'
+    depends_on: 
+      - postgres
+      - mysql
+  postgres:
+    image: 'postgres'
+    environment:
+      - POSTGRES_DB=sqlorm_test
+      - POSTGRES_USER=sqlorm_test
+      - POSTGRES_PASSWORD=sqlorm_test
+  mysql:
+    image: 'mysql'
+    environment:
+      - MYSQL_DATABASE=sqlorm_test
+      - MYSQL_USER=sqlorm_test
+      - MYSQL_PASSWORD=sqlorm_test

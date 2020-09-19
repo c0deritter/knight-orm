@@ -1,35 +1,5 @@
 import { DeleteCriteria, UpdateCriteria } from 'mega-nice-criteria'
-import { Relationship, Schema, Table } from './Schema'
-
-export function isId(columnSchema: string | { property: string, id: boolean }): boolean {
-  if (typeof columnSchema == 'string') {
-    return false
-  }
-
-  return columnSchema.id
-}
-
-export function getPropertyName(columnSchema: string | { property: string, id: boolean }): string {
-  if (typeof columnSchema == 'string') {
-    return columnSchema
-  }
-
-  return columnSchema.property
-}
-
-export function relationshipsOnly(table: Table): {[ relationship: string ]: Relationship } {
-  let relationships: {[ relationship: string ]: any|Relationship } = {}
-
-  for (let property of Object.keys(table)) {
-    if (property == 'name' || property == 'columns' || typeof table[property] == 'function') {
-      continue
-    }
-
-    relationships[property] = table[property]
-  }
-
-  return relationships
-}
+import { getPropertyName, getRelationshipNames, isId, Relationship, Schema, Table } from './Schema'
 
 export function instanceCriteriaToRowCriteria<T>(instanceCriteria: any, tableName: string, schema: Schema): T {
   let table = schema[tableName]
@@ -51,7 +21,7 @@ export function instanceCriteriaToRowCriteria<T>(instanceCriteria: any, tableNam
     rowCriteria[column] = propertyValue
   }
 
-  for (let relationshipName of Object.keys(relationshipsOnly(table))) {
+  for (let relationshipName of getRelationshipNames(table)) {
     let relationshipValue = instanceCriteria[relationshipName]
     let relationship = table[relationshipName] as Relationship
 
@@ -66,8 +36,7 @@ export function instanceCriteriaToRowCriteria<T>(instanceCriteria: any, tableNam
   return <T> rowCriteria
 }
 
-export function instanceToUpdateCriteria(instance: any, table: Table): UpdateCriteria {
-  let row = table.instanceToRow(instance)
+export function rowToUpdateCriteria(row: any, table: Table): UpdateCriteria {
   let updateCriteria: any = {
     set: {}
   }
@@ -84,8 +53,12 @@ export function instanceToUpdateCriteria(instance: any, table: Table): UpdateCri
   return updateCriteria
 }
 
-export function instanceToDeleteCriteria(instance: any, table: Table): DeleteCriteria {
+export function instanceToUpdateCriteria(instance: any, table: Table): UpdateCriteria {
   let row = table.instanceToRow(instance)
+  return rowToUpdateCriteria(row, table)
+}
+
+export function rowToDeleteCriteria(row: any, table: Table): DeleteCriteria {
   let deleteCriteria: any = {}
 
   for (let column of Object.keys(table.columns)) {
@@ -95,4 +68,9 @@ export function instanceToDeleteCriteria(instance: any, table: Table): DeleteCri
   }
 
   return deleteCriteria
+}
+
+export function instanceToDeleteCriteria(instance: any, table: Table): DeleteCriteria {
+  let row = table.instanceToRow(instance)
+  return rowToDeleteCriteria(row, table)
 }
