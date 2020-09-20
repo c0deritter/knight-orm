@@ -37,7 +37,7 @@ describe('isud', function() {
       await pool.query('DROP TABLE IF EXISTS table_many CASCADE')
     })
     
-    describe('insert', function() {
+    describe.only('insert', function() {
       it('should insert a simple row with PostgreSQL', async function() {
         let row = {
           column1: 'a',
@@ -92,6 +92,26 @@ describe('isud', function() {
         expect(insertedRow.id).to.equal(1)
         expect(insertedRow.column1).to.equal('a')
         expect(insertedRow.column2).to.equal(1)
+        expect(insertedRow.many).to.deep.equal([
+          {
+            table1_id: 1,
+            table2_id: 'x',
+            column1: 'b',
+            object2: {
+              id: 'x',
+              column1: 'c'
+            }
+          },
+          {
+            table1_id: 1,
+            table2_id: 'y',
+            column1: 'd',
+            object2: {
+              id: 'y',
+              column1: 'e'
+            }
+          }
+        ])
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
@@ -140,6 +160,15 @@ describe('isud', function() {
         expect(insertedRow.table1_id).to.equal(1)
         expect(insertedRow.table2_id).to.equal('x')
         expect(insertedRow.column1).to.equal('a')
+        expect(insertedRow.object1).to.deep.equal({
+          id: 1,
+          column1: 'b',
+          column2: 1
+        })
+        expect(insertedRow.object2).to.deep.equal({
+          id: 'x',
+          column1: 'c'
+        })
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
@@ -170,6 +199,11 @@ describe('isud', function() {
         expect(insertedRow.id).to.equal(2)
         expect(insertedRow.table3_id).to.equal(1)
         expect(insertedRow.column1).to.equal('a')
+        expect(insertedRow.object3).to.deep.equal({
+          id: 2,
+          column1: 'b',
+          table3_id: 1
+        })
 
         let rows = await pgQueryFn('SELECT * FROM table3')
 
@@ -197,6 +231,17 @@ describe('isud', function() {
 
         expect(insertedRow.table1_id1).to.equal(1)
         expect(insertedRow.table1_id2).to.equal(1)
+        expect(insertedRow.object11).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: 1
+        })
+        expect(insertedRow.object12).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: 1
+        })
+        expect(insertedRow.object11 === insertedRow.object12).to.be.true
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
@@ -218,6 +263,11 @@ describe('isud', function() {
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
         expect(insertedRow.id).to.equal(1)
+        expect(insertedRow.many).to.deep.equal([{
+          table1_id: 1,
+          table2_id: null,
+          column1: 'a'
+        }])
 
         let table1Rows = await pgQueryFn('SELECT * FROM table_many')
 

@@ -64,7 +64,7 @@ export async function insert(
 
   let alreadyInsertedRow = alreadyInsertedRows.getByRow(row)
   if (alreadyInsertedRow != undefined) {
-    // console.debug('Row already inserted. Returning already inserted row...', alreadyInsertedRow)
+    console.debug('Row already inserted. Returning already inserted row...', alreadyInsertedRow)
     return alreadyInsertedRow.fiddledRow
   }
 
@@ -143,8 +143,9 @@ export async function insert(
   }
 
   let sqlString = query.sql(db)
-  // console.debug('sqlString', sqlString)
   let values = query.values()
+  
+  // console.debug('sqlString', sqlString)
   // console.debug('values', values)
 
   let insertedRows = await queryFn(sqlString, values)
@@ -183,7 +184,7 @@ export async function insert(
       // console.debug('insertedRelationship', insertedRelationship)
 
       if (insertedRelationshipTable == undefined) {
-        throw new Error('Table not contianed in schema: ' + insertedRelationship.otherTable)
+        throw new Error('Table not contained in schema: ' + insertedRelationship.otherTable)
       }
 
       // console.debug('insertedRelationshipTable', insertedRelationshipTable)
@@ -200,15 +201,23 @@ export async function insert(
         if (relationship.manyToOne && relationship.otherTable == tableName && insertedRow[relationship.otherId] !== undefined) {
           let idsOnlyRow = idsOnly(insertedRelationshipTable, insertedRelationshipRow)
           idsOnlyRow[relationship.thisId] = insertedRow[relationship.otherId]
-          await update(schema, insertedRelationship.otherTable, db, queryFn, idsOnlyRow)
+          insertedRelationshipRow = await update(schema, insertedRelationship.otherTable, db, queryFn, idsOnlyRow)
         }
         else {
           // console.debug('Relationship did not fullfill conditions. Continuing...')
         }
       }
+
+      insertedRow[relationshipName] = insertedRelationshipRow
     }
     else if (alreadyInsertedRows.containsRow(row[relationshipName])) {
       // console.debug('Relationship was already inserted or is about to be inserted. Continuing...')
+
+      let alreadyInsertedRow = alreadyInsertedRows.getByRow(row[relationshipName])
+      if (alreadyInsertedRow != undefined && alreadyInsertedRow.fiddledRow != undefined) {
+        insertedRow[relationshipName] = alreadyInsertedRow.fiddledRow
+      }
+
       continue
     }
     // otherwise we just insert the relationship
@@ -217,16 +226,25 @@ export async function insert(
 
       if (relationship.manyToOne) {
         // console.debug('Many-to-one relationship. Inserting row. Going into recursion...')
-        await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows, insertedRow, tableName)
-        // console.debug('Returning from recursion...')  
+        let insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows, insertedRow, tableName)
+        // console.debug('Returning from recursion...')
+        insertedRow[relationshipName] = insertedRelationshipRow
       }
       else if (row[relationshipName] instanceof Array) {
         // console.debug('One-to-many relationship. Inserting all rows...')
         
         for (let relationshipRow of row[relationshipName]) {
           // console.debug('Inserting relationshipRow. Going into Recursion...', relationshipRow)
-          await insert(schema, relationship.otherTable, db, queryFn, relationshipRow, alreadyInsertedRows, insertedRow, tableName)
-          // console.debug('Returning from recursion...')  
+          let insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, relationshipRow, alreadyInsertedRows, insertedRow, tableName)
+          // console.debug('Returning from recursion...', insertedRelationshipRow)
+          
+          if (insertedRelationshipRow != undefined) {
+            if (insertedRow[relationshipName] == undefined) {
+              insertedRow[relationshipName] = []
+            }
+            
+            insertedRow[relationshipName].push(insertedRelationshipRow)
+          }
         }
       }
       else {
@@ -258,6 +276,7 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   // console.debug('values', values)
 
   let rows = await queryFn(sqlString, values)
+
   return rows
 }
 
@@ -373,6 +392,15 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
+  // at first delete all relationships who want to be deleted
+  for (let relationshipName of getRelationshipNames(table)) {
+    let relationship = table[relationshipName] as Relationship
+
+    if (relationship.delete) {
+      // await delete_(schema, relationship.otherTable, db, queryFn, )
+    }
+  }
+
   let criteria = rowToDeleteCriteria(row, table)
 
   let query = sql.deleteFrom(tableName)
@@ -391,15 +419,6 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
   }
 
   let deletedRow = rows[0]
-
-  for (let relationshipName of getRelationshipNames(table)) {
-    let relationship = table[relationshipName] as Relationship
-
-    if (relationship.delete && typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
-      let relationship = table[relationshipName] as Relationship
-      await delete_(schema, relationship.otherTable, db, queryFn, row[relationshipName])
-    }
-  }
 
   return deletedRow
 }
