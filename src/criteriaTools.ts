@@ -43,7 +43,7 @@ export function rowToUpdateCriteria(row: any, table: Table): UpdateCriteria {
 
   for (let column of Object.keys(table.columns)) {
     if (isId(table.columns[column])) {
-      updateCriteria[column] = row[column]
+      updateCriteria[column] = row[column] === undefined ? null : row[column]
     }
     else if (column in row) {
       updateCriteria.set[column] = row[column]

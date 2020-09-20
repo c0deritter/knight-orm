@@ -5,7 +5,7 @@ import { ManyObjects, Object1, Object2, schema } from './testSchema'
 
 describe('rowTools', function() {
   describe('rowsToInstances', function() {
-    it('should create objects from a simple select query', function() {
+    it('should create corresponding instance from simple rows without relationships', function() {
       let rows = [
         {
           table1__id: 1,
@@ -31,7 +31,7 @@ describe('rowTools', function() {
       expect(instances[1]).to.deep.equal({ id: 2, property1: 'b', property2: 2 })
     })
 
-    it('should create objects from a simple select query', function() {
+    it('should create corresponding instance from simple rows with relationships', function() {
       let rows = [
         {
           table1__id: 1,

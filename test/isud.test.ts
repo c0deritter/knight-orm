@@ -1,9 +1,12 @@
-import { expect } from 'chai'
+import * as chai from 'chai'
+import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
-import { rowToDeleteCriteria } from '../src/criteriaTools'
-import { insert } from '../src/isud'
+import { insert, select, update } from '../src/isud'
 import { schema } from './testSchema'
+
+chai.use(chaiAsPromised)
+const expect = chai.expect
 
 let pool: Pool = new Pool({
   host: 'postgres',
@@ -22,6 +25,7 @@ describe('isud', function() {
       await pool.query('CREATE TABLE table1 (id SERIAL, column1 VARCHAR(20), column2 INTEGER)')
       await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20))')
       await pool.query('CREATE TABLE table3 (id SERIAL, column1 VARCHAR(20), table3_id INTEGER)')
+      await pool.query('CREATE TABLE table4 (table1_id1 INTEGER, table1_id2 INTEGER)')
       await pool.query('CREATE TABLE table_many (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20))')
     })
 
@@ -29,6 +33,7 @@ describe('isud', function() {
       await pool.query('DROP TABLE IF EXISTS table1 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table2 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table3 CASCADE')
+      await pool.query('DROP TABLE IF EXISTS table4 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table_many CASCADE')
     })
     
@@ -88,33 +93,33 @@ describe('isud', function() {
         expect(insertedRow.column1).to.equal('a')
         expect(insertedRow.column2).to.equal(1)
 
-        let talbe1Rows = await pgQueryFn('SELECT * FROM table1')
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
-        expect(talbe1Rows.length).to.equal(1)
-        expect(talbe1Rows[0].id).to.equal(1)
-        expect(talbe1Rows[0].column1).to.equal('a')
-        expect(talbe1Rows[0].column2).to.equal(1)
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].id).to.equal(1)
+        expect(table1Rows[0].column1).to.equal('a')
+        expect(table1Rows[0].column2).to.equal(1)
 
-        let talbeManyRows = await pgQueryFn('SELECT * FROM table_many')
+        let tableManyRows = await pgQueryFn('SELECT * FROM table_many')
 
-        expect(talbeManyRows.length).to.equal(2)
-        expect(talbeManyRows[0].table1_id).to.equal(1)
-        expect(talbeManyRows[0].table2_id).to.equal('x')
-        expect(talbeManyRows[0].column1).to.equal('b')
-        expect(talbeManyRows[1].table1_id).to.equal(1)
-        expect(talbeManyRows[1].table2_id).to.equal('y')
-        expect(talbeManyRows[1].column1).to.equal('d')
+        expect(tableManyRows.length).to.equal(2)
+        expect(tableManyRows[0].table1_id).to.equal(1)
+        expect(tableManyRows[0].table2_id).to.equal('x')
+        expect(tableManyRows[0].column1).to.equal('b')
+        expect(tableManyRows[1].table1_id).to.equal(1)
+        expect(tableManyRows[1].table2_id).to.equal('y')
+        expect(tableManyRows[1].column1).to.equal('d')
 
-        let talbe2Rows = await pgQueryFn('SELECT * FROM table2')
+        let table2Rows = await pgQueryFn('SELECT * FROM table2')
 
-        expect(talbe2Rows.length).to.equal(2)
-        expect(talbe2Rows[0].id).to.equal('x')
-        expect(talbe2Rows[0].column1).to.equal('c')
-        expect(talbe2Rows[1].id).to.equal('y')
-        expect(talbe2Rows[1].column1).to.equal('e')
+        expect(table2Rows.length).to.equal(2)
+        expect(table2Rows[0].id).to.equal('x')
+        expect(table2Rows[0].column1).to.equal('c')
+        expect(table2Rows[1].id).to.equal('y')
+        expect(table2Rows[1].column1).to.equal('e')
       })
 
-      it.only('should insert a row with a many-to-many relationship', async function() {
+      it('should insert a row with a many-to-one relationships', async function() {
         let row: any = {
           column1: 'a',
           object1: {
@@ -136,18 +141,18 @@ describe('isud', function() {
         expect(insertedRow.table2_id).to.equal('x')
         expect(insertedRow.column1).to.equal('a')
 
-        let talbe1Rows = await pgQueryFn('SELECT * FROM table1')
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
-        expect(talbe1Rows.length).to.equal(1)
-        expect(talbe1Rows[0].id).to.equal(1)
-        expect(talbe1Rows[0].column1).to.equal('b')
-        expect(talbe1Rows[0].column2).to.equal(1)
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].id).to.equal(1)
+        expect(table1Rows[0].column1).to.equal('b')
+        expect(table1Rows[0].column2).to.equal(1)
 
-        let talbe2Rows = await pgQueryFn('SELECT * FROM table2')
+        let table2Rows = await pgQueryFn('SELECT * FROM table2')
 
-        expect(talbe2Rows.length).to.equal(1)
-        expect(talbe2Rows[0].id).to.equal('x')
-        expect(talbe2Rows[0].column1).to.equal('c')
+        expect(table2Rows.length).to.equal(1)
+        expect(table2Rows[0].id).to.equal('x')
+        expect(table2Rows[0].column1).to.equal('c')
       })
 
       it('should insert a row with a one-to-one relationship', async function() {
@@ -166,15 +171,401 @@ describe('isud', function() {
         expect(insertedRow.table3_id).to.equal(1)
         expect(insertedRow.column1).to.equal('a')
 
-        let talbe1Rows = await pgQueryFn('SELECT * FROM table3')
+        let rows = await pgQueryFn('SELECT * FROM table3')
 
-        expect(talbe1Rows.length).to.equal(2)
-        expect(talbe1Rows[0].id).to.equal(2)
-        expect(talbe1Rows[0].table3_id).to.equal(1)
-        expect(talbe1Rows[0].column1).to.equal('a')
-        expect(talbe1Rows[1].id).to.equal(1)
-        expect(talbe1Rows[1].table3_id).to.equal(2)
-        expect(talbe1Rows[1].column1).to.equal('b')
+        expect(rows.length).to.equal(2)
+        expect(rows[0].id).to.equal(2)
+        expect(rows[0].table3_id).to.equal(1)
+        expect(rows[0].column1).to.equal('a')
+        expect(rows[1].id).to.equal(1)
+        expect(rows[1].table3_id).to.equal(2)
+        expect(rows[1].column1).to.equal('b')
+      })
+
+      it('should not insert the same object twice inside many-to-one', async function() {
+        let table1Row = {
+          column1: 'a',
+          column2: 1
+        }
+
+        let row = {
+          object11: table1Row,
+          object12: table1Row
+        }
+
+        let insertedRow = await insert(schema, 'table4', 'postgres', pgQueryFn, row)
+
+        expect(insertedRow.table1_id1).to.equal(1)
+        expect(insertedRow.table1_id2).to.equal(1)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].id).to.equal(1)
+        expect(table1Rows[0].column1).to.equal('a')
+        expect(table1Rows[0].column2).to.equal(1)
+      })
+
+      it('should not insert the same object twice when it is inside one-to-many', async function() {
+        let tableManyRow = {
+          column1: 'a'
+        }
+
+        let row = {
+          many: [ tableManyRow, tableManyRow, tableManyRow ]
+        }
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        expect(insertedRow.id).to.equal(1)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table_many')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].table1_id).to.equal(1)
+        expect(table1Rows[0].table2_id).to.be.null
+        expect(table1Rows[0].column1).to.equal('a')
+      })
+    })
+
+    describe('select', function() {
+      it('should select the one row where the many-to-one relationship is present', async function() {
+        let row = {
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              column1: 'b',
+              object2: {
+                id: 'x',
+                column1: 'c'
+              }
+            },
+            {
+              column1: 'd'
+            }
+          ]
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let criteria = {
+          id: 1,
+          column1: 'a',
+          many: {
+            column1: 'b',
+            object2: {
+              column1: 'c'
+            }
+          }
+        }  
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+
+        expect(rows.length).to.equal(1)
+        expect(rows[0].table1__id).to.equal(1)
+        expect(rows[0].table1__column1).to.equal('a')
+        expect(rows[0].table1__column2).to.equal(1)
+        expect(rows[0].table1__many__table1_id).to.equal(1)
+        expect(rows[0].table1__many__table2_id).to.equal('x')
+        expect(rows[0].table1__many__column1).to.equal('b')
+        expect(rows[0].table1__many__object2__id).to.equal('x')
+        expect(rows[0].table1__many__object2__column1).to.equal('c')
+      })
+
+      it('should select the one row where the many-to-one relationship is not present', async function() {
+        let row = {
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              column1: 'b',
+              object2: {
+                id: 'x',
+                column1: 'c'
+              }
+            },
+            {
+              column1: 'd'
+            }
+          ]
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let criteria = {
+          id: 1,
+          column1: 'a',
+          many: {
+            column1: 'd',
+            object2: {}
+          }
+        }  
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+
+        expect(rows.length).to.equal(1)
+        expect(rows[0].table1__id).to.equal(1)
+        expect(rows[0].table1__column1).to.equal('a')
+        expect(rows[0].table1__column2).to.equal(1)
+        expect(rows[0].table1__many__table1_id).to.equal(1)
+        expect(rows[0].table1__many__table2_id).to.be.null
+        expect(rows[0].table1__many__column1).to.equal('d')
+        expect(rows[0].table1__many__object2__id).to.be.null
+        expect(rows[0].table1__many__object2__column1).to.be.null
+      })
+
+      it('should select all rows', async function() {
+        let row = {
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              column1: 'b',
+              object2: {
+                id: 'x',
+                column1: 'c'
+              }
+            },
+            {
+              column1: 'd'
+            }
+          ]
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let criteria = { many: { object2: {} }}
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+
+        expect(rows.length).to.equal(2)
+        expect(rows[0].table1__id).to.equal(1)
+        expect(rows[0].table1__column1).to.equal('a')
+        expect(rows[0].table1__column2).to.equal(1)
+        expect(rows[0].table1__many__table1_id).to.equal(1)
+        expect(rows[0].table1__many__table2_id).to.equal('x')
+        expect(rows[0].table1__many__column1).to.equal('b')
+        expect(rows[0].table1__many__object2__id).to.equal('x')
+        expect(rows[0].table1__many__object2__column1).to.equal('c')
+        expect(rows[1].table1__id).to.equal(1)
+        expect(rows[1].table1__column1).to.equal('a')
+        expect(rows[1].table1__column2).to.equal(1)
+        expect(rows[1].table1__many__table1_id).to.equal(1)
+        expect(rows[1].table1__many__table2_id).to.be.null
+        expect(rows[1].table1__many__column1).to.equal('d')
+        expect(rows[1].table1__many__object2__id).to.be.null
+        expect(rows[1].table1__many__object2__column1).to.be.null
+      })
+    })
+
+    describe('update', function() {
+      it('should update a simple row without relationships', async function() {
+        let row = {
+          column1: 'a',
+          column2: 1
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let updateRow = {
+          id: 1,
+          column1: 'b',
+          column2: 2
+        }
+
+        let updatedRow = await update(schema, 'table1', 'postgres', pgQueryFn, updateRow)
+
+        expect(updatedRow.id).to.equal(1)
+        expect(updatedRow.column1).to.equal('b')
+        expect(updatedRow.column2).to.equal(2)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].id).to.equal(1)
+        expect(table1Rows[0].column1).to.equal('b')
+        expect(table1Rows[0].column2).to.equal(2)
+      })
+
+      it('should not update if the id is missing', async function() {
+        let row = {
+          column1: 'a',
+          column2: 1
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let updateRow = {
+          column1: 'b',
+          column2: 2
+        }
+
+        expect(update(schema, 'table1', 'postgres', pgQueryFn, updateRow)).to.be.rejectedWith(Error)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].id).to.equal(1)
+        expect(table1Rows[0].column1).to.equal('a')
+        expect(table1Rows[0].column2).to.equal(1)
+      })
+
+      it('should not update if there was no valid column to set', async function() {
+        let row = {
+          column1: 'a',
+          column2: 1
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let updateRow = {
+          id: 1,
+          invalidColumn: 'error'
+        }
+
+        let updatedRow = await update(schema, 'table1', 'postgres', pgQueryFn, updateRow)
+
+        expect(updatedRow).to.be.not.undefined
+        expect(updatedRow.id).to.equal(1)
+        expect(updatedRow.column1).to.equal('a')
+        expect(updatedRow.column2).to.equal(1)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].id).to.equal(1)
+        expect(table1Rows[0].column1).to.equal('a')
+        expect(table1Rows[0].column2).to.equal(1)
+      })
+
+      it('should update a row with relationships', async function() {
+        let row = {
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              column1: 'b',
+              object2: {
+                id: 'x',
+                column1: 'c'
+              }
+            }
+          ]
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let updateRow = {
+          id: 1,
+          column1: 'b',
+          column2: 2,
+          many: [
+            {
+              table1_id: 1,
+              table2_id: 'x',
+              column1: 'c',
+              object2: {
+                id: 'x',
+                column1: 'd'
+              }
+            }
+          ]
+        }
+
+        let updatedRow = await update(schema, 'table1', 'postgres', pgQueryFn, updateRow)
+
+        expect(updatedRow.id).to.equal(1)
+        expect(updatedRow.column1).to.equal('b')
+        expect(updatedRow.column2).to.equal(2)
+        expect(updatedRow.many).to.deep.equal([
+          {
+            table1_id: 1,
+            table2_id: 'x',
+            column1: 'c',
+            object2: {
+              id: 'x',
+              column1: 'd'
+            }
+          }
+        ])
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].id).to.equal(1)
+        expect(table1Rows[0].column1).to.equal('b')
+        expect(table1Rows[0].column2).to.equal(2)
+
+        let tableManyRows = await pgQueryFn('SELECT * FROM table_many')
+
+        expect(tableManyRows.length).to.equal(1)
+        expect(tableManyRows[0].table1_id).to.equal(1)
+        expect(tableManyRows[0].table2_id).to.equal('x')
+        expect(tableManyRows[0].column1).to.equal('c')
+
+        let table2Rows = await pgQueryFn('SELECT * FROM table2')
+
+        expect(table2Rows.length).to.equal(1)
+        expect(table2Rows[0].id).to.equal('x')
+        expect(table2Rows[0].column1).to.equal('d')
+      })
+
+      it('should update the same row object only once', async function() {
+        let table1Row = {
+          column1: 'a',
+          column2: 1
+        }
+
+        let row = {
+          object11: table1Row,
+          object12: table1Row
+        }
+
+        await insert(schema, 'table4', 'postgres', pgQueryFn, row)
+
+        let updateTable1Row = {
+          id: 1,
+          column1: 'b',
+          column2: 2
+        }
+
+        let updateRow = {
+          table1_id1: 1,
+          table1_id2: 1,
+          object11: updateTable1Row,
+          object12: updateTable1Row
+        }
+
+        let updatedRow = await update(schema, 'table4', 'postgres', pgQueryFn, updateRow)
+
+        expect(updatedRow).to.be.not.undefined
+        expect(updatedRow.table1_id1).to.equal(1)
+        expect(updatedRow.table1_id2).to.equal(1)
+        expect(updatedRow.object11).to.deep.equal({
+          id: 1,
+          column1: 'b',
+          column2: 2
+        })
+        expect(updatedRow.object12).to.deep.equal({
+          id: 1,
+          column1: 'b',
+          column2: 2
+        })
+        expect(updatedRow.object11 === updatedRow.object12).to.be.true
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].id).to.equal(1)
+        expect(table1Rows[0].column1).to.equal('b')
+        expect(table1Rows[0].column2).to.equal(2)
+
+        let table2Rows = await pgQueryFn('SELECT * FROM table4')
+
+        expect(table2Rows.length).to.equal(1)
+        expect(table2Rows[0].table1_id1).to.equal(1)
+        expect(table2Rows[0].table1_id2).to.equal(1)
       })
     })
   })

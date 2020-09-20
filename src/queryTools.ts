@@ -86,8 +86,8 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
 
     // console.debug('joinAlias', joinAlias)
     
-    // console.debug('Adding INNER JOIN to query')
-    query.join('INNER', otherTableName, joinAlias, '' + (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId + ' = ' + joinAlias + '.' + otherId)
+    // console.debug('Adding LEFT JOIN to query')
+    query.join('LEFT', otherTableName, joinAlias, '' + (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId + ' = ' + joinAlias + '.' + otherId)
     // console.debug('query', query)
 
     let otherTable = schema[otherTableName]

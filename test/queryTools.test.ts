@@ -35,7 +35,7 @@ describe('queryTools', function() {
       expect(query._selects[6]).to.equal('table1__many__object2.id table1__many__object2__id')
       expect(query._selects[7]).to.equal('table1__many__object2.column1 table1__many__object2__column1')
   
-      expect(query.mysql()).to.equal('SELECT table1.id table1__id, table1.column1 table1__column1, table1.column2 table1__column2, table1__many.table1_id table1__many__table1_id, table1__many.table2_id table1__many__table2_id, table1__many.column1 table1__many__column1, table1__many__object2.id table1__many__object2__id, table1__many__object2.column1 table1__many__object2__column1 FROM table1 table1 INNER JOIN table_many table1__many ON table1.id = table1__many.table1_id INNER JOIN table2 table1__many__object2 ON table1__many.table2_id = table1__many__object2.id WHERE table1.id = ? AND table1.column1 = ? AND table1__many.column1 = ? AND table1__many__object2.column1 = ?;')
+      expect(query.mysql()).to.equal('SELECT table1.id table1__id, table1.column1 table1__column1, table1.column2 table1__column2, table1__many.table1_id table1__many__table1_id, table1__many.table2_id table1__many__table2_id, table1__many.column1 table1__many__column1, table1__many__object2.id table1__many__object2__id, table1__many__object2.column1 table1__many__object2__column1 FROM table1 table1 LEFT JOIN table_many table1__many ON table1.id = table1__many.table1_id LEFT JOIN table2 table1__many__object2 ON table1__many.table2_id = table1__many__object2.id WHERE table1.id = ? AND table1.column1 = ? AND table1__many.column1 = ? AND table1__many__object2.column1 = ?;')
     })
   })
 })

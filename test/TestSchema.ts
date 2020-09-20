@@ -20,6 +20,13 @@ export class Object3 {
   object3?: Object3
 }
 
+export class Object4 {
+  object1Id1?: number
+  object1Id2?: number
+  object11?: Object1
+  object12?: Object1
+}
+
 export class ManyObjects {
   object1Id?: number
   object2Id?: string
@@ -45,9 +52,9 @@ export const schema = {
     },
     rowToInstance: (row: any) => {
       let obj1 = new Object1
-      obj1.id = parseInt(row.id)
+      obj1.id = row.id
       obj1.property1 = row.column1
-      obj1.property2 = parseInt(row.column2)
+      obj1.property2 = row.column2
       return obj1
     },
     instanceToRow: (object1: Object1) => {
@@ -110,6 +117,38 @@ export const schema = {
         id: object3.id,
         column1: object3.property1,
         table3_id: object3.object3Id
+      }
+    }
+  },
+
+  'table4': {
+    name: 'table4',
+    columns: {
+      'table1_id1': { property: 'object1Id1', id: true },
+      'table1_id2': { property: 'object1Id2', id: true }
+    },
+    object11: {
+      manyToOne: true,
+      thisId: 'table1_id1',
+      otherTable: 'table1',
+      otherId: 'id'
+    },
+    object12: {
+      manyToOne: true,
+      thisId: 'table1_id2',
+      otherTable: 'table1',
+      otherId: 'id'
+    },
+    rowToInstance: (row: any) => {
+      let obj4 = new Object4
+      obj4.object1Id1 = row.table1_id1
+      obj4.object1Id2 = row.table2_i2d
+      return obj4      
+    },
+    instanceToRow: (object4: Object4) => {
+      return {
+        table1_id1: object4.object1Id1,
+        table1_id2: object4.object1Id2
       }
     }
   },

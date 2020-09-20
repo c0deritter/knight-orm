@@ -17,6 +17,7 @@ export interface Relationship {
   thisId: any
   otherTable: string
   otherId: any
+  delete?: boolean
 }
 
 export function isId(columnSchema: string | { property: string, id: boolean }): boolean {
@@ -43,20 +44,6 @@ export function getPropertyName(columnSchema: string | { property: string, id: 
   }
 
   return columnSchema.property
-}
-
-export function getRelationships(table: Table): Relationship[] {
-  let relationships: Relationship[] = []
-
-  for (let property of Object.keys(table)) {
-    if (property == 'name' || property == 'columns' || typeof table[property] == 'function') {
-      continue
-    }
-
-    relationships.push(table[property])
-  }
-
-  return relationships
 }
 
 export function getRelationshipNames(table: Table): string[] {

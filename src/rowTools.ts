@@ -50,11 +50,11 @@ export function rowsToInstances(schema: Schema, tableName: string, rows: any[], 
     }
 
     let unaliasedRow = instanceRelevantCellsWithoutAlias(table, row, alias)
-    let instance = table.rowToInstance(row)
+    let instance = table.rowToInstance(unaliasedRow)
     // console.debug('instance', instance)
     instances.push(instance)
 
-    let instanceAsRow = instanceRelevantCells(row, table, alias)
+    let instanceAsRow = instanceRelevantCells(table, row, alias)
     // console.debug('instanceAsRow', instanceAsRow)
 
     // console.debug('Iterating over all relationships...')
