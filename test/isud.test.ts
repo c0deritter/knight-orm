@@ -37,7 +37,7 @@ describe('isud', function() {
       await pool.query('DROP TABLE IF EXISTS table_many CASCADE')
     })
     
-    describe.only('insert', function() {
+    describe('insert', function() {
       it('should insert a simple row with PostgreSQL', async function() {
         let row = {
           column1: 'a',
@@ -538,6 +538,7 @@ describe('isud', function() {
             table1_id: 1,
             table2_id: 'x',
             column1: 'c',
+            table1_id2: null,
             object2: {
               id: 'x',
               column1: 'd'
@@ -558,6 +559,7 @@ describe('isud', function() {
         expect(tableManyRows[0].table1_id).to.equal(1)
         expect(tableManyRows[0].table2_id).to.equal('x')
         expect(tableManyRows[0].column1).to.equal('c')
+        expect(tableManyRows[0].table1_id2).to.be.null
 
         let table2Rows = await pgQueryFn('SELECT * FROM table2')
 
