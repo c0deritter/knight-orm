@@ -3,7 +3,7 @@ import sql from 'mega-nice-sql'
 import { fillCreateCriteria, fillDeleteCriteria, fillReadCriteria, fillUpdateCriteria } from 'mega-nice-sql-criteria-filler'
 import { rowToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { buildSelectQuery } from './queryTools'
-import { idsOnly } from './rowTools'
+import { idsOnly, unjoinRows } from './rowTools'
 import { getRelationshipNameByColumn, getRelationshipNames, isId, Relationship, Schema } from './Schema'
 
 class FiddledRows {
@@ -290,7 +290,8 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   // console.debug('sqlString', sqlString)
   // console.debug('values', values)
 
-  let rows = await queryFn(sqlString, values)
+  let joinedRows = await queryFn(sqlString, values)
+  let rows = unjoinRows(schema, tableName, joinedRows, criteria)
 
   return rows
 }

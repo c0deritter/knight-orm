@@ -18,7 +18,7 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any):
   }
 }
 
-export function rowsToInstances(schema: Schema, tableName: string, rows: any[], criteria: ReadCriteria, alias?: string, rowFilter?: any): any[]  {
+export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: ReadCriteria, toInstances: boolean = false, alias?: string, rowFilter?: any): any[]  {
   // console.debug('Entering rowsToInstances...')
   // console.debug('rows', rows)
   // console.debug('criteria', criteria)
@@ -36,26 +36,42 @@ export function rowsToInstances(schema: Schema, tableName: string, rows: any[], 
   }
 
   let relationshipNames = getRelationshipNames(table)
-  let instances: any[] = []
+  let rowsOrInstances: any[] = []
 
   // console.debug('relationships', relationships)
 
   // console.debug('Iterating over all rows...')
-  for (let row of rows) {
+  for (let joinedRow of joinedRows) {
     // console.debug('row', row)
 
-    if (! isRowRelevant(row, rowFilter)) {
+    if (! isRowRelevant(joinedRow, rowFilter)) {
       // console.debug('Row is not relevant. Continuing...')
       continue
     }
 
-    let unaliasedRow = instanceRelevantCellsWithoutAlias(table, row, alias)
-    let instance = table.rowToInstance(unaliasedRow)
-    // console.debug('instance', instance)
-    instances.push(instance)
+    let unaliasedRow = filterCellsOfTableAndRemoveAlias(table, joinedRow, alias)
+    // console.debug('unaliasedRow', unaliasedRow)
 
-    let instanceAsRow = instanceRelevantCells(table, row, alias)
-    // console.debug('instanceAsRow', instanceAsRow)
+    // if every column is null then there was no row in the first place
+    let everyColumnIsNull = true
+    for (let columnName of Object.keys(table.columns)) {
+      if (unaliasedRow[columnName] !== null) {
+        everyColumnIsNull = false
+        break
+      }
+    }
+
+    if (everyColumnIsNull) {
+      // console.debug('Every column is null thus we have to assume that there was no row. Continuing...')
+      continue
+    }
+
+    let rowOrInstance = toInstances ? table.rowToInstance(unaliasedRow) : unaliasedRow
+    // console.debug('rowOrInstance', rowOrInstance)
+    rowsOrInstances.push(rowOrInstance)
+
+    let filteredRow = filterCellsOfTable(table, joinedRow, alias)
+    // console.debug('filteredRow', filteredRow)
 
     // console.debug('Iterating over all relationships...')
     for (let relationshipName of relationshipNames) {
@@ -79,26 +95,26 @@ export function rowsToInstances(schema: Schema, tableName: string, rows: any[], 
       if (rowFilter != undefined) {
         relationshipRowFilter = {
           ...rowFilter,
-          ...instanceAsRow
+          ...filteredRow
         }
       }
       else {
-        relationshipRowFilter = instanceAsRow
+        relationshipRowFilter = filteredRow
       }
 
       // console.debug('relationshipRowFilter', relationshipRowFilter)
       
       // console.debug('Determining all relationship instances. Going into recursion...')
-      let relationshipInstances = rowsToInstances(schema, relationshipTableName, rows, criteria[relationshipName], relationshipAlias, relationshipRowFilter)
+      let relationshipInstances = unjoinRows(schema, relationshipTableName, joinedRows, criteria[relationshipName], toInstances, relationshipAlias, relationshipRowFilter)
       // console.debug('Coming back from recursion...', relationshipInstances)
 
-      if (relationship.oneToMany != undefined) {
+      if (relationship.oneToMany && relationshipInstances.length > 0) {
         // console.debug('Attaching one-to-many instances...')
-        instance[relationshipName] = relationshipInstances
+        rowOrInstance[relationshipName] = relationshipInstances
       }
-      else if (relationship.manyToOne != undefined) {
+      else if (relationship.manyToOne && relationshipInstances.length == 1) {
         // console.debug('Attaching many-to-one instance...')
-        instance[relationshipName] = relationshipInstances[0]
+        rowOrInstance[relationshipName] = relationshipInstances[0]
       }
       else {
         // console.debug('Not attaching anything...', relationship)
@@ -107,7 +123,7 @@ export function rowsToInstances(schema: Schema, tableName: string, rows: any[], 
   }
 
   // console.debug('Returning instances...', instances)
-  return instances
+  return rowsOrInstances
 }
 
 export function isRowRelevant(row: any, filter: any): boolean {
@@ -136,7 +152,7 @@ export function idsOnly(table: Table, row: any): any {
   return idsOnly
 }
 
-export function instanceRelevantCells(table: Table, row: any, alias?: string): any {
+export function filterCellsOfTable(table: Table, row: any, alias?: string): any {
   let relevantCells: any = {}
 
   for (let column of Object.keys(table.columns)) {
@@ -147,7 +163,7 @@ export function instanceRelevantCells(table: Table, row: any, alias?: string): a
   return relevantCells
 }
 
-export function instanceRelevantCellsWithoutAlias(table: Table, row: any, alias?: string): any {
+export function filterCellsOfTableAndRemoveAlias(table: Table, row: any, alias?: string): any {
   let relevantCells: any = {}
 
   for (let column of Object.keys(table.columns)) {

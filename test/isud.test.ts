@@ -318,14 +318,23 @@ describe('isud', function() {
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
 
         expect(rows.length).to.equal(1)
-        expect(rows[0].table1__id).to.equal(1)
-        expect(rows[0].table1__column1).to.equal('a')
-        expect(rows[0].table1__column2).to.equal(1)
-        expect(rows[0].table1__many__table1_id).to.equal(1)
-        expect(rows[0].table1__many__table2_id).to.equal('x')
-        expect(rows[0].table1__many__column1).to.equal('b')
-        expect(rows[0].table1__many__object2__id).to.equal('x')
-        expect(rows[0].table1__many__object2__column1).to.equal('c')
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              table1_id: 1,
+              table2_id: 'x',
+              column1: 'b',
+              table1_id2: null,
+              object2: {
+                id: 'x',
+                column1: 'c'
+              }
+            }
+          ]
+        })
       })
 
       it('should select the one row where the many-to-one relationship is not present', async function() {
@@ -360,14 +369,19 @@ describe('isud', function() {
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
 
         expect(rows.length).to.equal(1)
-        expect(rows[0].table1__id).to.equal(1)
-        expect(rows[0].table1__column1).to.equal('a')
-        expect(rows[0].table1__column2).to.equal(1)
-        expect(rows[0].table1__many__table1_id).to.equal(1)
-        expect(rows[0].table1__many__table2_id).to.be.null
-        expect(rows[0].table1__many__column1).to.equal('d')
-        expect(rows[0].table1__many__object2__id).to.be.null
-        expect(rows[0].table1__many__object2__column1).to.be.null
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              table1_id: 1,
+              table2_id: null,
+              column1: 'd',
+              table1_id2: null
+            }
+          ]
+        })
       })
 
       it('should select all rows', async function() {
@@ -395,22 +409,29 @@ describe('isud', function() {
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
 
         expect(rows.length).to.equal(2)
-        expect(rows[0].table1__id).to.equal(1)
-        expect(rows[0].table1__column1).to.equal('a')
-        expect(rows[0].table1__column2).to.equal(1)
-        expect(rows[0].table1__many__table1_id).to.equal(1)
-        expect(rows[0].table1__many__table2_id).to.equal('x')
-        expect(rows[0].table1__many__column1).to.equal('b')
-        expect(rows[0].table1__many__object2__id).to.equal('x')
-        expect(rows[0].table1__many__object2__column1).to.equal('c')
-        expect(rows[1].table1__id).to.equal(1)
-        expect(rows[1].table1__column1).to.equal('a')
-        expect(rows[1].table1__column2).to.equal(1)
-        expect(rows[1].table1__many__table1_id).to.equal(1)
-        expect(rows[1].table1__many__table2_id).to.be.null
-        expect(rows[1].table1__many__column1).to.equal('d')
-        expect(rows[1].table1__many__object2__id).to.be.null
-        expect(rows[1].table1__many__object2__column1).to.be.null
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              table1_id: 1,
+              table2_id: 'x',
+              column1: 'b',
+              table1_id2: null,
+              object2: {
+                id: 'x',
+                column1: 'c'
+              }
+            },
+            {
+              table1_id: 1,
+              table2_id: null,
+              column1: 'd',
+              table1_id2: null
+            }
+          ]
+        })
       })
     })
 
