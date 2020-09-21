@@ -26,7 +26,7 @@ describe('isud', function() {
       await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20))')
       await pool.query('CREATE TABLE table3 (id SERIAL, column1 VARCHAR(20), table3_id INTEGER)')
       await pool.query('CREATE TABLE table4 (table1_id1 INTEGER, table1_id2 INTEGER)')
-      await pool.query('CREATE TABLE table_many (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20))')
+      await pool.query('CREATE TABLE table_many (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20), table1_id2 INTEGER)')
     })
 
     afterEach(async function() {
@@ -97,6 +97,7 @@ describe('isud', function() {
             table1_id: 1,
             table2_id: 'x',
             column1: 'b',
+            table1_id2: null,
             object2: {
               id: 'x',
               column1: 'c'
@@ -106,6 +107,7 @@ describe('isud', function() {
             table1_id: 1,
             table2_id: 'y',
             column1: 'd',
+            table1_id2: null,
             object2: {
               id: 'y',
               column1: 'e'
@@ -126,9 +128,11 @@ describe('isud', function() {
         expect(tableManyRows[0].table1_id).to.equal(1)
         expect(tableManyRows[0].table2_id).to.equal('x')
         expect(tableManyRows[0].column1).to.equal('b')
+        expect(tableManyRows[0].table1_id2).to.be.null
         expect(tableManyRows[1].table1_id).to.equal(1)
         expect(tableManyRows[1].table2_id).to.equal('y')
         expect(tableManyRows[1].column1).to.equal('d')
+        expect(tableManyRows[1].table1_id2).to.be.null
 
         let table2Rows = await pgQueryFn('SELECT * FROM table2')
 
@@ -139,7 +143,7 @@ describe('isud', function() {
         expect(table2Rows[1].column1).to.equal('e')
       })
 
-      it('should insert a row with a many-to-one relationships', async function() {
+      it('should insert a row with a many-to-one relationship', async function() {
         let row: any = {
           column1: 'a',
           object1: {
@@ -200,9 +204,9 @@ describe('isud', function() {
         expect(insertedRow.table3_id).to.equal(1)
         expect(insertedRow.column1).to.equal('a')
         expect(insertedRow.object3).to.deep.equal({
-          id: 2,
+          id: 1,
           column1: 'b',
-          table3_id: 1
+          table3_id: 2
         })
 
         let rows = await pgQueryFn('SELECT * FROM table3')
@@ -266,7 +270,8 @@ describe('isud', function() {
         expect(insertedRow.many).to.deep.equal([{
           table1_id: 1,
           table2_id: null,
-          column1: 'a'
+          column1: 'a',
+          table1_id2: null,
         }])
 
         let table1Rows = await pgQueryFn('SELECT * FROM table_many')

@@ -4,27 +4,32 @@ import { fillCreateCriteria, fillDeleteCriteria, fillReadCriteria, fillUpdateCri
 import { rowToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { buildSelectQuery } from './queryTools'
 import { idsOnly } from './rowTools'
-import { getRelationshipNameByColumn, getRelationshipNames, Relationship, Schema } from './Schema'
+import { getRelationshipNameByColumn, getRelationshipNames, isId, Relationship, Schema } from './Schema'
 
 class FiddledRows {
-  rows: { tableName: string, row: any, fiddledRow?: any }[] = []
+  fiddledRows: { tableName: string, row: any, fiddledRow?: any }[] = []
 
   add(tableName: string, row: any, fiddledRow?: any) {
-    this.rows.push({ tableName: tableName, row: row, fiddledRow: fiddledRow })
+    this.fiddledRows.push({ tableName: tableName, row: row, fiddledRow: fiddledRow })
   }
 
   setFiddledRow(row: any, fiddledRow: any) {
-    let inserted = this.getByRow(row)
-
-    if (inserted == undefined) {
-      throw new Error('Could not set inserted row because the row was not already added')
+    let existingFiddledRow = undefined
+    for (let fiddledRow of this.fiddledRows) {
+      if (fiddledRow.row === row) {
+        existingFiddledRow = fiddledRow
+      }
     }
 
-    inserted.fiddledRow = fiddledRow
+    if (existingFiddledRow == undefined) {
+      throw new Error('Could not set fiddled row because the row object was not already fiddled with')
+    }
+
+    existingFiddledRow.fiddledRow = fiddledRow
   }
 
   containsTableName(tableName: string): boolean {
-    for (let fiddledRow of this.rows) {
+    for (let fiddledRow of this.fiddledRows) {
       if (fiddledRow.tableName === tableName) {
         return true
       }
@@ -33,13 +38,29 @@ class FiddledRows {
   }
 
   containsRow(row: any): boolean {
-    return this.getByRow(row) != undefined
+    for (let fiddledRow of this.fiddledRows) {
+      if (fiddledRow.row === row) {
+        return true
+      }
+    }
+
+    return false
   }
 
-  getByRow(row: any): { tableName: string, row: any, fiddledRow?: any } | undefined {
-    for (let fiddledRow of this.rows) {
+  getByRow(row: any): any | undefined {
+    for (let fiddledRow of this.fiddledRows) {
       if (fiddledRow.row === row) {
-        return fiddledRow
+        return fiddledRow.fiddledRow
+      }
+    }
+  }
+
+  getByTableNameAndId(tableName: string, idColumnName: string, idColumnValue: any): any | undefined {
+    for (let fiddledRow of this.fiddledRows) {
+      if (fiddledRow.tableName == tableName && fiddledRow.fiddledRow != undefined) {
+        if (fiddledRow.fiddledRow[idColumnName] == idColumnValue) {
+          return fiddledRow.fiddledRow
+        }
       }
     }
   }
@@ -58,14 +79,14 @@ export async function insert(
   // console.debug('tableName', tableName)
   // console.debug('db', db)
   // console.debug('row', row)
-  // console.debug('alreadyInsertedRows', alreadyInsertedRows)
+  // console.debug('alreadyInsertedRows', alreadyInsertedRows.fiddledRows)
   // console.debug('insertedRow', insertedRow)
   // console.debug('insertedRowIntoTableName', insertedRowIntoTableName)
 
   let alreadyInsertedRow = alreadyInsertedRows.getByRow(row)
   if (alreadyInsertedRow != undefined) {
-    console.debug('Row already inserted. Returning already inserted row...', alreadyInsertedRow)
-    return alreadyInsertedRow.fiddledRow
+    // console.debug('Row already inserted. Returning already inserted row...', alreadyInsertedRow)
+    return alreadyInsertedRow
   }
 
   alreadyInsertedRows.add(tableName, row)
@@ -76,11 +97,6 @@ export async function insert(
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  // this one will be used when we try to find out an id which is still missing for which purpose we inserted
-  // a relationship first which this variable represents. later on we want to check if the relationship might
-  // also want to know the id of this inserted entity because it may be a one-to-one relationship.
-  let insertedRelationships: { [relationshipName: string]: any } = {}
-
   // check if the row has all the id's it could have and try to do something about it if not
   // console.debug('Looking for empty id\'s of many-to-one relationships...')
   for (let columnName of Object.keys(table.columns)) {
@@ -90,40 +106,40 @@ export async function insert(
     if (relationshipName != undefined && row[columnName] == undefined) {
       let relationship = table[relationshipName] as Relationship
       
-      // if the relationship is a many-to-one which should be the case anyway because otherwise there would not
-      // be a corresponding column with an id
-      if (relationship.manyToOne) {
+      // if the relationship is a many-to-one and this entity thus needs its id
+      if (relationship.manyToOne || relationship.oneToOne != undefined) {
         // console.debug('Found empty id', columnName)
         // console.debug('relationship', relationship)
 
         // at first check if the given inserted row is the one of the relationship and if so use 
         // the id from there
-        if (relationship.otherTable == insertedRowIntoTableName) {
+        if (relationship.otherTable == insertedRowIntoTableName && isId(table.columns[relationship.thisId])) {
           // console.debug('The relationship was just inserted before. Retrieving id from given insertedRow', insertedRow)
           row[columnName] = insertedRow[relationship.otherId]
         }
         // otherwise check if there is a row object appended for the relationship. if so insert that one
         // first and then take the id from there
         else if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
-          // console.debug('There is an object for that relationship')
-          let alreadyInsertedRow = alreadyInsertedRows.getByRow(row[relationshipName])
-          // console.debug('alreadyInsertedRow', alreadyInsertedRow)
+          // console.debug('There is a row object for that relationship', row[relationshipName])
 
-          if (alreadyInsertedRow != undefined) {
-            if (alreadyInsertedRow.fiddledRow != undefined) {
+          if (alreadyInsertedRows.containsRow(row[relationshipName])) {
+            // console.debug('Row was already inserted or is about to be inserted')
+            let alreadyInsertedRow = alreadyInsertedRows.getByRow(row[relationshipName])
+            // console.debug('alreadyInsertedRow', alreadyInsertedRow)
+  
+            if (alreadyInsertedRow != undefined) {
               // console.debug('Row was already inserted', alreadyInsertedRow)
-              row[columnName] = alreadyInsertedRow.fiddledRow[relationship.otherId]  
+              row[columnName] = alreadyInsertedRow[relationship.otherId]
             }
             else {
-              // console.debug('But it is already about to be inserted somewhere up the recursion chain')
+              // console.debug('Row is about to be inserted somewhere up the recursion chain')
             }
           }
           else {
-            // console.debug('There is a relationship object. Inserting that one first. Going into recursion...', row[relationshipName])
+            // console.debug('Inserting the row of the relationship first. Going into recursion...')
             let relationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows)
             // console.debug('Returning from recursion...')
             row[columnName] = relationshipRow[relationship.otherId]
-            insertedRelationships[relationshipName] = relationshipRow
           }
         }
         else {
@@ -156,8 +172,9 @@ export async function insert(
   }
 
   insertedRow = insertedRows[0]
-
+  
   alreadyInsertedRows.setFiddledRow(row, insertedRow)
+  // console.debug('alreadyInsertedRows', alreadyInsertedRows.fiddledRows)
 
   // console.debug('Insert remaining relationships...')
 
@@ -166,84 +183,82 @@ export async function insert(
     let relationship = table[relationshipName] as Relationship
 
     // if the relationship leads back to were we are coming from continue
-    if (relationship.otherTable == insertedRowIntoTableName) {
+    if (relationship.otherTable == insertedRowIntoTableName && isId(table.columns[relationship.thisId])) {
       // console.debug('Relationship is the source. Continuing...')
       continue
     }
-    // if we already inserted the relationship because we needed its id we will also check
-    // if the relationship wants this id too
-    else if (relationshipName in insertedRelationships) {
-      // console.debug('Relationship was already inserted. Looking for one-to-one relationship...')
+    // if the relationship is a one-to-one insert it
+    else if (relationship.oneToOne != undefined) {
+      // console.debug('Relationship is one-to-one')
 
       // get the table of the relationship
-      let insertedRelationshipRow = insertedRelationships[relationshipName]
-      let insertedRelationship = table[relationshipName] as Relationship
-      let insertedRelationshipTable = schema[insertedRelationship.otherTable]
+      let otherRelationshipTable = schema[relationship.otherTable]
+      let otherRelationship = otherRelationshipTable[relationship.oneToOne] as Relationship
 
-      // console.debug('insertedRelationshipRow', insertedRelationshipRow)
-      // console.debug('insertedRelationship', insertedRelationship)
+      // console.debug('otherRelationshipTable', otherRelationshipTable)
+      // console.debug('otherRelationship', otherRelationship)
 
-      if (insertedRelationshipTable == undefined) {
-        throw new Error('Table not contained in schema: ' + insertedRelationship.otherTable)
+      if (otherRelationship == undefined) {
+        throw new Error('Relationship not contained in table: ' + relationship.oneToOne)
       }
 
-      // console.debug('insertedRelationshipTable', insertedRelationshipTable)
+      let otherRelationshipRow = alreadyInsertedRows.getByTableNameAndId(relationship.otherTable, relationship.otherId, insertedRow[relationship.thisId])
 
-      // go through all relationships of the relationship table and look if one refers to
-      // the table of this function call
-      // console.debug('Looking for a relationship in inserted relationship that is missing the id...')
-      for (let relationshipName of getRelationshipNames(insertedRelationshipTable)) {
-        // console.debug('relationshipName', relationshipName)
-        let relationship = insertedRelationshipTable[relationshipName] as Relationship
-        // console.debug('relationship', relationship)
-
-        // if the relationship is many-to-one and the other table is the same as the current table
-        if (relationship.manyToOne && relationship.otherTable == tableName && insertedRow[relationship.otherId] !== undefined) {
-          let idsOnlyRow = idsOnly(insertedRelationshipTable, insertedRelationshipRow)
-          idsOnlyRow[relationship.thisId] = insertedRow[relationship.otherId]
-          insertedRelationshipRow = await update(schema, insertedRelationship.otherTable, db, queryFn, idsOnlyRow)
-        }
-        else {
-          // console.debug('Relationship did not fullfill conditions. Continuing...')
-        }
+      if (otherRelationshipRow != undefined) {
+        // console.debug('otherRelationshipRow', otherRelationshipRow)
+        let idsOnlyRow = idsOnly(otherRelationshipTable, otherRelationshipRow)
+        idsOnlyRow[otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
+        let updatedOtherRelationshipRow = await update(schema, otherRelationship.otherTable, db, queryFn, idsOnlyRow)
+  
+        insertedRow[relationshipName] = updatedOtherRelationshipRow
+      }
+      else {
+        // console.debug('Could not determine the row of the one-to-one relationship now')
       }
 
-      insertedRow[relationshipName] = insertedRelationshipRow
     }
+    // we already inserted that particular row object and now we just want to set it on the resulting insertedRow object
     else if (alreadyInsertedRows.containsRow(row[relationshipName])) {
-      // console.debug('Relationship was already inserted or is about to be inserted. Continuing...')
-
       let alreadyInsertedRow = alreadyInsertedRows.getByRow(row[relationshipName])
-      if (alreadyInsertedRow != undefined && alreadyInsertedRow.fiddledRow != undefined) {
-        insertedRow[relationshipName] = alreadyInsertedRow.fiddledRow
+      if (alreadyInsertedRow != undefined) {
+        insertedRow[relationshipName] = alreadyInsertedRow
       }
 
+      // console.debug('Set inserted relationship row on the resulting insertedRow object')
       continue
-    }
+    }    
     // otherwise we just insert the relationship
     else if (row[relationshipName] != undefined) {
       // console.debug('Relationship is present in the given row', relationship)
 
-      if (relationship.manyToOne) {
+      // if (relationship.manyToOne) {
         // console.debug('Many-to-one relationship. Inserting row. Going into recursion...')
-        let insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows, insertedRow, tableName)
+      //   let insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows, insertedRow, tableName)
         // console.debug('Returning from recursion...')
-        insertedRow[relationshipName] = insertedRelationshipRow
-      }
-      else if (row[relationshipName] instanceof Array) {
+      //   insertedRow[relationshipName] = insertedRelationshipRow
+      // }
+      if (row[relationshipName] instanceof Array) {
         // console.debug('One-to-many relationship. Inserting all rows...')
         
         for (let relationshipRow of row[relationshipName]) {
-          // console.debug('Inserting relationshipRow. Going into Recursion...', relationshipRow)
-          let insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, relationshipRow, alreadyInsertedRows, insertedRow, tableName)
-          // console.debug('Returning from recursion...', insertedRelationshipRow)
-          
-          if (insertedRelationshipRow != undefined) {
-            if (insertedRow[relationshipName] == undefined) {
-              insertedRow[relationshipName] = []
-            }
+          // console.debug('relationshipRow', relationshipRow)
+
+          if (! alreadyInsertedRows.containsRow(relationshipRow)) {
+            // console.debug('Inserting. Going into Recursion...')
+
+            let insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, relationshipRow, alreadyInsertedRows, insertedRow, tableName)
+            // console.debug('Returning from recursion...', insertedRelationshipRow)
             
-            insertedRow[relationshipName].push(insertedRelationshipRow)
+            if (insertedRelationshipRow != undefined) {
+              if (insertedRow[relationshipName] == undefined) {
+                insertedRow[relationshipName] = []
+              }
+  
+              insertedRow[relationshipName].push(insertedRelationshipRow)
+            }  
+          }
+          else {
+            // console.debug('That particular row object is already being inserted up the recursion chain. Continuing...')
           }
         }
       }
@@ -288,7 +303,7 @@ export async function update(schema: Schema, tableName: string, db: string, quer
   if (allUpdatedRows.containsRow(row)) {
     let alreadyUpdatedRow = allUpdatedRows.getByRow(row)
     // console.debug('Row object was already inserted. Returning already row...', alreadyUpdatedRow!.fiddledRow)
-    return alreadyUpdatedRow!.fiddledRow
+    return alreadyUpdatedRow
   }
 
   let table = schema[tableName]

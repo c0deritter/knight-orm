@@ -13,6 +13,7 @@ export interface Table {
 export interface Relationship {
   oneToMany?: boolean
   manyToOne?: boolean
+  oneToOne?: string
   property: string
   thisId: any
   otherTable: string

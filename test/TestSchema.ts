@@ -100,7 +100,7 @@ export const schema = {
       'table3_id': 'object3Id'
     },
     object3: {
-      manyToOne: true,
+      oneToOne: 'object3',
       thisId: 'table3_id',
       otherTable: 'table3',
       otherId: 'id'
@@ -158,7 +158,8 @@ export const schema = {
     columns: {
       'table1_id': { property: 'object1Id', id: true },
       'table2_id': { property: 'object2Id', id: true },
-      'column1': 'property1'
+      'column1': 'property1',
+      'table1_id2': 'object1Id2'
     },
     object1: {
       manyToOne: true,
@@ -170,6 +171,12 @@ export const schema = {
       manyToOne: true,
       thisId: 'table2_id',
       otherTable: 'table2',
+      otherId: 'id'
+    },
+    object12: {
+      manyToOne: true,
+      thisId: 'table1_id2',
+      otherTable: 'table1',
       otherId: 'id'
     },
     rowToInstance: (row: any) => {
