@@ -54,7 +54,7 @@ describe('criteriaTools', function() {
   })
 
   describe('instanceToDeleteCriteria', function() {
-    it('should convert an instance to update criteria', function() {
+    it('should convert an instance to delete criteria', function() {
       let tableMany = new ManyObjects
       tableMany.object1Id = 1
       tableMany.object2Id = '2'
@@ -66,7 +66,7 @@ describe('criteriaTools', function() {
       tableMany.object1.many = [ tableMany ]
       tableMany.object2 = new Object2
       
-      let criteria = instanceToDeleteCriteria(tableMany, schema['table_many'])
+      let criteria = instanceToDeleteCriteria(schema['table_many'], tableMany)
 
       expect(criteria).to.deep.equal({
         table1_id: 1,

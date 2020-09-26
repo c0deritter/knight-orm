@@ -1,5 +1,23 @@
 import { ReadCriteria } from 'mega-nice-criteria'
-import { getRelationshipNames, isId, Schema, Table } from './Schema'
+import { getIdColumns, isIdColumn, Schema, Table } from './Schema'
+
+export function filterValidColumns(schema: Schema, tableName: string, row: any): any {
+  let table = schema[tableName]
+
+  if (table == undefined) {
+    throw new Error('Table not contained in schema: ' + tableName)
+  }
+
+  let filtered: any = {}
+  
+  for (let columnName of Object.keys(table.columns)) {
+    if (columnName in row) {
+      filtered[columnName] = row[columnName]
+    }
+  }
+
+  return filtered
+}
 
 export function instanceToRow(schema: Schema, tableName: string, instance: any): any {
   let table = schema[tableName]
@@ -11,9 +29,9 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any):
 
   let row = table.instanceToRow(instance)
 
-  for (let relationshipName in getRelationshipNames(table)) {
+  for (let relationshipName in Object.keys(table.relationships)) {
     if (relationshipName in instance) {
-      row[relationshipName] = instanceToRow(schema, table[relationshipName].otherTable, instance[relationshipName])
+      row[relationshipName] = instanceToRow(schema, table.relationships[relationshipName].otherTable, instance[relationshipName])
     }
   }
 }
@@ -35,10 +53,10 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  let relationshipNames = getRelationshipNames(table)
+  let relationshipNames = Object.keys(table.relationships)
   let rowsOrInstances: any[] = []
 
-  // console.debug('relationships', relationships)
+  // console.debug('relationshipNames', relationshipNames)
 
   // console.debug('Iterating over all rows...')
   for (let joinedRow of joinedRows) {
@@ -49,7 +67,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       continue
     }
 
-    let unaliasedRow = filterCellsOfTableAndRemoveAlias(table, joinedRow, alias)
+    let unaliasedRow = getCellsBelongingToTableAndRemoveAlias(table, joinedRow, alias)
     // console.debug('unaliasedRow', unaliasedRow)
 
     // if every column is null then there was no row in the first place
@@ -70,14 +88,14 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     // console.debug('rowOrInstance', rowOrInstance)
     rowsOrInstances.push(rowOrInstance)
 
-    let filteredRow = filterCellsOfTable(table, joinedRow, alias)
+    let filteredRow = getCellsBelongingToTable(table, joinedRow, alias)
     // console.debug('filteredRow', filteredRow)
 
     // console.debug('Iterating over all relationships...')
     for (let relationshipName of relationshipNames) {
       // console.debug('relationshipName', relationshipName)
       
-      let relationship = table[relationshipName]
+      let relationship = table.relationships[relationshipName]
       // console.debug('relationship', relationship)
 
       if (! (relationshipName in criteria)) {
@@ -126,6 +144,26 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
   return rowsOrInstances
 }
 
+export function rowsRepresentSameEntity(table: Table, row1: any, row2: any): boolean {
+  if (row1 == undefined || row2 == undefined) {
+    return false
+  }
+
+  let idColumns = getIdColumns(table)
+
+  if (idColumns.length == 0) {
+    return false
+  }
+
+  for (let idColumn of idColumns) {
+    if (row1[idColumn] === undefined || row1[idColumn] !== row2[idColumn]) {
+      return false
+    }
+  }
+
+  return true
+}
+
 export function isRowRelevant(row: any, filter: any): boolean {
   if (filter == undefined) {
     return true
@@ -144,7 +182,7 @@ export function idsOnly(table: Table, row: any): any {
   let idsOnly: any = {}
   
   for (let column of Object.keys(table.columns)) {
-    if (isId(table.columns[column])) {
+    if (isIdColumn(table.columns[column])) {
       idsOnly[column] = row[column]
     }
   }
@@ -152,7 +190,7 @@ export function idsOnly(table: Table, row: any): any {
   return idsOnly
 }
 
-export function filterCellsOfTable(table: Table, row: any, alias?: string): any {
+export function getCellsBelongingToTable(table: Table, row: any, alias?: string): any {
   let relevantCells: any = {}
 
   for (let column of Object.keys(table.columns)) {
@@ -163,7 +201,7 @@ export function filterCellsOfTable(table: Table, row: any, alias?: string): any 
   return relevantCells
 }
 
-export function filterCellsOfTableAndRemoveAlias(table: Table, row: any, alias?: string): any {
+export function getCellsBelongingToTableAndRemoveAlias(table: Table, row: any, alias?: string): any {
   let relevantCells: any = {}
 
   for (let column of Object.keys(table.columns)) {

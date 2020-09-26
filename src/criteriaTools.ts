@@ -1,5 +1,5 @@
 import { DeleteCriteria, UpdateCriteria } from 'mega-nice-criteria'
-import { getPropertyName, getRelationshipNames, isId, Relationship, Schema, Table } from './Schema'
+import { getPropertyName, isIdColumn, Schema, Table } from './Schema'
 
 export function instanceCriteriaToRowCriteria<T>(instanceCriteria: any, tableName: string, schema: Schema): T {
   let table = schema[tableName]
@@ -21,9 +21,9 @@ export function instanceCriteriaToRowCriteria<T>(instanceCriteria: any, tableNam
     rowCriteria[column] = propertyValue
   }
 
-  for (let relationshipName of getRelationshipNames(table)) {
+  for (let relationshipName of Object.keys(table.relationships)) {
     let relationshipValue = instanceCriteria[relationshipName]
-    let relationship = table[relationshipName] as Relationship
+    let relationship = table.relationships[relationshipName]
 
     if (relationshipValue === undefined) {
       continue
@@ -42,7 +42,7 @@ export function rowToUpdateCriteria(row: any, table: Table): UpdateCriteria {
   }
 
   for (let column of Object.keys(table.columns)) {
-    if (isId(table.columns[column])) {
+    if (isIdColumn(table.columns[column])) {
       updateCriteria[column] = row[column] === undefined ? null : row[column]
     }
     else if (column in row) {
@@ -58,11 +58,11 @@ export function instanceToUpdateCriteria(instance: any, table: Table): UpdateCri
   return rowToUpdateCriteria(row, table)
 }
 
-export function rowToDeleteCriteria(row: any, table: Table): DeleteCriteria {
+export function rowToDeleteCriteria(table: Table, row: any): DeleteCriteria {
   let deleteCriteria: any = {}
 
   for (let column of Object.keys(table.columns)) {
-    if (isId(table.columns[column])) {
+    if (isIdColumn(table.columns[column]) && row[column] !== undefined) {
       deleteCriteria[column] = row[column]
     }
   }
@@ -70,7 +70,7 @@ export function rowToDeleteCriteria(row: any, table: Table): DeleteCriteria {
   return deleteCriteria
 }
 
-export function instanceToDeleteCriteria(instance: any, table: Table): DeleteCriteria {
+export function instanceToDeleteCriteria(table: Table, instance: any): DeleteCriteria {
   let row = table.instanceToRow(instance)
-  return rowToDeleteCriteria(row, table)
+  return rowToDeleteCriteria(table, row)
 }

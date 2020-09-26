@@ -1,6 +1,6 @@
 import sql, { Query } from 'mega-nice-sql'
 import { fillCreateCriteria } from 'mega-nice-sql-criteria-filler'
-import { Relationship, getRelationshipNames, Schema, Table } from './Schema'
+import { Relationship, Schema, Table } from './Schema'
 
 export class SqlOrm {
 

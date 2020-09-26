@@ -4,8 +4,8 @@ export interface Schema {
 
 export interface Table {
   name: string
-  columns: {[ name: string ]: string|{ property: string, id: boolean }}
-  [ relationship: string ]: any|Relationship
+  columns: { [name: string]: string | { property: string, id: boolean } }
+  relationships: { [relationship: string]: Relationship }
   rowToInstance: (row: any) => any
   instanceToRow: (instance: any) => any
 }
@@ -14,26 +14,37 @@ export interface Relationship {
   oneToMany?: boolean
   manyToOne?: boolean
   oneToOne?: string
-  property: string
   thisId: any
   otherTable: string
   otherId: any
   delete?: boolean
 }
 
-export function isId(columnSchema: string | { property: string, id: boolean }): boolean {
-  if (typeof columnSchema == 'string') {
+export function getIdColumns(table: Table): string[] {
+  let idColumns: string[] = []
+
+  for (let column of Object.keys(table.columns)) {
+    if (isIdColumn(table.columns[column])) {
+      idColumns.push(column)
+    }
+  }
+
+  return idColumns
+}
+
+export function isIdColumn(column: string | { property: string, id: boolean }): boolean {
+  if (typeof column == 'string') {
     return false
   }
 
-  return columnSchema.id
+  return column.id
 }
 
-export function getRelationshipNameByColumn(columnName: string, table: Table): string|undefined {
-  for (let relationshipName of getRelationshipNames(table)) {
-    let relationship = table[relationshipName] as Relationship
+export function getRelationshipNameByColumn(column: string, table: Table): string|undefined {
+  for (let relationshipName of Object.keys(table.relationships)) {
+    let relationship = table.relationships[relationshipName]
 
-    if (relationship.thisId == columnName) {
+    if (relationship.thisId == column) {
       return relationshipName
     }
   }
@@ -45,18 +56,4 @@ export function getPropertyName(columnSchema: string | { property: string, id: 
   }
 
   return columnSchema.property
-}
-
-export function getRelationshipNames(table: Table): string[] {
-  let names: string[] = []
-
-  for (let property of Object.keys(table)) {
-    if (property == 'name' || property == 'columns' || typeof table[property] == 'function') {
-      continue
-    }
-
-    names.push(property.toString())
-  }
-
-  return names
 }

@@ -2,7 +2,7 @@ import * as chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
-import { insert, select, update } from '../src/isud'
+import { delete_, insert, select, update } from '../src/isud'
 import { schema } from './testSchema'
 
 chai.use(chaiAsPromised)
@@ -644,6 +644,181 @@ describe('isud', function() {
         expect(table2Rows.length).to.equal(1)
         expect(table2Rows[0].table1_id1).to.equal(1)
         expect(table2Rows[0].table1_id2).to.equal(1)
+      })
+    })
+
+    describe('delete_', function() {
+      it('should delete a simple row by id', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
+
+        let deletedRows = await delete_(schema, 'table1', 'postgres', pgQueryFn, { id: 1 })
+
+        expect(deletedRows).to.deep.equal([{ id: 1, column1: 'a', column2: 1 }])
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows).to.deep.equal([{
+          id: 2,
+          column1: 'b',
+          column2: 2
+        }])
+      })
+
+      it('should delete a simple row by another column than the id', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
+
+        let deletedRows = await delete_(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a' })
+
+        expect(deletedRows).to.deep.equal([{ id: 1, column1: 'a', column2: 1 }])
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows).to.deep.equal([{
+          id: 2,
+          column1: 'b',
+          column2: 2
+        }])
+      })
+
+      it('should not delete anything if the criteria contained invalid columns', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
+
+        expect(delete_(schema, 'table1', 'postgres', pgQueryFn, { invalid: 'invalid' })).to.be.rejectedWith(Error)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(2)
+        expect(table1Rows).to.deep.equal([
+          {
+            id: 1,
+            column1: 'a',
+            column2: 1
+          },
+          {
+            id: 2,
+            column1: 'b',
+            column2: 2
+          }
+        ])
+      })
+
+      it('should delete its one-to-many relationships', async function() {
+        let row1 = {
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              column1: 'b',
+              object2: {
+                id: 'x',
+                column1: 'c'
+              }
+            }
+          ]
+        }
+
+        let row2 = {
+          column1: 'b',
+          column2: 2,
+          many: [
+            {
+              column1: 'c',
+              object2: {
+                id: 'y',
+                column1: 'd'
+              }
+            }
+          ]
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row1)
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row2)
+
+        let deletedRows = await delete_(schema, 'table1', 'postgres', pgQueryFn, { id: 1 })
+
+        expect(deletedRows.length).to.equal(1)
+        expect(deletedRows).to.deep.equal([{
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              table1_id: 1,
+              table2_id: 'x',
+              column1: 'b',
+              table1_id2: null
+            }
+          ]
+        }])
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].id).to.equal(2)
+        expect(table1Rows[0].column1).to.equal('b')
+        expect(table1Rows[0].column2).to.equal(2)
+
+        let tableManyRows = await pgQueryFn('SELECT * FROM table_many')
+
+        expect(tableManyRows.length).to.equal(1)
+        expect(tableManyRows[0].table1_id).to.equal(2)
+        expect(tableManyRows[0].table2_id).to.equal('y')
+        expect(tableManyRows[0].column1).to.equal('c')
+        expect(tableManyRows[0].table1_id2).to.be.null
+
+        let table2Rows = await pgQueryFn('SELECT * FROM table2')
+
+        expect(table2Rows.length).to.equal(2)
+        expect(table2Rows[0].id).to.equal('x')
+        expect(table2Rows[0].column1).to.equal('c')
+        expect(table2Rows[1].id).to.equal('y')
+        expect(table2Rows[1].column1).to.equal('d')
+      })
+
+      it('should delete its one-to-one relationship', async function() {
+        let row1 = {
+          column1: 'a',
+          object3: {
+            column1: 'b'
+          }
+        }
+
+        let row2 = {
+          column1: 'c',
+          object3: {
+            column1: 'd',
+          }
+        }
+
+        await insert(schema, 'table3', 'postgres', pgQueryFn, row1)
+        await insert(schema, 'table3', 'postgres', pgQueryFn, row2)
+
+        let deletedRows = await delete_(schema, 'table3', 'postgres', pgQueryFn, { id: 2 })
+
+        expect(deletedRows.length).to.equal(1)
+        expect(deletedRows).to.deep.equal([{
+          id: 2,
+          column1: 'a',
+          table3_id: 1,
+          object3: {
+            id: 1,
+            column1: 'b',
+            table3_id: 2
+          }
+        }])
+
+        let table3Rows = await pgQueryFn('SELECT * FROM table3')
+
+        expect(table3Rows.length).to.equal(2)
+        expect(table3Rows[0].id).to.equal(4)
+        expect(table3Rows[0].column1).to.equal('c')
+        expect(table3Rows[1].id).to.equal(3)
+        expect(table3Rows[1].column1).to.equal('d')
       })
     })
   })

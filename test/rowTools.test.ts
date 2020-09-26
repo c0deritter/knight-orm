@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import 'mocha'
-import { unjoinRows } from '../src/rowTools'
+import { rowsRepresentSameEntity, unjoinRows } from '../src/rowTools'
 import { ManyObjects, Object1, Object2, schema } from './testSchema'
 
 describe('rowTools', function() {
@@ -86,6 +86,36 @@ describe('rowTools', function() {
       expect(instances[2]).to.be.instanceOf(Object1)
       expect(instances[2].many).to.be.undefined
       expect(instances[2]).to.deep.equal({ id: 3, property1: 'f', property2: 3 })
+    })
+  })
+
+  describe('rowsRepresentSameEntity', function() {
+    it('should detect two rows as the same entity', function() {
+      let row1 = { id: 1, column1: 'a', column2: 1 }
+      let row2 = { id: 1, column1: 'b', column2: 2 }
+
+      expect(rowsRepresentSameEntity(schema['table1'], row1, row2)).to.be.true
+      expect(rowsRepresentSameEntity(schema['table1'], row2, row1)).to.be.true
+
+      let row3 = { table1_id: 1, table2_id: 'x', column1: 'a' }
+      let row4 = { table1_id: 1, table2_id: 'x', column1: 'b' }
+
+      expect(rowsRepresentSameEntity(schema['table_many'], row3, row4)).to.be.true
+      expect(rowsRepresentSameEntity(schema['table_many'], row3, row4)).to.be.true
+    })
+
+    it('should not detect two rows as the same entity', function() {
+      let row1 = { id: 1 }
+      let row2 = { id: 2, column1: 'a', column2: 1 }
+
+      expect(rowsRepresentSameEntity(schema['table1'], row1, row2)).to.be.false
+      expect(rowsRepresentSameEntity(schema['table1'], row2, row1)).to.be.false
+
+      let row3 = { table1_id: 1, table2_id: 'x' }
+      let row4 = { table1_id: 2, table2_id: 'x', column1: 'a' }
+
+      expect(rowsRepresentSameEntity(schema['table_many'], row3, row4)).to.be.false
+      expect(rowsRepresentSameEntity(schema['table_many'], row3, row4)).to.be.false
     })
   })
 })

@@ -1,4 +1,4 @@
-import { Schema } from "../src/Schema"
+import { Schema } from '../src/Schema'
 
 export class Object1 {
   id?: number
@@ -44,11 +44,14 @@ export const schema = {
       'column1': 'property1',
       'column2': 'property2'
     },
-    many: {
-      oneToMany: true,
-      thisId: 'id',
-      otherTable: 'table_many',
-      otherId: 'table1_id'
+    relationships: {
+      many: {
+        oneToMany: true,
+        thisId: 'id',
+        otherTable: 'table_many',
+        otherId: 'table1_id',
+        delete: true
+      }
     },
     rowToInstance: (row: any) => {
       let obj1 = new Object1
@@ -72,11 +75,14 @@ export const schema = {
       'id': { property: 'id', id: true },
       'column1': 'property1'
     },
-    many: {
-      oneToMany: true,
-      thisId: 'id',
-      otherTable: 'table_many',
-      otherId: 'table2_id'
+    relationships: {
+      many: {
+        oneToMany: true,
+        thisId: 'id',
+        otherTable: 'table_many',
+        otherId: 'table2_id',
+        delete: true
+      }  
     },
     rowToInstance: (row: any) => {
       let obj2 = new Object2
@@ -99,11 +105,14 @@ export const schema = {
       'column1': 'property1',
       'table3_id': 'object3Id'
     },
-    object3: {
-      oneToOne: 'object3',
-      thisId: 'table3_id',
-      otherTable: 'table3',
-      otherId: 'id'
+    relationships: {
+      object3: {
+        oneToOne: 'object3',
+        thisId: 'table3_id',
+        otherTable: 'table3',
+        otherId: 'id',
+        delete: true
+      }  
     },
     rowToInstance: (row: any) => {
       let obj3 = new Object3
@@ -127,17 +136,19 @@ export const schema = {
       'table1_id1': { property: 'object1Id1', id: true },
       'table1_id2': { property: 'object1Id2', id: true }
     },
-    object11: {
-      manyToOne: true,
-      thisId: 'table1_id1',
-      otherTable: 'table1',
-      otherId: 'id'
-    },
-    object12: {
-      manyToOne: true,
-      thisId: 'table1_id2',
-      otherTable: 'table1',
-      otherId: 'id'
+    relationships: {
+      object11: {
+        manyToOne: true,
+        thisId: 'table1_id1',
+        otherTable: 'table1',
+        otherId: 'id'
+      },
+      object12: {
+        manyToOne: true,
+        thisId: 'table1_id2',
+        otherTable: 'table1',
+        otherId: 'id'
+      }
     },
     rowToInstance: (row: any) => {
       let obj4 = new Object4
@@ -161,23 +172,25 @@ export const schema = {
       'column1': 'property1',
       'table1_id2': 'object1Id2'
     },
-    object1: {
-      manyToOne: true,
-      thisId: 'table1_id',
-      otherTable: 'table1',
-      otherId: 'id'
-    },
-    object2: {
-      manyToOne: true,
-      thisId: 'table2_id',
-      otherTable: 'table2',
-      otherId: 'id'
-    },
-    object12: {
-      manyToOne: true,
-      thisId: 'table1_id2',
-      otherTable: 'table1',
-      otherId: 'id'
+    relationships: {
+      object1: {
+        manyToOne: true,
+        thisId: 'table1_id',
+        otherTable: 'table1',
+        otherId: 'id'
+      },
+      object2: {
+        manyToOne: true,
+        thisId: 'table2_id',
+        otherTable: 'table2',
+        otherId: 'id'
+      },
+      object12: {
+        manyToOne: true,
+        thisId: 'table1_id2',
+        otherTable: 'table1',
+        otherId: 'id'
+      }
     },
     rowToInstance: (row: any) => {
       let many = new ManyObjects

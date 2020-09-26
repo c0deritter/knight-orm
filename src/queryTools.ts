@@ -44,7 +44,7 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
   }
 
   // console.debug('Iterating through all properties of the table object which contain the relationships...')
-  for (let relationshipName of Object.keys(table)) {
+  for (let relationshipName of Object.keys(table.relationships)) {
     // console.debug('relationshipName', relationshipName)
     
     if (relationshipName == 'table' || relationshipName == 'columns') {
@@ -57,7 +57,7 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
       continue
     }
 
-    let relationship = table[relationshipName]
+    let relationship = table.relationships[relationshipName]
     let relationshipCriteria = criteria[relationshipName]
     // console.debug('relationship', relationship)
     // console.debug('relationshipCriteria', relationshipCriteria)
