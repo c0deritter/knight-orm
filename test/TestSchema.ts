@@ -40,7 +40,6 @@ export class ManyObjects {
 
 export const schema = {
   'table1': {
-    name: 'table1',
     columns: {
       'id': { property: 'id', id: true },
       'column1': 'property1',
@@ -72,7 +71,6 @@ export const schema = {
   },
   
   'table2': {
-    name: 'table2',
     columns: {
       'id': { property: 'id', id: true },
       'column1': 'property1'
@@ -101,7 +99,6 @@ export const schema = {
   },
 
   'table3': {
-    name: 'table3',
     columns: {
       'id': { property: 'id', id: true },
       'column1': 'property1',
@@ -133,7 +130,6 @@ export const schema = {
   },
 
   'table4': {
-    name: 'table4',
     columns: {
       'table1_id1': { property: 'object1Id1', id: true },
       'table1_id2': { property: 'object1Id2', id: true }
@@ -167,7 +163,6 @@ export const schema = {
   },
 
   'table_many': {
-    name: 'table_many',
     columns: {
       'table1_id': { property: 'object1Id', id: true },
       'table2_id': { property: 'object2Id', id: true },

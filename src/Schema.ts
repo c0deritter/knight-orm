@@ -3,7 +3,6 @@ export interface Schema {
 }
 
 export interface Table {
-  name: string
   columns: { [name: string]: string | { property: string, id: boolean } }
   relationships: { [relationship: string]: Relationship }
   rowToInstance: (row: any) => any
