@@ -3,7 +3,7 @@ import sql from 'mega-nice-sql'
 import { fillReadCriteria, fillUpdateCriteria } from 'mega-nice-sql-criteria-filler'
 import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { delete_ as isudDelete, insert } from './isud'
-import { buildSelectQuery } from './queryTools'
+import { buildCountQuery, buildSelectQuery } from './queryTools'
 import { allIdsSet, instanceToRow, rowToInstance, unjoinRows } from './rowTools'
 import { Schema } from './Schema'
 import { FiddledRows } from './util'
@@ -36,6 +36,28 @@ export async function read<T>(schema: Schema, tableName: string, db: string, que
   let instances = unjoinRows(schema, tableName, joinedRows, criteria, true)
 
   return instances
+}
+
+export async function count<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: ReadCriteria): Promise<number> {
+  let table = schema[tableName]
+
+  if (table == undefined) {
+    throw new Error('Table not contained in schema: ' + tableName)
+  }
+
+  let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
+
+  let query = buildCountQuery(schema, tableName, rowCriteria)
+
+  let sqlString = query.sql(db)
+  let values = query.values()
+
+  // console.debug('sqlString', sqlString)
+  // console.debug('values', values)
+
+  let rows = await queryFn(sqlString, values)
+
+  return parseInt(rows[0].count)
 }
 
 export async function update<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: Partial<T>, alreadyUpdatedRows: FiddledRows = new FiddledRows(schema)): Promise<T> {
