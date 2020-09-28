@@ -155,7 +155,7 @@ export const schema = {
     rowToInstance: (row: any) => {
       let obj4 = new Object4
       obj4.object1Id1 = row.table1_id1
-      obj4.object1Id2 = row.table2_i2d
+      obj4.object1Id2 = row.table1_id2
       return obj4      
     },
     instanceToRow: (object4: Object4) => {
@@ -196,7 +196,7 @@ export const schema = {
     },
     rowToInstance: (row: any) => {
       let many = new ManyObjects
-      many.object1Id = parseInt(row.table1_id)
+      many.object1Id = row.table1_id
       many.object2Id = row.table2_id
       many.property1 = row.column1
       many.object1Id2 = row.table1_id2

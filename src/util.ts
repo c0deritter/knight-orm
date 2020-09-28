@@ -3,17 +3,17 @@ import { Schema } from './Schema'
 
 export class FiddledRows {
   schema: Schema
-  fiddledRows: { tableName: string, row: any, fiddledRow?: any }[] = []
+  fiddledRows: { tableName: string, row: any, result?: any }[] = []
 
   constructor(schema: Schema) {
     this.schema = schema
   }
 
   add(tableName: string, row: any, fiddledRow?: any) {
-    this.fiddledRows.push({ tableName: tableName, row: row, fiddledRow: fiddledRow })
+    this.fiddledRows.push({ tableName: tableName, row: row, result: fiddledRow })
   }
 
-  setFiddledRow(row: any, fiddledRow: any) {
+  setResult(row: any, result: any) {
     let existingFiddledRow = undefined
     for (let fiddledRow of this.fiddledRows) {
       if (fiddledRow.row === row) {
@@ -25,7 +25,7 @@ export class FiddledRows {
       throw new Error('Could not set fiddled row because the row object was not already fiddled with')
     }
 
-    existingFiddledRow.fiddledRow = fiddledRow
+    existingFiddledRow.result = result
   }
 
   containsTableName(tableName: string): boolean {
@@ -66,20 +66,20 @@ export class FiddledRows {
 
     for (let fiddledRow of this.fiddledRows) {
       if (fiddledRow.row === row) {
-        return fiddledRow.fiddledRow
+        return fiddledRow.result
       }
 
       if (rowsRepresentSameEntity(table, row, fiddledRow.row)) {
-        return fiddledRow.fiddledRow
+        return fiddledRow.result
       }
     }
   }
 
   getByTableNameAndId(tableName: string, idColumnName: string, idColumnValue: any): any | undefined {
     for (let fiddledRow of this.fiddledRows) {
-      if (fiddledRow.tableName == tableName && fiddledRow.fiddledRow != undefined) {
-        if (fiddledRow.fiddledRow[idColumnName] == idColumnValue) {
-          return fiddledRow.fiddledRow
+      if (fiddledRow.tableName == tableName && fiddledRow.result != undefined) {
+        if (fiddledRow.result[idColumnName] == idColumnValue) {
+          return fiddledRow.result
         }
       }
     }

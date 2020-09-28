@@ -249,7 +249,7 @@ describe('crud', function() {
         expect(createdInstance.id).to.equal(1)
         expect(createdInstance.many).to.deep.equal([{
           object1Id: 1,
-          objec2Id: null,
+          object2Id: null,
           property1: 'a',
           object1Id2: null
         }])
@@ -442,7 +442,7 @@ describe('crud', function() {
         expect(table1Rows[0].column2).to.equal(1)
       })
 
-      it.only('should not update if there was no valid column to set', async function() {
+      it('should not update if there was no valid column to set', async function() {
         let object1 = new Object1
         object1.property1 = 'a'
         object1.property2 = 1
@@ -481,6 +481,7 @@ describe('crud', function() {
         await create(schema, 'table1', 'postgres', pgQueryFn, object1)
 
         let updateObject1 = new Object1
+        updateObject1.id = 1
         updateObject1.property1 = 'b'
         updateObject1.property2 =  2
         updateObject1.many = [new ManyObjects]
@@ -586,13 +587,13 @@ describe('crud', function() {
     })
 
     describe('delete_', function() {
-      it('should delete a simple row by id', async function() {
+      it('should delete a simple instance by id', async function() {
         await create(schema, 'table1', 'postgres', pgQueryFn, { property1: 'a', property2: 1 })
         await create(schema, 'table1', 'postgres', pgQueryFn, { property1: 'b', property2: 2 })
 
         let deletedInstances = await delete_(schema, 'table1', 'postgres', pgQueryFn, { id: 1 })
 
-        expect(deletedInstances).to.deep.equal([{ id: 1, property1: 'a', property2: 1 }])
+        expect(deletedInstances).to.deep.equal({ id: 1, property1: 'a', property2: 1 })
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
@@ -662,7 +663,7 @@ describe('crud', function() {
 
         let object2 = new Object1
         object2.property1 = 'b'
-        object2.property2 =  1
+        object2.property2 =  2
         object2.many = [new ManyObjects]
         object2.many[0].property1 = 'c'
         object2.many[0].object2 = new Object2
@@ -675,7 +676,7 @@ describe('crud', function() {
         let deletedInstance = await delete_(schema, 'table1', 'postgres', pgQueryFn, { id: 1 })
 
         expect(deletedInstance).to.be.not.undefined
-        expect(deletedInstance).to.deep.equal([{
+        expect(deletedInstance).to.deep.equal({
           id: 1,
           property1: 'a',
           property2: 1,
@@ -687,7 +688,7 @@ describe('crud', function() {
               object1Id2: null
             }
           ]
-        }])
+        })
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
@@ -732,7 +733,7 @@ describe('crud', function() {
         let deletedInstance = await delete_(schema, 'table3', 'postgres', pgQueryFn, { id: 2 })
 
         expect(deletedInstance).to.be.not.undefined
-        expect(deletedInstance).to.deep.equal([{
+        expect(deletedInstance).to.deep.equal({
           id: 2,
           property1: 'a',
           object3Id: 1,
@@ -741,7 +742,7 @@ describe('crud', function() {
             property1: 'b',
             object3Id: 2
           }
-        }])
+        })
 
         let table3Rows = await pgQueryFn('SELECT * FROM table3')
 

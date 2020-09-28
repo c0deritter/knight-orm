@@ -346,3 +346,13 @@ export function getCellsBelongingToTableAndRemoveAlias(table: Table, row: any, a
 
   return relevantCells
 }
+
+export function allIdsSet(table: Table, row: any): boolean {
+  for (let idColumn of getIdColumns(table)) {
+    if (row[idColumn] === undefined) {
+      return false
+    }
+  }
+
+  return true
+}

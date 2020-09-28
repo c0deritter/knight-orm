@@ -4,7 +4,7 @@ import { fillReadCriteria, fillUpdateCriteria } from 'mega-nice-sql-criteria-fil
 import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { delete_ as isudDelete, insert } from './isud'
 import { buildSelectQuery } from './queryTools'
-import { filterValidColumns, instanceToRow, rowToInstance, unjoinRows } from './rowTools'
+import { allIdsSet, instanceToRow, rowToInstance, unjoinRows } from './rowTools'
 import { Schema } from './Schema'
 import { FiddledRows } from './util'
 
@@ -40,8 +40,8 @@ export async function read<T>(schema: Schema, tableName: string, db: string, que
 
 export async function update<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: Partial<T>, alreadyUpdatedRows: FiddledRows = new FiddledRows(schema)): Promise<T> {
   // console.debug('Entering update...')
-  console.debug('instance', instance)
-  // console.debug('allUpdatedRows', allUpdatedRows)
+  // console.debug('instance', instance)
+  // console.debug('alreadyUpdatedRows', alreadyUpdatedRows.fiddledRows)
 
   let table = schema[tableName]
 
@@ -50,7 +50,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   }
 
   let row = table.instanceToRow(instance)
-  console.debug('row', row)
+  // console.debug('row', row)
 
   if (row == undefined) {
     throw new Error('Could not convert the given instance into a row')
@@ -58,12 +58,12 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
 
   if (alreadyUpdatedRows.containsRow(tableName, row)) {
     let alreadyUpdatedRow = alreadyUpdatedRows.getByRow(tableName, row)
-    // console.debug('Row object was already inserted. Returning already updated row...', alreadyUpdatedRow!.fiddledRow)
+    // console.debug('Row object was already inserted. Returning already updated row...', alreadyUpdatedRow)
     return alreadyUpdatedRow
   }
 
   let criteria = rowToUpdateCriteria(schema, tableName, row)
-  console.debug('criteria', criteria)
+  // console.debug('criteria', criteria)
 
   let hasValuesToSet = false
   for (let column of Object.keys(criteria.set)) {
@@ -76,7 +76,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   let updatedRow = undefined
 
   if (hasValuesToSet) {
-    console.debug('There is something to set. Updating...')
+    // console.debug('There is something to set. Updating...')
     let query = sql.update(tableName)
     fillUpdateCriteria(query, criteria, Object.keys(table.columns))
 
@@ -89,8 +89,8 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     let sqlString = query.sql(db)
     let values = query.values()
   
-    console.debug('sqlString', sqlString)
-    console.debug('values', values)
+    // console.debug('sqlString', sqlString)
+    // console.debug('values', values)
   
     let updatedRows = await queryFn(sqlString, values)
     // console.debug('updatedRows', updatedRows)
@@ -122,10 +122,9 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     updatedRow = selectedRows[0]
   }
 
-  alreadyUpdatedRows.add(tableName, row, updatedRow)
-
   let updatedInstance = table.rowToInstance(updatedRow)
-  
+  alreadyUpdatedRows.add(tableName, row, updatedInstance)
+
   // console.debug('Update relationships...')
 
   for (let relationshipName of Object.keys(table.relationships)) {
@@ -161,12 +160,24 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     }
   }
 
+  // console.debug('Returning updatedInstance...', updatedInstance)
   return updatedInstance
 }
 
 export async function delete_<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
+  let table = schema[tableName]
+
+  if (table == undefined) {
+    throw new Error('Table not contained in schema: ' + tableName)
+  }
+
   let criteria = instanceToDeleteCriteria(schema, tableName, instance)
   let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
+
+  if (! allIdsSet(table, rowCriteria)) {
+    throw new Error('Not all id\'s are set')
+  }
+
   let deletedRows = await isudDelete(schema, tableName, db, queryFn, rowCriteria)
 
   if (deletedRows.length != 1) {

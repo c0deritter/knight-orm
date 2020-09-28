@@ -115,7 +115,7 @@ export async function insert(
 
   insertedRow = insertedRows[0]
   
-  alreadyInsertedRows.setFiddledRow(row, insertedRow)
+  alreadyInsertedRows.setResult(row, insertedRow)
   // console.debug('alreadyInsertedRows', alreadyInsertedRows.fiddledRows)
 
   // console.debug('Insert remaining relationships...')
