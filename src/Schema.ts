@@ -4,7 +4,7 @@ export interface Schema {
 
 export interface Table {
   columns: { [name: string]: string | { property: string, id: boolean } }
-  relationships: { [relationship: string]: Relationship }
+  relationships?: { [relationship: string]: Relationship }
   rowToInstance: (row: any) => any
   instanceToRow: (instance: any) => any
 }
@@ -40,6 +40,10 @@ export function isIdColumn(column: string | { property: string, id: boolean }):
 }
 
 export function getRelationshipNameByColumn(column: string, table: Table): string|undefined {
+  if (table.relationships == undefined) {
+    return undefined
+  }
+  
   for (let relationshipName of Object.keys(table.relationships)) {
     let relationship = table.relationships[relationshipName]
 

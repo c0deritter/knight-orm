@@ -66,41 +66,43 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
 
   alreadyConverted.add(instance, row)
 
-  for (let relationshipName of Object.keys(table.relationships)) {
-    // console.debug('relationshipName', relationshipName)
-
-    if (typeof instance[relationshipName] == 'object' && instance[relationshipName] !== null) {
-      let relationship = table.relationships[relationshipName]
-
-      if (relationship.manyToOne || relationship.oneToOne != undefined) {
-        // console.debug('Relationship is many-to-one or one-to-one. Going into recursion...')
-        row[relationshipName] = instanceToRow(schema, relationship.otherTable, instance[relationshipName], alreadyConverted)
-        // console.debug('Coming back from recursion...')
-      }
-      else if (instance[relationshipName] instanceof Array) {
-        // console.debug('Relationship is one-to-many')
-
-        for (let relationshipInstance of instance[relationshipName]) {
-          // console.debug('relationshipInstance', relationshipInstance)
-          // console.debug('Going into recursion...')
-          let relationshipRow = instanceToRow(schema, relationship.otherTable, relationshipInstance, alreadyConverted)
+  if (table.relationships != undefined) {
+    for (let relationshipName of Object.keys(table.relationships)) {
+      // console.debug('relationshipName', relationshipName)
+  
+      if (typeof instance[relationshipName] == 'object' && instance[relationshipName] !== null) {
+        let relationship = table.relationships[relationshipName]
+  
+        if (relationship.manyToOne || relationship.oneToOne != undefined) {
+          // console.debug('Relationship is many-to-one or one-to-one. Going into recursion...')
+          row[relationshipName] = instanceToRow(schema, relationship.otherTable, instance[relationshipName], alreadyConverted)
           // console.debug('Coming back from recursion...')
-
-          if (row[relationshipName] == undefined) {
-            row[relationshipName] = []
-          }
-
-          row[relationshipName].push(relationshipRow)
-        }        
+        }
+        else if (instance[relationshipName] instanceof Array) {
+          // console.debug('Relationship is one-to-many')
+  
+          for (let relationshipInstance of instance[relationshipName]) {
+            // console.debug('relationshipInstance', relationshipInstance)
+            // console.debug('Going into recursion...')
+            let relationshipRow = instanceToRow(schema, relationship.otherTable, relationshipInstance, alreadyConverted)
+            // console.debug('Coming back from recursion...')
+  
+            if (row[relationshipName] == undefined) {
+              row[relationshipName] = []
+            }
+  
+            row[relationshipName].push(relationshipRow)
+          }        
+        }
       }
-    }
-    else if (instance[relationshipName] !== undefined) {
-      // console.debug('Relationship is not an object and not undefined')
-      row[relationshipName] = instance[relationshipName]
-    }
-    else {
-      // console.debug('Relationship does not exist on this instance. Continuing...')
-    }
+      else if (instance[relationshipName] !== undefined) {
+        // console.debug('Relationship is not an object and not undefined')
+        row[relationshipName] = instance[relationshipName]
+      }
+      else {
+        // console.debug('Relationship does not exist on this instance. Continuing...')
+      }
+    }  
   }
 
   // console.debug('Returning row...', row)
@@ -130,42 +132,43 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
 
   alreadyConverted.add(instance, row)
 
-  for (let relationshipName of Object.keys(table.relationships)) {
-    // console.debug('relationshipName', relationshipName)
-
-    if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
-      let relationship = table.relationships[relationshipName]
-
-      if (relationship.manyToOne || relationship.oneToOne != undefined) {
-        // console.debug('Relationship is many-to-one or one-to-one. Going into recursion...')
-        instance[relationshipName] = rowToInstance(schema, table.relationships[relationshipName].otherTable, row[relationshipName], alreadyConverted)
-        // console.debug('Coming back from recursion...')
-      }
-      else if (row[relationshipName] instanceof Array) {
-        // console.debug('Relationship is one-to-many')
-
-        for (let relationshipRow of row[relationshipName]) {
-          // console.debug('relationshipRow', relationshipRow)
-          // console.debug('Going into recursion...')
-          let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, relationshipRow, alreadyConverted)
+  if (table.relationships != undefined) {
+    for (let relationshipName of Object.keys(table.relationships)) {
+      // console.debug('relationshipName', relationshipName)
+  
+      if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
+        let relationship = table.relationships[relationshipName]
+  
+        if (relationship.manyToOne || relationship.oneToOne != undefined) {
+          // console.debug('Relationship is many-to-one or one-to-one. Going into recursion...')
+          instance[relationshipName] = rowToInstance(schema, table.relationships[relationshipName].otherTable, row[relationshipName], alreadyConverted)
           // console.debug('Coming back from recursion...')
-
-          if (instance[relationshipName] == undefined) {
-            instance[relationshipName] = []
-          }
-
-          instance[relationshipName].push(relationshipInstance)
-        }        
+        }
+        else if (row[relationshipName] instanceof Array) {
+          // console.debug('Relationship is one-to-many')
+  
+          for (let relationshipRow of row[relationshipName]) {
+            // console.debug('relationshipRow', relationshipRow)
+            // console.debug('Going into recursion...')
+            let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, relationshipRow, alreadyConverted)
+            // console.debug('Coming back from recursion...')
+  
+            if (instance[relationshipName] == undefined) {
+              instance[relationshipName] = []
+            }
+  
+            instance[relationshipName].push(relationshipInstance)
+          }        
+        }
       }
-    }
-    else if (row[relationshipName] !== undefined) {
-      // console.debug('Relationship is not an object and not undefined')
-      row[relationshipName] = instance[relationshipName]
-    }
-    else {
-      // console.debug('Relationship does not exist on this instance. Continuing...')
-    }
-
+      else if (row[relationshipName] !== undefined) {
+        // console.debug('Relationship is not an object and not undefined')
+        row[relationshipName] = instance[relationshipName]
+      }
+      else {
+        // console.debug('Relationship does not exist on this instance. Continuing...')
+      }
+    }      
   }
 
   return instance
@@ -188,7 +191,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  let relationshipNames = Object.keys(table.relationships)
+  let relationshipNames = table.relationships != undefined ? Object.keys(table.relationships) : []
   let rowsOrInstances: any[] = []
 
   // console.debug('relationshipNames', relationshipNames)
@@ -230,7 +233,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     for (let relationshipName of relationshipNames) {
       // console.debug('relationshipName', relationshipName)
       
-      let relationship = table.relationships[relationshipName]
+      let relationship = table.relationships![relationshipName]
       // console.debug('relationship', relationship)
 
       if (! (relationshipName in criteria)) {

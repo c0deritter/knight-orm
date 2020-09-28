@@ -127,37 +127,39 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
 
   // console.debug('Update relationships...')
 
-  for (let relationshipName of Object.keys(table.relationships)) {
-    // console.debug('relationshipName', relationshipName)
-
-    if (typeof (instance as any)[relationshipName] == 'object' && (instance as any)[relationshipName] !== null) {
-      let relationship = table.relationships[relationshipName]
-
-      if (relationship.manyToOne) {
-        // console.debug('Many-to-one relationship')
-        // console.debug('Updating. Going into recursion...')
-        let updatedRelationshipInstance = await update(schema, relationship.otherTable, db, queryFn, (instance as any)[relationshipName], alreadyUpdatedRows)
-        // console.debug('Coming back from recursion...')
-        updatedInstance[relationshipName] = updatedRelationshipInstance
-      }
-      else if ((instance as any)[relationshipName] instanceof Array) {
-        // console.debug('One-to-many relationship. Iterating through all relationhip rows...')
-        updatedInstance[relationshipName] = []
-
-        for (let relationshipInstance of (instance as any)[relationshipName]) {
+  if (table.relationships != undefined) {
+    for (let relationshipName of Object.keys(table.relationships)) {
+      // console.debug('relationshipName', relationshipName)
+  
+      if (typeof (instance as any)[relationshipName] == 'object' && (instance as any)[relationshipName] !== null) {
+        let relationship = table.relationships[relationshipName]
+  
+        if (relationship.manyToOne) {
+          // console.debug('Many-to-one relationship')
           // console.debug('Updating. Going into recursion...')
-          let updatedRelationshipInstance = await update(schema, relationship.otherTable, db, queryFn, relationshipInstance, alreadyUpdatedRows)
-          // console.debug('Coming back from recursion...')            
-          updatedInstance[relationshipName].push(updatedRelationshipInstance)
+          let updatedRelationshipInstance = await update(schema, relationship.otherTable, db, queryFn, (instance as any)[relationshipName], alreadyUpdatedRows)
+          // console.debug('Coming back from recursion...')
+          updatedInstance[relationshipName] = updatedRelationshipInstance
+        }
+        else if ((instance as any)[relationshipName] instanceof Array) {
+          // console.debug('One-to-many relationship. Iterating through all relationhip rows...')
+          updatedInstance[relationshipName] = []
+  
+          for (let relationshipInstance of (instance as any)[relationshipName]) {
+            // console.debug('Updating. Going into recursion...')
+            let updatedRelationshipInstance = await update(schema, relationship.otherTable, db, queryFn, relationshipInstance, alreadyUpdatedRows)
+            // console.debug('Coming back from recursion...')            
+            updatedInstance[relationshipName].push(updatedRelationshipInstance)
+          }
+        }
+        else {
+          // console.debug('Was neither a many-to-one relationship nor was the correspinding object of type Array')
         }
       }
       else {
-        // console.debug('Was neither a many-to-one relationship nor was the correspinding object of type Array')
+        // console.debug('Relationship is not of type object or null. Continuing...')
       }
-    }
-    else {
-      // console.debug('Relationship is not of type object or null. Continuing...')
-    }
+    }  
   }
 
   // console.debug('Returning updatedInstance...', updatedInstance)

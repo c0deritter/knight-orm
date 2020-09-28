@@ -21,16 +21,18 @@ export function instanceCriteriaToRowCriteria<T>(schema: Schema, tableName: stri
     rowCriteria[column] = propertyValue
   }
 
-  for (let relationshipName of Object.keys(table.relationships)) {
-    let relationshipValue = (instanceCriteria as any)[relationshipName]
-    let relationship = table.relationships[relationshipName]
-
-    if (relationshipValue === undefined) {
-      continue
+  if (table.relationships != undefined) {
+    for (let relationshipName of Object.keys(table.relationships)) {
+      let relationshipValue = (instanceCriteria as any)[relationshipName]
+      let relationship = table.relationships[relationshipName]
+  
+      if (relationshipValue === undefined) {
+        continue
+      }
+  
+      let relationshipTable = relationship.otherTable
+      rowCriteria[relationshipName] = instanceCriteriaToRowCriteria(schema, relationshipTable, relationshipValue)
     }
-
-    let relationshipTable = relationship.otherTable
-    rowCriteria[relationshipName] = instanceCriteriaToRowCriteria(schema, relationshipTable, relationshipValue)
   }
 
   return <T> rowCriteria
