@@ -1,7 +1,7 @@
 import { DeleteCriteria, UpdateCriteria } from 'mega-nice-criteria'
-import { getPropertyName, isIdColumn, Schema, Table } from './Schema'
+import { getPropertyName, isIdColumn, Schema } from './Schema'
 
-export function instanceCriteriaToRowCriteria<T>(instanceCriteria: any, tableName: string, schema: Schema): T {
+export function instanceCriteriaToRowCriteria<T>(schema: Schema, tableName: string, instanceCriteria: T): T {
   let table = schema[tableName]
 
   if (table == undefined) {
@@ -12,7 +12,7 @@ export function instanceCriteriaToRowCriteria<T>(instanceCriteria: any, tableNam
 
   for (let column of Object.keys(table.columns)) {
     let propertyName = getPropertyName(table.columns[column])
-    let propertyValue = instanceCriteria[propertyName]
+    let propertyValue = (instanceCriteria as any)[propertyName]
 
     if (propertyValue === undefined) {
       continue
@@ -22,7 +22,7 @@ export function instanceCriteriaToRowCriteria<T>(instanceCriteria: any, tableNam
   }
 
   for (let relationshipName of Object.keys(table.relationships)) {
-    let relationshipValue = instanceCriteria[relationshipName]
+    let relationshipValue = (instanceCriteria as any)[relationshipName]
     let relationship = table.relationships[relationshipName]
 
     if (relationshipValue === undefined) {
@@ -30,13 +30,19 @@ export function instanceCriteriaToRowCriteria<T>(instanceCriteria: any, tableNam
     }
 
     let relationshipTable = relationship.otherTable
-    rowCriteria[relationshipName] = instanceCriteriaToRowCriteria(relationshipValue, relationshipTable, schema)
+    rowCriteria[relationshipName] = instanceCriteriaToRowCriteria(schema, relationshipTable, relationshipValue)
   }
 
   return <T> rowCriteria
 }
 
-export function rowToUpdateCriteria(row: any, table: Table): UpdateCriteria {
+export function rowToUpdateCriteria(schema: Schema, tableName: string, row: any): UpdateCriteria {
+  let table = schema[tableName]
+
+  if (table == undefined) {
+    throw new Error('Table not contained in schema: ' + tableName)
+  }
+
   let updateCriteria: any = {
     set: {}
   }
@@ -53,12 +59,24 @@ export function rowToUpdateCriteria(row: any, table: Table): UpdateCriteria {
   return updateCriteria
 }
 
-export function instanceToUpdateCriteria(instance: any, table: Table): UpdateCriteria {
+export function instanceToUpdateCriteria(schema: Schema, tableName: string, instance: any): UpdateCriteria {
+  let table = schema[tableName]
+
+  if (table == undefined) {
+    throw new Error('Table not contained in schema: ' + tableName)
+  }
+
   let row = table.instanceToRow(instance)
-  return rowToUpdateCriteria(row, table)
+  return rowToUpdateCriteria(schema, tableName, row)
 }
 
-export function rowToDeleteCriteria(table: Table, row: any): DeleteCriteria {
+export function rowToDeleteCriteria(schema: Schema, tableName: string, row: any): DeleteCriteria {
+  let table = schema[tableName]
+
+  if (table == undefined) {
+    throw new Error('Table not contained in schema: ' + tableName)
+  }
+
   let deleteCriteria: any = {}
 
   for (let column of Object.keys(table.columns)) {
@@ -70,7 +88,13 @@ export function rowToDeleteCriteria(table: Table, row: any): DeleteCriteria {
   return deleteCriteria
 }
 
-export function instanceToDeleteCriteria(table: Table, instance: any): DeleteCriteria {
+export function instanceToDeleteCriteria(schema: Schema, tableName: string, instance: any): DeleteCriteria {
+  let table = schema[tableName]
+
+  if (table == undefined) {
+    throw new Error('Table not contained in schema: ' + tableName)
+  }
+
   let row = table.instanceToRow(instance)
-  return rowToDeleteCriteria(table, row)
+  return rowToDeleteCriteria(schema, tableName, row)
 }

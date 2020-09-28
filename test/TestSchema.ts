@@ -31,9 +31,11 @@ export class ManyObjects {
   object1Id?: number
   object2Id?: string
   property1?: string
+  object1Id2?: number|null
 
   object1?: Object1
   object2?: Object2
+  object12?: Object1
 }
 
 export const schema = {
@@ -197,13 +199,15 @@ export const schema = {
       many.object1Id = parseInt(row.table1_id)
       many.object2Id = row.table2_id
       many.property1 = row.column1
+      many.object1Id2 = row.table1_id2
       return many
     },
     instanceToRow: (manyObjects: ManyObjects) => {
       return {
         table1_id: manyObjects.object1Id,
         table2_id: manyObjects.object2Id,
-        column1: manyObjects.property1
+        column1: manyObjects.property1,
+        table1_id2: manyObjects.object1Id2
       }
     }
   }

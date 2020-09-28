@@ -17,7 +17,7 @@ describe('criteriaTools', function() {
         }
       }
 
-      let rowCriteria = instanceCriteriaToRowCriteria(instanceCriteria, 'table1', schema)
+      let rowCriteria = instanceCriteriaToRowCriteria(schema, 'table1', instanceCriteria)
 
       expect(rowCriteria).to.deep.equal({
         column1: 'a',
@@ -41,7 +41,7 @@ describe('criteriaTools', function() {
       table1.many = [ new ManyObjects ]
       table1.many[0].property1 = 'b'
       
-      let criteria = instanceToUpdateCriteria(table1, schema['table1'])
+      let criteria = instanceToUpdateCriteria(schema, 'table1', table1)
 
       expect(criteria).to.deep.equal({
         id: 1,
@@ -66,7 +66,7 @@ describe('criteriaTools', function() {
       tableMany.object1.many = [ tableMany ]
       tableMany.object2 = new Object2
       
-      let criteria = instanceToDeleteCriteria(schema['table_many'], tableMany)
+      let criteria = instanceToDeleteCriteria(schema, 'table_many', tableMany)
 
       expect(criteria).to.deep.equal({
         table1_id: 1,

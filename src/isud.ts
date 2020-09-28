@@ -1,106 +1,23 @@
-import { DeleteCriteria, ReadCriteria } from 'mega-nice-criteria'
-import sql from 'mega-nice-sql'
+import { DeleteCriteria, ReadCriteria, UpdateCriteria } from 'mega-nice-criteria'
+import sql, { Query } from 'mega-nice-sql'
 import { fillCreateCriteria, fillDeleteCriteria, fillReadCriteria, fillUpdateCriteria } from 'mega-nice-sql-criteria-filler'
 import { rowToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { buildSelectQuery } from './queryTools'
-import { filterValidColumns, idsOnly, rowsRepresentSameEntity, unjoinRows } from './rowTools'
-import { getRelationshipNameByColumn, isIdColumn, Relationship, Schema } from './Schema'
-
-class FiddledRows {
-  schema: Schema
-  fiddledRows: { tableName: string, row: any, fiddledRow?: any }[] = []
-
-  constructor(schema: Schema) {
-    this.schema = schema
-  }
-
-  add(tableName: string, row: any, fiddledRow?: any) {
-    this.fiddledRows.push({ tableName: tableName, row: row, fiddledRow: fiddledRow })
-  }
-
-  setFiddledRow(row: any, fiddledRow: any) {
-    let existingFiddledRow = undefined
-    for (let fiddledRow of this.fiddledRows) {
-      if (fiddledRow.row === row) {
-        existingFiddledRow = fiddledRow
-      }
-    }
-
-    if (existingFiddledRow == undefined) {
-      throw new Error('Could not set fiddled row because the row object was not already fiddled with')
-    }
-
-    existingFiddledRow.fiddledRow = fiddledRow
-  }
-
-  containsTableName(tableName: string): boolean {
-    for (let fiddledRow of this.fiddledRows) {
-      if (fiddledRow.tableName === tableName) {
-        return true
-      }
-    }
-    return false
-  }
-
-  containsRow(tableName: string, row: any): boolean {
-    let table = this.schema[tableName]
-
-    if (table == undefined) {
-      throw new Error('Table not contained in schema: ' + tableName)
-    }
-
-    for (let fiddledRow of this.fiddledRows) {
-      if (fiddledRow.row === row) {
-        return true
-      }
-
-      if (rowsRepresentSameEntity(table, row, fiddledRow.row)) {
-        return true
-      }
-    }
-
-    return false
-  }
-
-  getByRow(tableName: string, row: any): any | undefined {
-    let table = this.schema[tableName]
-
-    if (table == undefined) {
-      throw new Error('Table not contained in schema: ' + tableName)
-    }
-
-    for (let fiddledRow of this.fiddledRows) {
-      if (fiddledRow.row === row) {
-        return fiddledRow.fiddledRow
-      }
-
-      if (rowsRepresentSameEntity(table, row, fiddledRow.row)) {
-        return fiddledRow.fiddledRow
-      }
-    }
-  }
-
-  getByTableNameAndId(tableName: string, idColumnName: string, idColumnValue: any): any | undefined {
-    for (let fiddledRow of this.fiddledRows) {
-      if (fiddledRow.tableName == tableName && fiddledRow.fiddledRow != undefined) {
-        if (fiddledRow.fiddledRow[idColumnName] == idColumnValue) {
-          return fiddledRow.fiddledRow
-        }
-      }
-    }
-  }
-}
+import { filterValidColumns, idsOnly, unjoinRows } from './rowTools'
+import { getRelationshipNameByColumn, isIdColumn, Schema } from './Schema'
+import { FiddledRows } from './util'
 
 export async function insert(
       schema: Schema, 
-      tableName: string, 
-      db: string, 
-      queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, row: any, 
+      tableName: string,
+      db: string,
+      queryFn: (sqlString: string, values?: any[]) => Promise<any[]>,
+      row: any,
       alreadyInsertedRows: FiddledRows = new FiddledRows(schema),
       insertedRow?: any,
       insertedRowIntoTableName?: string
     ): Promise<any> {
-  // console.debug('Entering insert...')
+  // console.debug('ENTERING insert...')
   // console.debug('tableName', tableName)
   // console.debug('db', db)
   // console.debug('row', row)
@@ -231,11 +148,22 @@ export async function insert(
 
       if (otherRelationshipRow != undefined) {
         // console.debug('otherRelationshipRow', otherRelationshipRow)
+        
         let idsOnlyRow = idsOnly(otherRelationshipTable, otherRelationshipRow)
         idsOnlyRow[otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
-        let updatedOtherRelationshipRow = await update(schema, otherRelationship.otherTable, db, queryFn, idsOnlyRow)
+        // console.debug('idsOnlyRow', idsOnlyRow)
+
+        let updateCriteria = rowToUpdateCriteria(schema, otherRelationship.otherTable, idsOnlyRow)
+        // console.debug('updateCriteria', updateCriteria)
+
+        let updatedOtherRelationshipRows = await update(schema, otherRelationship.otherTable, db, queryFn, updateCriteria)
+        // console.debug('updatedOtherRelationshipRows', updatedOtherRelationshipRows)
+
+        if (updatedOtherRelationshipRows.length != 1) {
+          throw new Error('Expected row count does not equal 1')
+        }
   
-        insertedRow[relationshipName] = updatedOtherRelationshipRow
+        insertedRow[relationshipName] = updatedOtherRelationshipRows[0]
       }
       else {
         // console.debug('Could not determine the row of the one-to-one relationship now')
@@ -260,12 +188,6 @@ export async function insert(
     else if (row[relationshipName] != undefined) {
       // console.debug('Relationship is present in the given row', relationship)
 
-      // if (relationship.manyToOne) {
-        // console.debug('Many-to-one relationship. Inserting row. Going into recursion...')
-      //   let insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows, insertedRow, tableName)
-        // console.debug('Returning from recursion...')
-      //   insertedRow[relationshipName] = insertedRelationshipRow
-      // }
       if (row[relationshipName] instanceof Array) {
         // console.debug('One-to-many relationship. Inserting all rows...')
         
@@ -325,16 +247,11 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   return rows
 }
 
-export async function update(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, row: any, allUpdatedRows: FiddledRows = new FiddledRows(schema)): Promise<any> {
-  // console.debug('Entering update...')
-  // console.debug('row', row)
-  // console.debug('allUpdatedRows', allUpdatedRows)
-
-  if (allUpdatedRows.containsRow(tableName, row)) {
-    let alreadyUpdatedRow = allUpdatedRows.getByRow(tableName, row)
-    // console.debug('Row object was already inserted. Returning already row...', alreadyUpdatedRow!.fiddledRow)
-    return alreadyUpdatedRow
-  }
+// https://stackoverflow.com/questions/1293330/how-can-i-do-an-update-statement-with-join-in-sql-server
+export async function update(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria): Promise<any[]> {
+  // console.debug('ENTERING update...')
+  // console.debug('tableName', tableName)
+  // console.debug('criteria', criteria)
 
   let table = schema[tableName]
 
@@ -342,95 +259,24 @@ export async function update(schema: Schema, tableName: string, db: string, quer
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  let criteria = rowToUpdateCriteria(row, table)
-  // console.debug('criteria', criteria)
+  let query = new Query
+  query.update(tableName)
+  fillUpdateCriteria(query, criteria, Object.keys(table.columns))
+  query.returning('*')
 
-  let updatedRow = undefined
+  let sqlString = query.sql(db)
+  let values = query.values()
 
-  if (Object.keys(criteria.set).length > 0) {
-    let query = sql.update(tableName)
-    fillUpdateCriteria(query, criteria, Object.keys(table.columns))
-  
-    if (db == 'postgres') {
-      query.returning('*')
-    }
-  
-    let sqlString = query.sql(db)
-    let values = query.values()
-  
-    // console.debug('sqlString', sqlString)
-    // console.debug('values', values)
-  
-    let rows = await queryFn(sqlString, values)
-  
-    if (rows.length != 1) {
-      throw new Error('Expected row count does not equal 1')
-    }
-  
-    updatedRow = rows[0]
-    // console.debug('updatedRow', updatedRow)
-  }
-  else {
-    // console.debug('No column to set given. Loading entity...')
-    // remove the set property from the criteria to only have left the ids for selecting
-    delete (criteria as any).set
+  // console.debug('sqlString', sqlString)
+  // console.debug('values', values)
 
-    let query = sql.select('*').from(tableName)
-    fillReadCriteria(query, criteria, Object.keys(table.columns))
+  let updatedRows = await queryFn(sqlString, values)
+  // console.debug('updatedRows', updatedRows)
 
-    let sqlString = query.sql(db)
-    let values = query.values()
-
-    let selectedRows = await queryFn(sqlString, values)
-
-    if (selectedRows.length != 1) {
-      throw new Error('Expected row count does not equal 1')
-    }
-
-    updatedRow = selectedRows[0]
-  }
-
-  allUpdatedRows.add(tableName, row, updatedRow)
-  
-  // console.debug('Update relationships...')
-
-  for (let relationshipName of Object.keys(table.relationships)) {
-    // console.debug('relationshipName', relationshipName)
-
-    if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
-      let relationship = table.relationships[relationshipName] as Relationship
-
-      if (relationship.manyToOne) {
-        // console.debug('Many-to-one relationship')
-        // console.debug('Updating. Going into recursion...')
-        let updatedRelationshipRow = await update(schema, relationship.otherTable, db, queryFn, row[relationshipName], allUpdatedRows)
-        // console.debug('Coming back from recursion...')
-        updatedRow[relationshipName] = updatedRelationshipRow
-      }
-      else if (row[relationshipName] instanceof Array) {
-        // console.debug('One-to-many relationship. Iterating through all relationhip rows...')
-        updatedRow[relationshipName] = []
-
-        for (let relationshipRow of row[relationshipName]) {
-          // console.debug('Updating. Going into recursion...')
-          let updatedRelationshipRow = await update(schema, relationship.otherTable, db, queryFn, relationshipRow, allUpdatedRows)
-          // console.debug('Coming back from recursion...')            
-          updatedRow[relationshipName].push(updatedRelationshipRow)
-        }
-      }
-      else {
-        // console.debug('Was neither a many-to-one relationship nor was the correspinding object of type Array')
-      }
-    }
-    else {
-      // console.debug('Relationship is not of type object or null. Continuing...')
-    }
-  }
-
-  return updatedRow
+  return updatedRows
 }
 
-export async function delete_(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: any, alreadyDeletedRows: FiddledRows = new FiddledRows(schema)): Promise<any[]> {
+export async function delete_(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: DeleteCriteria, alreadyDeletedRows: FiddledRows = new FiddledRows(schema)): Promise<any[]> {
   // console.debug('ENTERING delete_...')
   // console.debug('tableName', tableName)
   // console.debug('criteria', criteria)
@@ -514,7 +360,7 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
       }
     }
 
-    let rowDeleteCriteria = rowToDeleteCriteria(table, row)
+    let rowDeleteCriteria = rowToDeleteCriteria(schema, tableName, row)
 
     let query = sql.deleteFrom(tableName)
     fillDeleteCriteria(query, rowDeleteCriteria, Object.keys(table.columns))
