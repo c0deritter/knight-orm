@@ -38,7 +38,7 @@ export async function read<T>(schema: Schema, tableName: string, db: string, que
   return instances
 }
 
-export async function count<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: ReadCriteria): Promise<number> {
+export async function count(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: ReadCriteria): Promise<number> {
   let table = schema[tableName]
 
   if (table == undefined) {

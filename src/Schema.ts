@@ -19,6 +19,10 @@ export interface Relationship {
   delete?: boolean
 }
 
+export class SchemaClass {
+  
+}
+
 export function getIdColumns(table: Table): string[] {
   let idColumns: string[] = []
 
