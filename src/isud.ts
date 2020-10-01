@@ -58,6 +58,7 @@ export async function insert(
         // console.debug('relationship', relationship)
 
         let column = table.columns[relationship.thisId]
+        // console.debug('column', column)
 
         if (column == undefined) {
           throw new Error(`Column '${relationship.thisId}' not contained in table '${tableName}'.`)
@@ -134,9 +135,16 @@ export async function insert(
     for (let relationshipName of Object.keys(table.relationships)) {
       // console.debug('relationshipName', relationshipName)
       let relationship = table.relationships[relationshipName]
+
+      let column = table.columns[relationship.thisId]
+      // console.debug('column', column)
+
+      if (column == undefined) {
+        throw new Error(`Column '${relationship.thisId}' not contained in table '${tableName}'.`)
+      }
   
       // if the relationship leads back to were we are coming from continue
-      if (relationship.otherTable == insertedRowIntoTableName && isIdColumn(table.columns[relationship.thisId])) {
+      if (relationship.otherTable == insertedRowIntoTableName && isIdColumn(column)) {
         // console.debug('Relationship is the source. Continuing...')
         continue
       }
