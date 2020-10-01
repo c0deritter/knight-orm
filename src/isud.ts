@@ -49,7 +49,7 @@ export async function insert(
       let relationship = table.relationships[relationshipName]
 
       if (relationship == undefined) {
-        throw new Error('Relationship not in table: ' + relationshipName)
+        throw new Error(`Relationship '${relationshipName} not contained table '${tableName}'.`)
       }
       
       // if the relationship is a many-to-one and this entity thus needs its id
@@ -57,9 +57,15 @@ export async function insert(
         // console.debug('Found empty id', columnName)
         // console.debug('relationship', relationship)
 
+        let column = table.columns[relationship.thisId]
+
+        if (column == undefined) {
+          throw new Error(`Column '${relationship.thisId}' not contained in table '${tableName}'.`)
+        }
+
         // at first check if the given inserted row is the one of the relationship and if so use 
         // the id from there
-        if (relationship.otherTable == insertedRowIntoTableName && isIdColumn(table.columns[relationship.thisId])) {
+        if (relationship.otherTable == insertedRowIntoTableName && isIdColumn(column)) {
           // console.debug('The relationship was just inserted before. Retrieving id from given insertedRow', insertedRow)
           row[columnName] = insertedRow[relationship.otherId]
         }
@@ -146,7 +152,7 @@ export async function insert(
         }
 
         if (otherRelationshipTable.relationships == undefined) {
-          throw new Error('Relationship not contained table: ' + relationship.oneToOne)
+          throw new Error(`Relationship '${relationship.oneToOne} not contained table '${relationship.otherTable}'.`)
         }
 
         let otherRelationship = otherRelationshipTable.relationships[relationship.oneToOne]
@@ -155,7 +161,7 @@ export async function insert(
         // console.debug('otherRelationship', otherRelationship)
   
         if (otherRelationship == undefined) {
-          throw new Error('Relationship not contained in table: ' + relationship.oneToOne)
+          throw new Error(`Relationship '${relationship.oneToOne} not contained table '${relationship.otherTable}'.`)
         }
   
         let otherRelationshipRow = alreadyInsertedRows.getByTableNameAndId(relationship.otherTable, relationship.otherId, insertedRow[relationship.thisId])
