@@ -217,17 +217,14 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
   let criteria = instanceToDeleteCriteria(schema, tableName, instance)
   l.debug('Converted instance to delete criteria', criteria)
 
-  let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
-  l.debug('Converted delete criteria to row criteria', rowCriteria)
-
-  let missingIdValues = idsNotSet(table, rowCriteria)
+  let missingIdValues = idsNotSet(table, criteria)
   l.debug('missingIdValues', missingIdValues)
 
   if (missingIdValues.length > 0) {
     throw new Error('Not all id\'s are set. ' + JSON.stringify(missingIdValues))
   }
 
-  let deletedRows = await isudDelete(schema, tableName, db, queryFn, rowCriteria)
+  let deletedRows = await isudDelete(schema, tableName, db, queryFn, criteria)
   l.debug('deletedRows', deletedRows)
 
   if (deletedRows.length != 1) {
