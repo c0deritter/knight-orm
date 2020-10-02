@@ -1,13 +1,13 @@
 import { ReadCriteria } from 'mega-nice-criteria'
+import Log from 'mega-nice-log'
 import sql from 'mega-nice-sql'
 import { fillReadCriteria, fillUpdateCriteria } from 'mega-nice-sql-criteria-filler'
 import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { delete_ as isudDelete, insert } from './isud'
 import { buildCountQuery, buildSelectQuery } from './queryTools'
-import { allIdsSet, instanceToRow, rowToInstance, unjoinRows } from './rowTools'
+import { idsNotSet, instanceToRow, rowToInstance, unjoinRows } from './rowTools'
 import { Schema } from './Schema'
 import { FiddledRows } from './util'
-import Log from 'mega-nice-log'
 
 let log = new Log('mega-nice-sql-orm/crud.ts')
 
@@ -96,6 +96,11 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
 
   let criteria = rowToUpdateCriteria(schema, tableName, row)
   l.debug('criteria', criteria)
+
+  let missingIdValues = idsNotSet(table, criteria)
+  if (missingIdValues.length > 0) {
+    throw new Error('Not all id\'s are set. ' + JSON.stringify(missingIdValues))
+  }
 
   let hasValuesToSet = false
   for (let column of Object.keys(criteria.set)) {
@@ -208,8 +213,9 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
   let criteria = instanceToDeleteCriteria(schema, tableName, instance)
   let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
 
-  if (! allIdsSet(table, rowCriteria)) {
-    throw new Error('Not all id\'s are set')
+  let missingIdValues = idsNotSet(table, rowCriteria)
+  if (missingIdValues.length > 0) {
+    throw new Error('Not all id\'s are set. ' + JSON.stringify(missingIdValues))
   }
 
   let deletedRows = await isudDelete(schema, tableName, db, queryFn, rowCriteria)

@@ -362,3 +362,15 @@ export function allIdsSet(table: Table, row: any): boolean {
 
   return true
 }
+
+export function idsNotSet(table: Table, row: any): string[] {
+  let idsNotSet = []
+
+  for (let idColumn of getIdColumns(table)) {
+    if (row[idColumn] === undefined) {
+      idsNotSet.push(idColumn)
+    }
+  }
+
+  return idsNotSet
+}
