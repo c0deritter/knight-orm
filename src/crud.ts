@@ -204,6 +204,10 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
 }
 
 export async function delete_<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
+  let l = log.fn('delete_')
+  l.debug('tableName', tableName)
+  l.debug('instance', instance)
+
   let table = schema[tableName]
 
   if (table == undefined) {
@@ -211,14 +215,20 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
   }
 
   let criteria = instanceToDeleteCriteria(schema, tableName, instance)
+  l.debug('Converted instance to delete criteria', criteria)
+
   let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
+  l.debug('Converted delete criteria to row criteria', rowCriteria)
 
   let missingIdValues = idsNotSet(table, rowCriteria)
+  l.debug('missingIdValues', missingIdValues)
+
   if (missingIdValues.length > 0) {
     throw new Error('Not all id\'s are set. ' + JSON.stringify(missingIdValues))
   }
 
   let deletedRows = await isudDelete(schema, tableName, db, queryFn, rowCriteria)
+  l.debug('deletedRows', deletedRows)
 
   if (deletedRows.length != 1) {
     throw new Error('Expected row count does not equal 1')
@@ -226,5 +236,6 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
 
   let deletedRow = deletedRows[0]
   let deletedInstance = rowToInstance(schema, tableName, deletedRow)
+  l.debug('Returning deleted instance...', deletedInstance)
   return deletedInstance
 }
