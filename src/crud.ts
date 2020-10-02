@@ -12,7 +12,18 @@ import Log from 'mega-nice-log'
 let log = new Log('mega-nice-sql-orm/crud.ts')
 
 export async function create<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
+  let table = schema[tableName]
+
+  if (table == undefined) {
+    throw new Error('Table not contained in schema: ' + tableName)
+  }
+
   let row = instanceToRow(schema, tableName, instance)
+
+  if (! allIdsSet(table, row)) {
+    throw new Error('Not all id\'s are set')
+  }
+
   let insertedRow = await insert(schema, tableName, db, queryFn, row)
   let insertedInstance = rowToInstance(schema, tableName, insertedRow)
   return insertedInstance
@@ -20,6 +31,7 @@ export async function create<T>(schema: Schema, tableName: string, db: string, q
 
 export async function read<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: ReadCriteria): Promise<T[]> {
   let l = log.fn('read')
+
   let table = schema[tableName]
 
   if (table == undefined) {
@@ -37,7 +49,10 @@ export async function read<T>(schema: Schema, tableName: string, db: string, que
   l.debug('values', values)
 
   let joinedRows = await queryFn(sqlString, values)
+  l.debug('joinedRows', joinedRows)
+
   let instances = unjoinRows(schema, tableName, joinedRows, criteria, true)
+  l.debug('Returning instances...', instances)
 
   return instances
 }
