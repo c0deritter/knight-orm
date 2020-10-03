@@ -21,29 +21,31 @@ export async function insert(
       insertedRowIntoTableName?: string
     ): Promise<any> {
   let l = log.fn('insert')
-  l.debug('tableName', tableName)
-  l.debug('db', db)
-  l.debug('row', row)
-  l.debug('alreadyInsertedRows', alreadyInsertedRows.fiddledRows)
-  l.debug('insertedRow', insertedRow)
-  l.debug('insertedRowIntoTableName', insertedRowIntoTableName)
+  l.debug('parameter: tableName', tableName)
+  l.debug('parameter: db', db)
+  l.debug('parameter: row', row)
+  l.debug('parameter: alreadyInsertedRows', alreadyInsertedRows.fiddledRows)
+  l.debug('parameter: insertedRow', insertedRow)
+  l.debug('parameter: insertedRowIntoTableName', insertedRowIntoTableName)
 
   let alreadyInsertedRow = alreadyInsertedRows.getByRow(tableName, row)
   if (alreadyInsertedRow != undefined) {
     l.debug('Row already inserted. Returning already inserted row...', alreadyInsertedRow)
     return alreadyInsertedRow
   }
+  else {
+    l.debug('Row was not inserted before is already inserted up the recursion chain...')
+  }
 
   alreadyInsertedRows.add(tableName, row)
 
   let table = schema[tableName]
-
   if (table == undefined) {
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
   // check if the row has all the id's it could have and try to do something about it if not
-  l.debug('Looking for empty id\'s of many-to-one relationships...')
+  l.debug('Inserting missing many-to-one and one-to-one relationships first to be able to assign their id\'s before inserting the actual row...')
   for (let columnName of Object.keys(table.columns)) {
     let relationshipName = getRelationshipNameByColumn(columnName, table)
 
@@ -52,13 +54,12 @@ export async function insert(
       let relationship = table.relationships[relationshipName]
 
       if (relationship == undefined) {
-        throw new Error(`Relationship '${relationshipName} not contained table '${tableName}'.`)
+        throw new Error(`Relationship '${relationshipName}' not contained table '${tableName}'.`)
       }
       
       // if the relationship is a many-to-one and this entity thus needs its id
       if (relationship.manyToOne || relationship.oneToOne != undefined) {
-        l.debug('Found empty id', columnName)
-        l.debug('relationship', relationship)
+        l.debug(`Column '${columnName}' is part of a relationship`, relationship)
 
         let column = table.columns[relationship.thisId]
         l.debug('column', column)
@@ -70,36 +71,35 @@ export async function insert(
         // at first check if the given inserted row is the one of the relationship and if so use 
         // the id from there
         if (relationship.otherTable == insertedRowIntoTableName && isIdColumn(column)) {
-          l.debug('The relationship was just inserted before. Retrieving id from given insertedRow', insertedRow)
+          l.debug('The other end of the relationship was given as parameter insertedRow. Using id from it...', insertedRow)
           row[columnName] = insertedRow[relationship.otherId]
         }
         // otherwise check if there is a row object appended for the relationship. if so insert that one
         // first and then take the id from there
         else if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
-          l.debug('There is a row object for that relationship', row[relationshipName])
+          l.debug('There is a row object for that relationship. Insert it first...', row[relationshipName])
 
           if (alreadyInsertedRows.containsRow(relationship.otherTable, row[relationshipName])) {
-            l.debug('Row was already inserted or is about to be inserted')
             let alreadyInsertedRow = alreadyInsertedRows.getByRow(relationship.otherTable, row[relationshipName])
-            l.debug('alreadyInsertedRow', alreadyInsertedRow)
   
             if (alreadyInsertedRow != undefined) {
-              l.debug('Row was already inserted', alreadyInsertedRow)
+              l.debug('Using id from already inserted row', alreadyInsertedRow)
               row[columnName] = alreadyInsertedRow[relationship.otherId]
             }
             else {
-              l.debug('Row is about to be inserted somewhere up the recursion chain')
+              l.debug('Row is about to be inserted somewhere up the recursion chain. Continuing...')
             }
           }
           else {
-            l.debug('Inserting the row of the relationship first. Going into recursion...')
+            l.debug('Inserting the row object of the relationship. Going into recursion...')
             let relationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows)
             l.debug('Returning from recursion...')
+            l.debug('Using id from just inserted relationship...', relationshipRow)
             row[columnName] = relationshipRow[relationship.otherId]
           }
         }
         else {
-          l.debug('Relationship was neither inserted before nor was there a corresponding object in the row. Continuing...')
+          l.debug('Relationship was neither inserted before nor was there a corresponding row object. Continuing...')
         }
       }
     }
@@ -130,13 +130,13 @@ export async function insert(
   insertedRow = insertedRows[0]
   
   alreadyInsertedRows.setResult(row, insertedRow)
-  l.debug('alreadyInsertedRows', alreadyInsertedRows.fiddledRows)
+  l.debug('Setting result on alreadyInsertedRows', alreadyInsertedRows.fiddledRows)
 
   l.debug('Insert remaining relationships...')
 
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
-      l.debug('relationshipName', relationshipName)
+      l.debug('Trying to insert relationship...', relationshipName)
       let relationship = table.relationships[relationshipName]
 
       let column = table.columns[relationship.thisId]
@@ -148,12 +148,12 @@ export async function insert(
   
       // if the relationship leads back to were we are coming from continue
       if (relationship.otherTable == insertedRowIntoTableName && isIdColumn(column)) {
-        l.debug('Relationship is the source. Continuing...')
+        l.debug('Relationship is the one which was given as parameter insertedRowIntoTableName. Continuing...')
         continue
       }
       // if the relationship is a one-to-one insert it
       else if (relationship.oneToOne != undefined) {
-        l.debug('Relationship is one-to-one')
+        l.debug('Relationship is one-to-one. Trying to determine already inserted other end of the relationship and set the id from it...')
   
         // get the table of the relationship
         let otherRelationshipTable = schema[relationship.otherTable]
@@ -168,7 +168,6 @@ export async function insert(
 
         let otherRelationship = otherRelationshipTable.relationships[relationship.oneToOne]
   
-        l.debug('otherRelationshipTable', otherRelationshipTable)
         l.debug('otherRelationship', otherRelationship)
   
         if (otherRelationship == undefined) {
@@ -178,7 +177,7 @@ export async function insert(
         let otherRelationshipRow = alreadyInsertedRows.getByTableNameAndId(relationship.otherTable, relationship.otherId, insertedRow[relationship.thisId])
   
         if (otherRelationshipRow != undefined) {
-          l.debug('otherRelationshipRow', otherRelationshipRow)
+          l.debug('Found already inserted row if relationship. Setting id...', otherRelationshipRow)
           
           let idsOnlyRow = idsOnly(otherRelationshipTable, otherRelationshipRow)
           idsOnlyRow[otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
@@ -197,7 +196,7 @@ export async function insert(
           insertedRow[relationshipName] = updatedOtherRelationshipRows[0]
         }
         else {
-          l.debug('Could not determine the row of the one-to-one relationship now')
+          l.debug('Could not determine the row of the one-to-one relationship')
         }
   
       }
