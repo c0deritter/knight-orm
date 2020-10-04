@@ -216,8 +216,7 @@ export async function insert(
         }
         else {
           l.debug('Could not determine the row of the one-to-one relationship')
-        }
-  
+        }  
       }
       // we already inserted that particular row object and now we just want to set it on the resulting insertedRow object
       else if (alreadyInsertedRows.containsRow(tableName, row[relationshipName])) {

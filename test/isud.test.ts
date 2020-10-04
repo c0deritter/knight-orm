@@ -344,7 +344,6 @@ describe('isud', function() {
         expect(insertedRow).to.deep.equal(expectedRow)
 
         let table5Rows = await pgQueryFn('SELECT * FROM table5')
-        console.log(table5Rows)
 
         expect(table5Rows.length).to.equal(2)
         expect(table5Rows[0].id).to.equal(2)
