@@ -3,17 +3,22 @@ import { Schema } from './Schema'
 
 export class FiddledRows {
   schema: Schema
-  fiddledRows: { tableName: string, row: any, result?: any }[] = []
+  fiddledRows: {
+    tableName: string,
+    row: any,
+    result?: any,
+    afterSettingResultHandlers: ((result: any) => Promise<void>)[]
+  }[] = []
 
   constructor(schema: Schema) {
     this.schema = schema
   }
 
   add(tableName: string, row: any, fiddledRow?: any) {
-    this.fiddledRows.push({ tableName: tableName, row: row, result: fiddledRow })
+    this.fiddledRows.push({ tableName: tableName, row: row, result: fiddledRow, afterSettingResultHandlers: [] })
   }
 
-  setResult(row: any, result: any) {
+  async setResult(row: any, result: any): Promise<void> {
     let existingFiddledRow = undefined
     for (let fiddledRow of this.fiddledRows) {
       if (fiddledRow.row === row) {
@@ -22,10 +27,29 @@ export class FiddledRows {
     }
 
     if (existingFiddledRow == undefined) {
-      throw new Error('Could not set fiddled row because the row object was not already fiddled with')
+      throw new Error('Could not set result because the row object was not already fiddled with')
     }
 
     existingFiddledRow.result = result
+
+    for (let fn of existingFiddledRow.afterSettingResultHandlers) {
+      await fn(result)
+    }
+  }
+
+  addAfterSettingResultHandler(row: any, handler: (result: any) => Promise<void>) {
+    let existingFiddledRow = undefined
+    for (let fiddledRow of this.fiddledRows) {
+      if (fiddledRow.row === row) {
+        existingFiddledRow = fiddledRow
+      }
+    }
+
+    if (existingFiddledRow == undefined) {
+      throw new Error('Could not afterSettingResultHander because the row object was not already fiddled with')
+    }
+
+    existingFiddledRow.afterSettingResultHandlers.push(handler)
   }
 
   containsTableName(tableName: string): boolean {

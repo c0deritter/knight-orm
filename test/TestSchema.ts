@@ -29,6 +29,12 @@ export class Object4 {
   object12?: Object1
 }
 
+export class Object5 {
+  id?: number
+  object5Id?: number
+  object5?: Object5
+}
+
 export class ManyObjects {
   object1Id?: number
   object2Id?: string
@@ -172,6 +178,34 @@ export const schema = {
       return {
         table1_id1: object4.object1Id1,
         table1_id2: object4.object1Id2
+      }
+    }
+  },
+
+  'table5': {
+    columns: {
+      'id': { property: 'id', id: true },
+      'table5_id': 'object5Id'
+    },
+    relationships: {
+      object5: {
+        manyToOne: true,
+        thisId: 'table5_id',
+        otherTable: 'table5',
+        otherId: 'id',
+        delete: true
+      }  
+    },
+    rowToInstance: (row: any) => {
+      let obj5 = new Object5
+      obj5.id = row.id
+      obj5.object5Id = row.table3_id
+      return obj5
+    },
+    instanceToRow: (object5: Object5) => {
+      return {
+        id: object5.id,
+        table5_id: object5.object5Id
       }
     }
   },

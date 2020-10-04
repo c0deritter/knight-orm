@@ -77,7 +77,36 @@ export async function insert(
               row[columnName] = alreadyInsertedRow[relationship.otherId]
             }
             else {
-              l.debug('Row is about to be inserted somewhere up the recursion chain. Continuing...')
+              l.debug('Row is about to be inserted somewhere up the recursion chain. Adding handler after result is known...')
+              alreadyInsertedRows.addAfterSettingResultHandler(row[relationshipName], async (insertedRelationshipRow: any) => {
+                let l = log.fn('addAfterSettingResultHandler')
+                l.debug('parameter: insertedRelationshipRow', insertedRelationshipRow)
+                l.debug('parameter: columnName', columnName)
+                l.debug('parameter: relationship', relationship)
+
+                let insertedRow = alreadyInsertedRows.getByRow(tableName, row)
+                l.debug('insertedRow', insertedRow)
+
+                if (insertedRow == undefined) {
+                  throw new Error('Could not set many-to-one relationship id')
+                }
+
+                let updateRow = idsOnly(table, insertedRow)
+                updateRow[columnName] = insertedRelationshipRow[relationship.otherId]
+                l.debug('updateRow', updateRow)
+
+                let updateCriteria = rowToUpdateCriteria(schema, relationship.otherTable, updateRow)
+                l.debug('updateCriteria', updateCriteria)
+        
+                let updatedRelationshipRows = await update(schema, relationship.otherTable, db, queryFn, updateCriteria)
+                l.debug('updatedRelationshipRows', updatedRelationshipRows)
+        
+                if (updatedRelationshipRows.length != 1) {
+                  throw new Error('Expected row count does not equal 1')
+                }
+
+                insertedRow[columnName] = updatedRelationshipRows[0][columnName]
+              })
             }
           }
           else {
@@ -119,8 +148,14 @@ export async function insert(
 
   let insertedRow = insertedRows[0]
   
-  alreadyInsertedRows.setResult(row, insertedRow)
-  l.debug('Setting result on alreadyInsertedRows', alreadyInsertedRows.fiddledRows)
+  l.debug('Setting result on alreadyInsertedRows...')
+
+  try {
+    await alreadyInsertedRows.setResult(row, insertedRow)
+  }
+  catch (e) {
+    throw e
+  }
 
   l.debug('Insert remaining relationships...')
 
@@ -163,11 +198,11 @@ export async function insert(
         if (otherRelationshipRow != undefined) {
           l.debug('Found already inserted row of relationship. Setting id...', otherRelationshipRow)
           
-          let idsOnlyRow = idsOnly(otherRelationshipTable, otherRelationshipRow)
-          idsOnlyRow[otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
-          l.debug('idsOnlyRow', idsOnlyRow)
+          let updateRow = idsOnly(otherRelationshipTable, otherRelationshipRow)
+          updateRow[otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
+          l.debug('updateRow', updateRow)
   
-          let updateCriteria = rowToUpdateCriteria(schema, otherRelationship.otherTable, idsOnlyRow)
+          let updateCriteria = rowToUpdateCriteria(schema, otherRelationship.otherTable, updateRow)
           l.debug('updateCriteria', updateCriteria)
   
           let updatedOtherRelationshipRows = await update(schema, otherRelationship.otherTable, db, queryFn, updateCriteria)
