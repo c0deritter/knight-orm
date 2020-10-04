@@ -84,7 +84,7 @@ export async function insert(
             l.debug('Inserting the row object of the relationship. Going into recursion...')
             let relationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows)
             l.debug('Returning from recursion...')
-            l.debug('Using id from just inserted relationship...', relationshipRow)
+            l.debug('Setting relationship id from just inserted relationship... ' + columnName + ' = ' + relationshipRow[relationship.otherId])
             row[columnName] = relationshipRow[relationship.otherId]
           }
         }
@@ -161,7 +161,7 @@ export async function insert(
         let otherRelationshipRow = alreadyInsertedRows.getByTableNameAndId(relationship.otherTable, relationship.otherId, insertedRow[relationship.thisId])
   
         if (otherRelationshipRow != undefined) {
-          l.debug('Found already inserted row if relationship. Setting id...', otherRelationshipRow)
+          l.debug('Found already inserted row of relationship. Setting id...', otherRelationshipRow)
           
           let idsOnlyRow = idsOnly(otherRelationshipTable, otherRelationshipRow)
           idsOnlyRow[otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
@@ -199,45 +199,38 @@ export async function insert(
         continue
       }
       // otherwise we just insert the relationship
-      else if (row[relationshipName] != undefined) {
-        l.debug('Relationship is present in the given row', relationship)
-  
-        if (row[relationshipName] instanceof Array) {
-          l.debug('One-to-many relationship. Inserting all rows...')
-          
-          for (let relationshipRow of row[relationshipName]) {
-            l.debug('Inserting relationship row...', relationshipRow)
-  
-            if (! alreadyInsertedRows.containsRow(relationship.otherTable, relationshipRow)) {
-              let otherTable = schema[relationship.otherTable]
-              if (otherTable == undefined) {
-                throw new Error('Table not contained in schema: ' + relationship.otherTable)
+      else if (relationship.oneToMany == true && row[relationshipName] instanceof Array) {
+        l.debug('One-to-many relationship. Inserting all rows...')
+        
+        for (let relationshipRow of row[relationshipName]) {
+          l.debug('Inserting relationship row...', relationshipRow)
+
+          if (! alreadyInsertedRows.containsRow(relationship.otherTable, relationshipRow)) {
+            let otherTable = schema[relationship.otherTable]
+            if (otherTable == undefined) {
+              throw new Error('Table not contained in schema: ' + relationship.otherTable)
+            }
+
+            l.debug('Setting id on relationship row... ' + relationship.otherId + ' = ' + insertedRow[relationship.thisId])
+            relationshipRow[relationship.otherId] = insertedRow[relationship.thisId]
+
+            l.debug('Going into Recursion...')
+
+            let insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, relationshipRow, alreadyInsertedRows)
+            l.debug('Returning from recursion...', insertedRelationshipRow)
+            
+            if (insertedRelationshipRow != undefined) {
+              if (insertedRow[relationshipName] == undefined) {
+                insertedRow[relationshipName] = []
               }
-
-              l.debug('Setting id on relationship row... ' + relationship.otherId + ' = ' + insertedRow[relationship.thisId])
-              relationshipRow[relationship.otherId] = insertedRow[relationship.thisId]
-
-              l.debug('Going into Recursion...')
   
-              let insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, relationshipRow, alreadyInsertedRows)
-              l.debug('Returning from recursion...', insertedRelationshipRow)
-              
-              if (insertedRelationshipRow != undefined) {
-                if (insertedRow[relationshipName] == undefined) {
-                  insertedRow[relationshipName] = []
-                }
-    
-                l.debug('Pushing inserted relationship row into array on inserted row...')
-                insertedRow[relationshipName].push(insertedRelationshipRow)
-              }  
-            }
-            else {
-              l.debug('That particular row object is already being inserted up the recursion chain. Continuing...')
-            }
+              l.debug('Pushing inserted relationship row into array on inserted row...')
+              insertedRow[relationshipName].push(insertedRelationshipRow)
+            }  
           }
-        }
-        else {
-          l.debug('No supported relationship type. Was neither many-to-one nor one-to-many nor one-to-one. Continuing...')
+          else {
+            l.debug('That particular row object is already being inserted up the recursion chain. Continuing...')
+          }
         }
       }
       else {
