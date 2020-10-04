@@ -43,7 +43,7 @@ export function isIdColumn(column: string | { property: string, id: boolean }):
   return column.id
 }
 
-export function getRelationshipNameByColumn(column: string, table: Table): string|undefined {
+export function getRelationshipNameByColumn(table: Table, column: string): string|undefined {
   if (table.relationships == undefined) {
     return undefined
   }

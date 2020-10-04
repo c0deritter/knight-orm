@@ -5,6 +5,8 @@ export class Object1 {
   property1?: string
   property2?: number
   many?: ManyObjects[]
+  object41s?: Object4[]
+  object42s?: Object4[]
 }
 
 export class Object2 {
@@ -52,6 +54,18 @@ export const schema = {
         otherTable: 'table_many',
         otherId: 'table1_id',
         delete: true
+      },
+      object41s: {
+        oneToMany: true,
+        thisId: 'id',
+        otherTable: 'table4',
+        otherId: 'table1_id1'
+      },
+      object42s: {
+        oneToMany: true,
+        thisId: 'id',
+        otherTable: 'table4',
+        otherId: 'table1_id2'
       }
     },
     rowToInstance: (row: any) => {

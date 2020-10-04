@@ -61,7 +61,7 @@ describe('crud', function() {
         let object1 = new Object1
         object1.property1 = 'a'
         object1.property2 = 1
-        object1.many = [new ManyObjects, new ManyObjects]
+        object1.many = [ new ManyObjects, new ManyObjects ]
 
         object1.many[0].property1 = 'b'
         object1.many[0].object1 = object1
@@ -79,31 +79,38 @@ describe('crud', function() {
         
         let createdInstance = await create(schema, 'table1', 'postgres', pgQueryFn, object1)
 
-        expect(createdInstance.id).to.equal(1)
-        expect(createdInstance.property1).to.equal('a')
-        expect(createdInstance.property2).to.equal(1)
-        expect(createdInstance.many).to.deep.equal([
-          {
-            object1Id: 1,
-            object2Id: 'x',
-            property1: 'b',
-            object1Id2: null,
-            object2: {
-              id: 'x',
-              property1: 'c'
-            }
-          },
-          {
-            object1Id: 1,
-            object2Id: 'y',
-            property1: 'd',
-            object1Id2: null,
-            object2: {
-              id: 'y',
-              property1: 'e'
-            }
-          }
-        ])
+        let expectedInstance = {
+          id: 1,
+          property1: 'a',
+          property2: 1,
+          many: [
+            {
+              object1Id: 1,
+              object2Id: 'x',
+              property1: 'b',
+              object1Id2: null,
+              object2: {
+                id: 'x',
+                property1: 'c'
+              }
+            } as any,
+            {
+              object1Id: 1,
+              object2Id: 'y',
+              property1: 'd',
+              object1Id2: null,
+              object2: {
+                id: 'y',
+                property1: 'e'
+              }
+            }            
+          ]
+        }
+
+        expectedInstance.many[0].object1 = expectedInstance
+        expectedInstance.many[1].object1 = expectedInstance
+
+        expect(createdInstance).to.deep.equal(expectedInstance)
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
 

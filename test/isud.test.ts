@@ -58,6 +58,76 @@ describe('isud', function() {
         expect(rows[0].column2).to.equal(1)
       })
   
+      it('should insert a row with a one-to-many relationship', async function() {
+        let row: any = {
+          column1: 'a',
+          column2: 1,
+          many: []
+        }
+
+        row.many.push(
+          {
+            column1: 'b',
+            object1: row
+          },
+          {
+            column1: 'c',
+            object1: row
+          }
+        )
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let expectedRow = {
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              table1_id: 1,
+              table2_id: null,
+              column1: 'b',
+              table1_id2: null
+            } as any,
+            {
+              table1_id: 1,
+              table2_id: null,
+              column1: 'c',
+              table1_id2: null
+            }
+          ]
+        }
+
+        expectedRow.many[0].object1 = expectedRow
+        expectedRow.many[1].object1 = expectedRow
+
+        expect(insertedRow.id).to.equal(1)
+        expect(insertedRow).to.deep.equal(expectedRow)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].id).to.equal(1)
+        expect(table1Rows[0].column1).to.equal('a')
+        expect(table1Rows[0].column2).to.equal(1)
+
+        let tableManyRows = await pgQueryFn('SELECT * FROM table_many')
+
+        expect(tableManyRows.length).to.equal(2)
+        expect(tableManyRows[0].table1_id).to.equal(1)
+        expect(tableManyRows[0].table2_id).to.be.null
+        expect(tableManyRows[0].column1).to.equal('b')
+        expect(tableManyRows[0].table1_id2).to.be.null
+        expect(tableManyRows[1].table1_id).to.equal(1)
+        expect(tableManyRows[1].table2_id).to.be.null
+        expect(tableManyRows[1].column1).to.equal('c')
+        expect(tableManyRows[1].table1_id2).to.be.null
+
+        let table2Rows = await pgQueryFn('SELECT * FROM table2')
+
+        expect(table2Rows.length).to.equal(0)
+      })
+
       it('should insert a row with a many-to-many relationship', async function() {
         let row: any = {
           column1: 'a',
@@ -89,31 +159,38 @@ describe('isud', function() {
         
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        expect(insertedRow.id).to.equal(1)
-        expect(insertedRow.column1).to.equal('a')
-        expect(insertedRow.column2).to.equal(1)
-        expect(insertedRow.many).to.deep.equal([
-          {
-            table1_id: 1,
-            table2_id: 'x',
-            column1: 'b',
-            table1_id2: null,
-            object2: {
-              id: 'x',
-              column1: 'c'
-            }
-          },
-          {
-            table1_id: 1,
-            table2_id: 'y',
-            column1: 'd',
-            table1_id2: null,
-            object2: {
-              id: 'y',
-              column1: 'e'
-            }
-          }
-        ])
+        let expectedRow = {
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              table1_id: 1,
+              table2_id: 'x',
+              column1: 'b',
+              table1_id2: null,
+              object2: {
+                id: 'x',
+                column1: 'c'
+              }
+            } as any,
+            {
+              table1_id: 1,
+              table2_id: 'y',
+              column1: 'd',
+              table1_id2: null,
+              object2: {
+                id: 'y',
+                column1: 'e'
+              }
+            }            
+          ]
+        }
+
+        expectedRow.many[0].object1 = expectedRow
+        expectedRow.many[1].object1 = expectedRow
+
+        expect(insertedRow).to.deep.equal(expectedRow)
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
@@ -141,6 +218,62 @@ describe('isud', function() {
         expect(table2Rows[0].column1).to.equal('c')
         expect(table2Rows[1].id).to.equal('y')
         expect(table2Rows[1].column1).to.equal('e')
+      })
+
+      it('should insert a row with a many-to-many relationship where both id\'s refer to the same table and only one is set', async function() {
+        let row: any = {
+          column1: 'a',
+          column2: 1,
+          object41s: []
+        }
+
+        row.object41s.push(
+          {
+            object11: row
+          },
+          {
+            object11: row
+          }
+        )
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let expectedRow: any = {
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          object41s: [
+            {
+              table1_id1: 1,
+              table1_id2: null
+            },
+            {
+              table1_id1: 1,
+              table1_id2: null
+            }
+          ]
+        }
+
+        expectedRow.object41s[0].object11 = expectedRow
+        expectedRow.object41s[1].object11 = expectedRow
+
+        expect(insertedRow.id).to.equal(1)
+        expect(insertedRow).to.deep.equal(expectedRow)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0].id).to.equal(1)
+        expect(table1Rows[0].column1).to.equal('a')
+        expect(table1Rows[0].column2).to.equal(1)
+
+        let tableManyRows = await pgQueryFn('SELECT * FROM table4')
+
+        expect(tableManyRows.length).to.equal(2)
+        expect(tableManyRows[0].table1_id1).to.equal(1)
+        expect(tableManyRows[0].table1_id2).to.be.null
+        expect(tableManyRows[1].table1_id1).to.equal(1)
+        expect(tableManyRows[1].table1_id2).to.be.null
       })
 
       it('should insert a row with a many-to-one relationship', async function() {
@@ -432,6 +565,18 @@ describe('isud', function() {
             }
           ]
         })
+      })
+
+      it('should select a row which columns are null', function() {
+
+      })
+
+      it('should select one-to-many row which columns are all null', function() {
+
+      })
+
+      it('should select a many-to-ony relationship which columns are all null', function() {
+
       })
     })
 
