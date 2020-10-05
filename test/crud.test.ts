@@ -26,6 +26,8 @@ describe('crud', function() {
       await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20))')
       await pool.query('CREATE TABLE table3 (id SERIAL, column1 VARCHAR(20), table3_id INTEGER)')
       await pool.query('CREATE TABLE table4 (table1_id1 INTEGER, table1_id2 INTEGER)')
+      await pool.query('CREATE TABLE table5 (id SERIAL, table5_id INTEGER)')
+      await pool.query('CREATE TABLE table6 (table5_id1 INTEGER, table5_id2 INTEGER)')
       await pool.query('CREATE TABLE table_many (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20), table1_id2 INTEGER)')
     })
 
@@ -34,6 +36,8 @@ describe('crud', function() {
       await pool.query('DROP TABLE IF EXISTS table2 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table3 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table4 CASCADE')
+      await pool.query('DROP TABLE IF EXISTS table5 CASCADE')
+      await pool.query('DROP TABLE IF EXISTS table6 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table_many CASCADE')
     })
     

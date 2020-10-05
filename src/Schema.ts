@@ -3,7 +3,7 @@ export interface Schema {
 }
 
 export interface Table {
-  columns: { [name: string]: string | { property: string, id: boolean } }
+  columns: { [name: string]: string | { property: string, id: boolean, generated: boolean } }
   relationships?: { [relationship: string]: Relationship }
   rowToInstance: (row: any) => any
   instanceToRow: (instance: any) => any
@@ -41,6 +41,14 @@ export function isIdColumn(column: string | { property: string, id: boolean }):
   }
 
   return column.id
+}
+
+export function isGeneratedIdColumn(column: string | { property: string, id: boolean, generated: boolean }): boolean {
+  if (typeof column == 'string') {
+    return false
+  }
+
+  return column.id && column.generated
 }
 
 export function getRelationshipNameByColumn(table: Table, column: string): string|undefined {

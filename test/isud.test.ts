@@ -27,6 +27,7 @@ describe('isud', function() {
       await pool.query('CREATE TABLE table3 (id SERIAL, column1 VARCHAR(20), table3_id INTEGER)')
       await pool.query('CREATE TABLE table4 (table1_id1 INTEGER, table1_id2 INTEGER)')
       await pool.query('CREATE TABLE table5 (id SERIAL, table5_id INTEGER)')
+      await pool.query('CREATE TABLE table6 (table5_id1 INTEGER, table5_id2 INTEGER)')
       await pool.query('CREATE TABLE table_many (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20), table1_id2 INTEGER)')
     })
 
@@ -36,6 +37,7 @@ describe('isud', function() {
       await pool.query('DROP TABLE IF EXISTS table3 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table4 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table5 CASCADE')
+      await pool.query('DROP TABLE IF EXISTS table6 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table_many CASCADE')
     })
     
@@ -329,6 +331,98 @@ describe('isud', function() {
         }
 
         row.object5.object5 = row
+        
+        let insertedRow = await insert(schema, 'table5', 'postgres', pgQueryFn, row)
+
+        let expectedRow = {
+          id: 2,
+          table5_id: 1,
+          object5: {
+            id: 1,
+            table5_id: 2
+          }
+        }
+
+        expect(insertedRow).to.deep.equal(expectedRow)
+
+        let table5Rows = await pgQueryFn('SELECT * FROM table5')
+
+        expect(table5Rows.length).to.equal(2)
+        expect(table5Rows[0].id).to.equal(2)
+        expect(table5Rows[0].table5_id).to.equal(1)
+        expect(table5Rows[1].id).to.equal(1)
+        expect(table5Rows[1].table5_id).to.equal(2)
+      })
+
+      it('should insert a row with a one-to-one relationship', async function() {
+        let row: any = {
+          column1: 'a',
+          object3: {
+            column1: 'b'
+          }
+        }
+
+        row.object3.object3 = row
+
+        let insertedRow = await insert(schema, 'table3', 'postgres', pgQueryFn, row)
+
+        expect(insertedRow.id).to.equal(2)
+        expect(insertedRow.table3_id).to.equal(1)
+        expect(insertedRow.column1).to.equal('a')
+        expect(insertedRow.object3).to.deep.equal({
+          id: 1,
+          column1: 'b',
+          table3_id: 2
+        })
+
+        let rows = await pgQueryFn('SELECT * FROM table3')
+
+        expect(rows.length).to.equal(2)
+        expect(rows[0].id).to.equal(2)
+        expect(rows[0].table3_id).to.equal(1)
+        expect(rows[0].column1).to.equal('a')
+        expect(rows[1].id).to.equal(1)
+        expect(rows[1].table3_id).to.equal(2)
+        expect(rows[1].column1).to.equal('b')
+      })
+
+      it.only('should insert a row which one-to-one relationship has two many-to-one id\'s', async function() {
+        let row: any = {
+          object6: {
+          }
+        }
+
+        let insertedRow = await insert(schema, 'table5', 'postgres', pgQueryFn, row)
+
+        let expectedRow = {
+          id: 2,
+          table5_id: 1,
+          object5: {
+            id: 1,
+            table5_id: 2
+          }
+        }
+
+        expect(insertedRow).to.deep.equal(expectedRow)
+
+        let table5Rows = await pgQueryFn('SELECT * FROM table5')
+
+        expect(table5Rows.length).to.equal(2)
+        expect(table5Rows[0].id).to.equal(2)
+        expect(table5Rows[0].table5_id).to.equal(1)
+        expect(table5Rows[1].id).to.equal(1)
+        expect(table5Rows[1].table5_id).to.equal(2)
+      })
+
+
+
+      it('should insert a row which many-to-one relationship which object has two many-to-one id\'s and which refers to an object which is about to be inserted up the recursion chain', async function() {
+        let row: any = {
+          object6: {
+          }
+        }
+
+        row.object6.object52 = row
         
         let insertedRow = await insert(schema, 'table5', 'postgres', pgQueryFn, row)
 

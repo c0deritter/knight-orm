@@ -81,7 +81,7 @@ export class FiddledRows {
     return false
   }
 
-  getByRow(tableName: string, row: any): any | undefined {
+  getResultByRow(tableName: string, row: any): any | undefined {
     let table = this.schema[tableName]
 
     if (table == undefined) {

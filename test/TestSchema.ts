@@ -32,7 +32,16 @@ export class Object4 {
 export class Object5 {
   id?: number
   object5Id?: number
+  object6Id?: number
   object5?: Object5
+  object6?: Object6
+}
+
+export class Object6 {
+  object5Id1?: number
+  object5Id2?: number
+  object51?: Object5
+  object52?: Object5
 }
 
 export class ManyObjects {
@@ -49,7 +58,7 @@ export class ManyObjects {
 export const schema = {
   'table1': {
     columns: {
-      'id': { property: 'id', id: true },
+      'id': { property: 'id', id: true, generated: true },
       'column1': 'property1',
       'column2': 'property2'
     },
@@ -92,7 +101,7 @@ export const schema = {
   
   'table2': {
     columns: {
-      'id': { property: 'id', id: true },
+      'id': { property: 'id', id: true, generated: true },
       'column1': 'property1'
     },
     relationships: {
@@ -120,7 +129,7 @@ export const schema = {
 
   'table3': {
     columns: {
-      'id': { property: 'id', id: true },
+      'id': { property: 'id', id: true, generated: true },
       'column1': 'property1',
       'table3_id': 'object3Id'
     },
@@ -151,8 +160,8 @@ export const schema = {
 
   'table4': {
     columns: {
-      'table1_id1': { property: 'object1Id1', id: true },
-      'table1_id2': { property: 'object1Id2', id: true }
+      'table1_id1': { property: 'object1Id1', id: true, generated: false },
+      'table1_id2': { property: 'object1Id2', id: true, generated: false }
     },
     relationships: {
       object11: {
@@ -184,8 +193,9 @@ export const schema = {
 
   'table5': {
     columns: {
-      'id': { property: 'id', id: true },
-      'table5_id': 'object5Id'
+      'id': { property: 'id', id: true, generated: true },
+      'table5_id': 'object5Id',
+      'table6_id': 'object6Id'
     },
     relationships: {
       object5: {
@@ -194,7 +204,13 @@ export const schema = {
         otherTable: 'table5',
         otherId: 'id',
         delete: true
-      }  
+      },
+      object6: {
+        oneToOne: 'object5',
+        thisId: 'table6_id',
+        otherTable: 'table6',
+        otherId: 'table5_id1'
+      }
     },
     rowToInstance: (row: any) => {
       let obj5 = new Object5
@@ -210,10 +226,43 @@ export const schema = {
     }
   },
 
+  'table6': {
+    columns: {
+      'table5_id1': { property: 'object5Id1', id: true, generated: false },
+      'table5_id2': { property: 'object5Id2', id: true, generated: false }
+    },
+    relationships: {
+      object51: {
+        oneToOne: 'object6',
+        thisId: 'table5_id1',
+        otherTable: 'table5',
+        otherId: 'id'
+      },
+      object52: {
+        manyToOne: true,
+        thisId: 'table5_id2',
+        otherTable: 'table5',
+        otherId: 'id'
+      }
+    },
+    rowToInstance: (row: any) => {
+      let obj6 = new Object6
+      obj6.object5Id1 = row.table5_id1
+      obj6.object5Id2 = row.table5_id2
+      return obj6
+    },
+    instanceToRow: (object6: Object6) => {
+      return {
+        table5_id1: object6.object5Id1,
+        table5_id2: object6.object5Id2
+      }
+    }
+  },
+
   'table_many': {
     columns: {
-      'table1_id': { property: 'object1Id', id: true },
-      'table2_id': { property: 'object2Id', id: true },
+      'table1_id': { property: 'object1Id', id: true, generated: false },
+      'table2_id': { property: 'object2Id', id: true, generated: false },
       'column1': 'property1',
       'table1_id2': 'object1Id2'
     },

@@ -89,7 +89,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   }
 
   if (alreadyUpdatedRows.containsRow(tableName, row)) {
-    let alreadyUpdatedRow = alreadyUpdatedRows.getByRow(tableName, row)
+    let alreadyUpdatedRow = alreadyUpdatedRows.getResultByRow(tableName, row)
     l.debug('Row object was already inserted. Returning already updated row...', alreadyUpdatedRow)
     return alreadyUpdatedRow
   }
