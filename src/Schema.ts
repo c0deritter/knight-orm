@@ -3,7 +3,7 @@ export interface Schema {
 }
 
 export interface Table {
-  columns: { [name: string]: string | { property: string, id: boolean, generated: boolean } }
+  columns: { [name: string]: string | { property: string, id: boolean } }
   relationships?: { [relationship: string]: Relationship }
   rowToInstance: (row: any) => any
   instanceToRow: (instance: any) => any
@@ -43,12 +43,30 @@ export function isIdColumn(column: string | { property: string, id: boolean }):
   return column.id
 }
 
-export function isGeneratedIdColumn(column: string | { property: string, id: boolean, generated: boolean }): boolean {
+export function isGeneratedIdColumn(table: Table, columnName: string): boolean {
+  let column = table.columns[columnName]
+
+  if (column == undefined) {
+    throw new Error(`Column '${columnName} not contained table`)
+  }
+
   if (typeof column == 'string') {
     return false
   }
 
-  return column.id && column.generated
+  if (table.relationships == undefined) {
+    return false
+  }
+
+  for (let relationshipName of Object.keys(table.relationships)) {
+    let relationship = table.relationships[relationshipName]
+    
+    if (relationship.thisId == columnName) {
+      return true
+    }
+  }
+
+  return false
 }
 
 export function getRelationshipNameByColumn(table: Table, column: string): string|undefined {

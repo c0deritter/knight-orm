@@ -15,7 +15,24 @@ export class FiddledRows {
   }
 
   add(tableName: string, row: any, fiddledRow?: any) {
-    this.fiddledRows.push({ tableName: tableName, row: row, result: fiddledRow, afterSettingResultHandlers: [] })
+    if (! this.containsRow(tableName, row)) {
+      this.fiddledRows.push({ tableName: tableName, row: row, result: fiddledRow, afterSettingResultHandlers: [] })
+    }
+  }
+
+  remove(row: any) {
+    let index = -1
+
+    for (let i = 0; i < this.fiddledRows.length; i++) {
+      if (this.fiddledRows[i].row === row) {
+        index = i
+        break
+      }
+    }
+
+    if (index > -1) {
+      this.fiddledRows.splice(index, 1)
+    }
   }
 
   async setResult(row: any, result: any): Promise<void> {

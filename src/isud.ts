@@ -10,6 +10,19 @@ import { FiddledRows } from './util'
 
 let log = new Log('mega-nice-sql-orm/isud.ts', 'insane')
 
+/**
+ * At first it goes through all columns which contain an id of a many-to-one or one-to-one relationship
+ * and it tries to insert the rows of that relationships at first if a relationship row object is set.
+ * 1. If the relationship is part of the id of that row it postpones the creation to the point in time
+ *    when the corresponding row was inserted.
+ * 
+ * @param schema 
+ * @param tableName 
+ * @param db 
+ * @param queryFn 
+ * @param row 
+ * @param alreadyInsertedRows 
+ */
 export async function insert(
       schema: Schema, 
       tableName: string,
@@ -29,11 +42,6 @@ export async function insert(
     l.debug('Row already inserted. Returning already inserted row...', alreadyInsertedRow)
     return alreadyInsertedRow
   }
-  else {
-    if (alreadyInsertedRows.containsRow(tableName, row)) {
-      l.debug('Row is already inserted up in the recursion chain...')
-    }
-  }
 
   alreadyInsertedRows.add(tableName, row)
 
@@ -50,10 +58,6 @@ export async function insert(
   //    inserted the row that is to be inserted which will then provide the missing id on the relationship
   l.debug('Inserting missing many-to-one and one-to-one relationships first to be able to assign their id\'s before inserting the actual row...')
   for (let columnName of Object.keys(table.columns)) {
-    if (isGeneratedIdColumn(table.columns[columnName])) {
-      continue
-    }
-
     let relationshipName = getRelationshipNameByColumn(table, columnName)
 
     // the column is part of a relationship and its id is missing
@@ -69,6 +73,8 @@ export async function insert(
       if (otherTable == undefined) {
         throw new Error('Table not contained in schema: ' + relationship.otherTable)
       }
+
+      let relationshipRow = row[relationshipName]
       
       // if the relationship is a many-to-one or a one-to-one and this row thus needs its id
       if (relationship.manyToOne || relationship.oneToOne != undefined) {
@@ -76,22 +82,40 @@ export async function insert(
 
         // check if there is a row object set for the relationship. if so insert that one
         // first and then take the id from there
-        if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
+        if (typeof relationshipRow == 'object' && relationshipRow !== null) {
           // check if we already inserted the relationship row or if it is about to be inserted up the recursion chain
-          if (alreadyInsertedRows.containsRow(relationship.otherTable, row[relationshipName])) {
-            let alreadyInsertedRow = alreadyInsertedRows.getResultByRow(relationship.otherTable, row[relationshipName])
+          if (alreadyInsertedRows.containsRow(relationship.otherTable, relationshipRow)) {
+            let alreadyInsertedRow = alreadyInsertedRows.getResultByRow(relationship.otherTable, relationshipRow)
 
             // relationship row was already inserted. use its id.
             if (alreadyInsertedRow != undefined) {
               l.debug('Using id from already inserted row', alreadyInsertedRow)
               row[columnName] = alreadyInsertedRow[relationship.otherId]
             }
+            // if the relationship is an id for that row, attempt to insert the whole row after the missing relationship
+            // row which is about to be inserted up the recursion chain.
+            else if (isGeneratedIdColumn(table, relationship.thisId)) {
+              l.debug('Row is about to be inserted somewhere up the recursion chain and the relationship is an id. Adding handler after result is known. Returning...')
+              alreadyInsertedRows.addAfterSettingResultHandler(relationshipRow, async () => {
+                let l = log.fn('afterSettingResultHandler')
+                l.debug('Inserting row which was missing an id which came from a relationship which was just created...')
+
+                let insertedRow = await insert(schema, tableName, db, queryFn, row, alreadyInsertedRows)
+                l.debug('insertedRow', insertedRow)
+        
+                if (insertedRow == undefined) {
+                  throw new Error('Expected result to be not undefined')
+                }
+              })
+
+              return
+            }
             // the relationship is about to be inserted up the recursion chain. update the row that is to be inserted after
             // the row of the relationship was inserted up in the recursion chain.
             else {
               l.debug('Row is about to be inserted somewhere up the recursion chain. Adding handler after result is known...')
               alreadyInsertedRows.addAfterSettingResultHandler(row[relationshipName], async (insertedRelationshipRow: any) => {
-                let l = log.fn('addAfterSettingResultHandler')
+                let l = log.fn('afterSettingResultHandler')
                 l.debug('parameter: insertedRelationshipRow', insertedRelationshipRow)
                 l.debug('parameter: columnName', columnName)
                 l.debug('parameter: relationship', relationship)
@@ -104,13 +128,13 @@ export async function insert(
                 }
 
                 let updateRow = idsOnly(table, insertedRow)
-                updateRow[columnName] = insertedRelationshipRow[relationship.otherId]
                 l.debug('updateRow', updateRow)
 
-                let updateCriteria = rowToUpdateCriteria(schema, relationship.otherTable, updateRow)
+                let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
+                updateCriteria.set[columnName] = insertedRelationshipRow[relationship.otherId]
                 l.debug('updateCriteria', updateCriteria)
         
-                let updatedRelationshipRows = await update(schema, relationship.otherTable, db, queryFn, updateCriteria)
+                let updatedRelationshipRows = await update(schema, tableName, db, queryFn, updateCriteria)
                 l.debug('updatedRelationshipRows', updatedRelationshipRows)
         
                 if (updatedRelationshipRows.length != 1) {
@@ -129,14 +153,12 @@ export async function insert(
           // 3. if the id the relationship refers to is not generated then it will insert the that relationship later so that we can set the id after we 
           //    inserted the row that is to be inserted which will then provide the missing id on the relationship
           else {
-            let otherIdColumn = otherTable.columns[relationship.otherId]
-
-            if (otherIdColumn == undefined) {
-              throw new Error(`Column '${otherIdColumn} not contained table '${relationship.otherTable}'`)
+            if (otherTable.columns[relationship.otherId] == undefined) {
+              throw new Error(`Column '${relationship.otherId} not contained table '${relationship.otherTable}'`)
             }
 
-            // the if of the row the relationship is referencing is generated. attempt to insert it now.
-            if (isGeneratedIdColumn(otherIdColumn)) {
+            // the id of the row the relationship is referencing is generated. attempt to insert it now
+            if (isGeneratedIdColumn(otherTable, relationship.otherId)) {
               // if the relationship refers to the same table as the row that is to be inserted, insert the relationship row after
               // we inserted the row that is to be inserted.
               if (relationship.otherTable == tableName) {
@@ -144,7 +166,7 @@ export async function insert(
               }
               // the relationship row refers a different table and its id is generated. insert it now.
               else {
-                l.debug('Inserting the row object of the relationship first. Going into recursion...')
+                l.debug('Inserting the row object of the relationship. Going into recursion...')
                 let relationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows)
                 l.debug('Returning from recursion...')
                 l.debug('Setting relationship id from just inserted relationship... ' + columnName + ' = ' + relationshipRow[relationship.otherId])
@@ -232,19 +254,43 @@ export async function insert(
         let relationshipId: any = undefined
 
         // at first check if we already inserted the relationship row
-        let alreadyInsertedRelationshipRow = alreadyInsertedRows.getResultByRow(relationship.otherTable, row[relationshipName])
-        if (alreadyInsertedRelationshipRow) {
-          l.debug('Relationship was already inserted. Using id from it...', alreadyInsertedRelationshipRow)
+        let relationshipRow = alreadyInsertedRows.getResultByRow(relationship.otherTable, row[relationshipName])
+        if (relationshipRow) {
+          l.debug('Relationship was already inserted. Using id from it...', relationshipRow)
 
-          if (alreadyInsertedRelationshipRow[relationship.otherId] == undefined) {
+          if (relationshipRow[relationship.otherId] == undefined) {
             throw new Error('Already inserted relationship row does not contain id which the relationship owning row wants to refer to')
           }
 
-          relationshipId = alreadyInsertedRelationshipRow[relationship.otherId]
+          relationshipId = relationshipRow[relationship.otherId]
+        }
+        else if (alreadyInsertedRows.containsRow(relationship.otherTable, row[relationshipName])) {
+          l.debug('Row of relationship is about to be inserted up the recursion chain. Continuing...')
+          continue
         }
         else {
+          if (relationship.oneToOne != undefined) {
+            let otherTable = schema[relationship.otherTable]
+
+            if (otherTable == undefined) {
+              throw new Error('Table not contained in schema: ' + relationship.otherTable)
+            }
+
+            if (otherTable.relationships == undefined) {
+              throw new Error(`Relationship '${relationship.oneToOne}' not contained in table '${relationship.otherTable}'`)
+            }
+
+            let otherRelationship = otherTable.relationships[relationship.oneToOne]
+
+            if (otherRelationship == undefined) {
+              throw new Error(`Relationship '${relationship.oneToOne}' not contained in table '${relationship.otherTable}'`)
+            }
+
+            row[relationshipName][otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
+          }
+
           l.debug('Inserting the row object of the relationship. Going into recursion...', row[relationshipName])
-          let relationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows)
+          relationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows)
           l.debug('Returning from recursion...')
           l.debug('Setting relationship id from just inserted relationship... ' + relationship.thisId + ' = ' + relationshipRow[relationship.otherId])
 
@@ -268,9 +314,10 @@ export async function insert(
         }
   
         insertedRow[relationship.thisId] = relationshipId
+        insertedRow[relationshipName] = relationshipRow
 
         // if the relationship is one-to-one then we also need to update the id on the relationship row
-        if (relationship.oneToOne != undefined) {  
+        if (relationship.oneToOne != undefined) {
           if (relationshipTable.relationships == undefined) {
             throw new Error(`Relationship '${relationship.oneToOne} not contained table '${relationship.otherTable}'`)
           }
@@ -339,15 +386,27 @@ export async function insert(
 
             let insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, relationshipRow, alreadyInsertedRows)
             l.debug('Returning from recursion...', insertedRelationshipRow)
+
+            if (insertedRow[relationshipName] == undefined) {
+              insertedRow[relationshipName] = []
+            }
             
-            if (insertedRelationshipRow != undefined) {
-              if (insertedRow[relationshipName] == undefined) {
-                insertedRow[relationshipName] = []
-              }
-  
+            if (insertedRelationshipRow != undefined) {  
               l.debug('Pushing inserted relationship row into array on inserted row...')
               insertedRow[relationshipName].push(insertedRelationshipRow)
-            }  
+            }
+            // if the result is undefined that means we could not insert that row now because it depends on rows
+            // which are being inserted up the recursion chain. in this case we set a handler which triggers after
+            // the row was inserted. We do this to be able to add this particular one-to-many relationhip row to the
+            // result row.
+            else {
+              l.debug('Row could not be inserted because it is missing an id which is given through a relationship. Adding handler to push it into the inserted row after it has been inserted...')
+              alreadyInsertedRows.addAfterSettingResultHandler(relationshipRow, async (insertedRelationshipRow: any) => {
+                let l = log.fn('afterSettingResultHandler')
+                l.debug('Pushing inserted relationship row into array on inserted row...')
+                insertedRow[relationshipName].push(insertedRelationshipRow)
+              })
+            }
           }
           else {
             l.debug('That particular row object is already being inserted up the recursion chain. Continuing...')

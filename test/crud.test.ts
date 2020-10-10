@@ -3,7 +3,7 @@ import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
 import { create, delete_, read, update } from '../src/crud'
-import { ManyObjects, Object1, Object2, Object3, Object4, schema } from './testSchema'
+import { ManyObjects, Object1, Object2, Object4, schema } from './testSchema'
 
 chai.use(chaiAsPromised)
 const expect = chai.expect
@@ -186,34 +186,34 @@ describe('crud', function() {
         expect(table2Rows[0].column1).to.equal('c')
       })
 
-      it('should create a row with a one-to-one relationship', async function() {
-        let object3 = new Object3
-        object3.property1 = 'a'
-        object3.object3 = new Object3
-        object3.object3.property1 = 'b'
-        object3.object3.object3 = object3
+      // it('should create a row with a one-to-one relationship', async function() {
+      //   let object3 = new Object3
+      //   object3.property1 = 'a'
+      //   object3.object3 = new Object3
+      //   object3.object3.property1 = 'b'
+      //   object3.object3.object3 = object3
 
-        let createdInstance = await create(schema, 'table3', 'postgres', pgQueryFn, object3)
+      //   let createdInstance = await create(schema, 'table3', 'postgres', pgQueryFn, object3)
 
-        expect(createdInstance.id).to.equal(2)
-        expect(createdInstance.object3Id).to.equal(1)
-        expect(createdInstance.property1).to.equal('a')
-        expect(createdInstance.object3).to.deep.equal({
-          id: 1,
-          property1: 'b',
-          object3Id: 2
-        })
+      //   expect(createdInstance.id).to.equal(2)
+      //   expect(createdInstance.object3Id).to.equal(1)
+      //   expect(createdInstance.property1).to.equal('a')
+      //   expect(createdInstance.object3).to.deep.equal({
+      //     id: 1,
+      //     property1: 'b',
+      //     object3Id: 2
+      //   })
 
-        let rows = await pgQueryFn('SELECT * FROM table3')
+      //   let rows = await pgQueryFn('SELECT * FROM table3')
 
-        expect(rows.length).to.equal(2)
-        expect(rows[0].id).to.equal(2)
-        expect(rows[0].table3_id).to.equal(1)
-        expect(rows[0].column1).to.equal('a')
-        expect(rows[1].id).to.equal(1)
-        expect(rows[1].table3_id).to.equal(2)
-        expect(rows[1].column1).to.equal('b')
-      })
+      //   expect(rows.length).to.equal(2)
+      //   expect(rows[0].id).to.equal(2)
+      //   expect(rows[0].table3_id).to.equal(1)
+      //   expect(rows[0].column1).to.equal('a')
+      //   expect(rows[1].id).to.equal(1)
+      //   expect(rows[1].table3_id).to.equal(2)
+      //   expect(rows[1].column1).to.equal('b')
+      // })
 
       it('should not create the same object twice inside many-to-one', async function() {
         let object1 = new Object1
@@ -725,44 +725,44 @@ describe('crud', function() {
         expect(table2Rows[1].column1).to.equal('d')
       })
 
-      it('should delete its one-to-one relationship', async function() {
-        let object31 = new Object3
-        object31.property1 = 'a'
-        object31.object3 = new Object3
-        object31.object3.property1 = 'b'
-        object31.object3.object3 = object31
+    //   it('should delete its one-to-one relationship', async function() {
+    //     let object31 = new Object3
+    //     object31.property1 = 'a'
+    //     object31.object3 = new Object3
+    //     object31.object3.property1 = 'b'
+    //     object31.object3.object3 = object31
 
-        let object32 = new Object3
-        object32.property1 = 'c'
-        object32.object3 = new Object3
-        object32.object3.property1 = 'd'
-        object32.object3.object3 = object32
+    //     let object32 = new Object3
+    //     object32.property1 = 'c'
+    //     object32.object3 = new Object3
+    //     object32.object3.property1 = 'd'
+    //     object32.object3.object3 = object32
 
-        await create(schema, 'table3', 'postgres', pgQueryFn, object31)
-        await create(schema, 'table3', 'postgres', pgQueryFn, object32)
+    //     await create(schema, 'table3', 'postgres', pgQueryFn, object31)
+    //     await create(schema, 'table3', 'postgres', pgQueryFn, object32)
 
-        let deletedInstance = await delete_(schema, 'table3', 'postgres', pgQueryFn, { id: 2 })
+    //     let deletedInstance = await delete_(schema, 'table3', 'postgres', pgQueryFn, { id: 2 })
 
-        expect(deletedInstance).to.be.not.undefined
-        expect(deletedInstance).to.deep.equal({
-          id: 2,
-          property1: 'a',
-          object3Id: 1,
-          object3: {
-            id: 1,
-            property1: 'b',
-            object3Id: 2
-          }
-        })
+    //     expect(deletedInstance).to.be.not.undefined
+    //     expect(deletedInstance).to.deep.equal({
+    //       id: 2,
+    //       property1: 'a',
+    //       object3Id: 1,
+    //       object3: {
+    //         id: 1,
+    //         property1: 'b',
+    //         object3Id: 2
+    //       }
+    //     })
 
-        let table3Rows = await pgQueryFn('SELECT * FROM table3')
+    //     let table3Rows = await pgQueryFn('SELECT * FROM table3')
 
-        expect(table3Rows.length).to.equal(2)
-        expect(table3Rows[0].id).to.equal(4)
-        expect(table3Rows[0].column1).to.equal('c')
-        expect(table3Rows[1].id).to.equal(3)
-        expect(table3Rows[1].column1).to.equal('d')
-      })
+    //     expect(table3Rows.length).to.equal(2)
+    //     expect(table3Rows[0].id).to.equal(4)
+    //     expect(table3Rows[0].column1).to.equal('c')
+    //     expect(table3Rows[1].id).to.equal(3)
+    //     expect(table3Rows[1].column1).to.equal('d')
+    //   })
     })
   })
 })
