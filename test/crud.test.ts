@@ -177,8 +177,7 @@ describe('crud', function() {
 
         let instances = await read(schema, 'table1', 'postgres', pgQueryFn, criteria)
 
-        expect(instances.length).to.equal(1)
-        expect(instances[0]).to.deep.equal({
+        let expectedInstance = {
           id: 1,
           property1: 'a',
           property2: 1,
@@ -201,6 +200,13 @@ describe('crud', function() {
               object2Id: 'x',
               property1: 'd',
               object1Id2: 1,
+              object1: {
+                id: 1,
+                property1: 'a',
+                property2: 1,
+                object1Id: 2,
+                object2Id: 'x'
+              },
               object2: {
                 id: 'x',
                 property1: 'c'
@@ -211,13 +217,23 @@ describe('crud', function() {
               object2Id: 'y',
               property1: 'e',
               object1Id2: null,
+              object1: {
+                id: 1,
+                property1: 'a',
+                property2: 1,
+                object1Id: 2,
+                object2Id: 'x'
+              },
               object2: {
                 id: 'y',
                 property1: 'f'
               }
             }
           ]
-        })
+        }
+
+        expect(instances.length).to.equal(1)
+        expect(instances[0]).to.deep.equal(expectedInstance)
       })
     })
 
