@@ -177,14 +177,14 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
   return instance
 }
 
-export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: ReadCriteria, toInstances: boolean = false, alias?: string, alreadyUnjoined: { tableName: string, rowOrInstance: any }[] = []): any[]  {
+export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: ReadCriteria, toInstances: boolean = false, alias?: string): any[]  {
   let l = log.fn('unjoinRows')
-  l.level = 'debug'
   l.debug('parameter: joinedRows', joinedRows)
   l.debug('parameter: criteria', criteria)
   l.debug('parameter: tableName', tableName)
   l.debug('parameter: alias', alias)
 
+  let alreadyUnjoined: { tableName: string, rowOrInstance: any }[] = []
   let rootRows = alias == undefined
   alias = alias != undefined ? alias : tableName + '__'
 
@@ -282,7 +282,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       l.debug('relationshipAlias', relationshipAlias)
       
       l.debug('Determining relationship. Going into recursion...')
-      let relationshipRowOrInstances = unjoinRows(schema, relationshipTableName, [ joinedRow ], criteria[relationshipName], toInstances, relationshipAlias, alreadyUnjoined)
+      let relationshipRowOrInstances = unjoinRows(schema, relationshipTableName, [ joinedRow ], criteria[relationshipName], toInstances, relationshipAlias)
       l.debug('Coming back from recursion...', relationshipRowOrInstances)
 
       if (relationshipRowOrInstances.length == 1) {

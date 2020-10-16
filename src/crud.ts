@@ -20,9 +20,8 @@ export async function create<T>(schema: Schema, tableName: string, db: string, q
 
 export async function read<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: ReadCriteria): Promise<T[]> {
   let l = log.fn('read')
-l.level = 'debug'
-  let table = schema[tableName]
 
+  let table = schema[tableName]
   if (table == undefined) {
     throw new Error('Table not contained in schema: ' + tableName)
   }
