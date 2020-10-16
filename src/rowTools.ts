@@ -114,9 +114,9 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
 
 export function rowToInstance(schema: Schema, tableName: string, row: any, alreadyConverted: AlreadyConverted = new AlreadyConverted): any {
   let l = log.fn('rowToInstance')
-  l.debug('tableName', tableName)
-  l.debug('row', row)
-  l.debug('alreadyConverted', alreadyConverted.instancesAndRows)
+  l.debug('parameter: tableName', tableName)
+  l.debug('parameter: row', row)
+  l.debug('parameter: alreadyConverted', alreadyConverted.instancesAndRows)
 
   let instance = alreadyConverted.getInstance(row)
   if (instance != undefined) {
@@ -179,12 +179,13 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
 
 export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: ReadCriteria, toInstances: boolean = false, alias?: string, rowFilter?: any): any[]  {
   let l = log.fn('unjoinRows')
-  l.debug('joinedRows', joinedRows)
-  l.debug('criteria', criteria)
-  l.debug('tableName', tableName)
-  l.debug('alias', alias)
-  l.debug('rowFilter', rowFilter)
+  l.debug('parameter: joinedRows', joinedRows)
+  l.debug('parameter: criteria', criteria)
+  l.debug('parameter: tableName', tableName)
+  l.debug('parameter: alias', alias)
+  l.debug('parameter: rowFilter', rowFilter)
 
+  let rootRow = alias == undefined
   alias = alias != undefined ? alias : tableName + '__'
 
   let table = schema[tableName]
@@ -220,7 +221,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       }
     }
 
-    if (everyColumnIsNull) {
+    if (everyColumnIsNull && ! rootRow) {
       l.debug('Every column is null thus we have to assume that there was no row. Continuing...')
       continue
     }

@@ -809,16 +809,14 @@ describe('isud', function() {
         })
       })
 
-      it('should select a row which columns are null', function() {
+      it.only('should select a row which columns are null', async function() {
+        await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
+        await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
+        await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
 
-      })
+        let rows = await select(schema, 'table_many', 'postgres', pgQueryFn, {})
 
-      it('should select one-to-many row which columns are all null', function() {
-
-      })
-
-      it('should select a many-to-ony relationship which columns are all null', function() {
-
+        expect(rows.length).to.equal(3)
       })
     })
 

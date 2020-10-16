@@ -221,7 +221,7 @@ describe('crud', function() {
     })
 
     describe('update', function() {
-      it.only('should update an instance with relationships', async function() {
+      it('should update an instance with relationships', async function() {
         let object1 = new Object1
         object1.property1 = 'a'
         object1.property2 = 1
@@ -344,7 +344,7 @@ describe('crud', function() {
     })
 
     describe('delete_', function() {
-      it.only('should delete in instance with relationships', async function() {
+      it('should delete in instance with relationships', async function() {
         let object1 = new Object1
         object1.property1 = 'a'
         object1.property2 = 1
