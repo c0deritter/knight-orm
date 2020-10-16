@@ -12,10 +12,10 @@ export interface Table {
 export interface Relationship {
   oneToMany?: boolean
   manyToOne?: boolean
-  oneToOne?: string
   thisId: any
   otherTable: string
   otherId: any
+  otherRelationship?: string
   delete?: boolean
 }
 

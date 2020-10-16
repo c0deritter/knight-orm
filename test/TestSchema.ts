@@ -48,10 +48,11 @@ export const schema = {
         delete: true
       },
       object1: {
-        oneToOne: 'object1',
+        manyToOne: true,
         thisId: 'table1_id',
         otherTable: 'table1',
         otherId: 'id',
+        otherRelationship: 'object1',
         delete: true
       },
       object2: {

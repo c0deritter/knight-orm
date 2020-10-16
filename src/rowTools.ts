@@ -76,8 +76,8 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
       if (typeof instance[relationshipName] == 'object' && instance[relationshipName] !== null) {
         let relationship = table.relationships[relationshipName]
   
-        if (relationship.manyToOne || relationship.oneToOne != undefined) {
-          l.debug('Relationship is many-to-one or one-to-one. Going into recursion...')
+        if (relationship.manyToOne) {
+          l.debug('Relationship is many-to-one. Going into recursion...')
           row[relationshipName] = instanceToRow(schema, relationship.otherTable, instance[relationshipName], alreadyConverted)
           l.debug('Coming back from recursion...')
         }
@@ -142,7 +142,7 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
       if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
         let relationship = table.relationships[relationshipName]
   
-        if (relationship.manyToOne || relationship.oneToOne != undefined) {
+        if (relationship.manyToOne) {
           l.debug('Relationship is many-to-one or one-to-one. Going into recursion...')
           instance[relationshipName] = rowToInstance(schema, table.relationships[relationshipName].otherTable, row[relationshipName], alreadyConverted)
           l.debug('Coming back from recursion...')
@@ -270,7 +270,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       let relationship = table.relationships![relationshipName]
       l.debug('relationship', relationship)
 
-      if ((relationship.manyToOne || relationship.oneToOne != undefined) && rowOrInstance[relationshipName] != undefined) {
+      if ((relationship.manyToOne) && rowOrInstance[relationshipName] != undefined) {
         l.debug('Many-to-one relationship was already determined. Continuing...')
         continue
       }
@@ -295,7 +295,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
             rowOrInstance[relationshipName].push(relationshipRowOrInstances[0])
           }
         }
-        else if (relationship.manyToOne || relationship.oneToOne != undefined) {
+        else if (relationship.manyToOne) {
           l.debug('Attaching many-to-one instance...')
           rowOrInstance[relationshipName] = relationshipRowOrInstances[0]
         }  

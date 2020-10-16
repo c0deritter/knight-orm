@@ -77,7 +77,7 @@ export async function insert(
       let relationshipRow = row[relationshipName]
       
       // if the relationship is a many-to-one or a one-to-one and this row thus needs its id
-      if (relationship.manyToOne || relationship.oneToOne != undefined) {
+      if (relationship.manyToOne) {
         l.debug(`Trying to determine id for '${columnName}'`, relationship)
 
         // check if there is a row object set for the relationship. if so insert that one
@@ -242,7 +242,7 @@ export async function insert(
 
       // if the relationship is many-to-one or one-to-one and the id is not set by now and there is a set relationship row object
       // attempt to set the id
-      if ((relationship.manyToOne || relationship.oneToOne != undefined) && row[relationship.thisId] === undefined && typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
+      if (relationship.manyToOne && row[relationship.thisId] === undefined && typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
         // if the id of the relationship is not set it can be for one of the following reasons
         // 1. the id of the relationship refers to the same table thus we wanted to insert the relationship owning row first
         //    to have a lower id on it
@@ -269,22 +269,18 @@ export async function insert(
           continue
         }
         else {
-          if (relationship.oneToOne != undefined) {
+          if (relationship.otherRelationship != undefined) {
             let otherTable = schema[relationship.otherTable]
 
             if (otherTable == undefined) {
               throw new Error('Table not contained in schema: ' + relationship.otherTable)
             }
 
-            if (otherTable.relationships == undefined) {
-              throw new Error(`Relationship '${relationship.oneToOne}' not contained in table '${relationship.otherTable}'`)
+            if (otherTable.relationships == undefined || otherTable.relationships[relationship.otherRelationship] == undefined) {
+              throw new Error(`Relationship '${relationship.otherRelationship}' not contained in table '${relationship.otherTable}'`)
             }
 
-            let otherRelationship = otherTable.relationships[relationship.oneToOne]
-
-            if (otherRelationship == undefined) {
-              throw new Error(`Relationship '${relationship.oneToOne}' not contained in table '${relationship.otherTable}'`)
-            }
+            let otherRelationship = otherTable.relationships[relationship.otherRelationship]
 
             row[relationshipName][otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
           }
@@ -317,17 +313,12 @@ export async function insert(
         insertedRow[relationshipName] = relationshipRow
 
         // if the relationship is one-to-one then we also need to update the id on the relationship row
-        if (relationship.oneToOne != undefined) {
-          if (relationshipTable.relationships == undefined) {
-            throw new Error(`Relationship '${relationship.oneToOne} not contained table '${relationship.otherTable}'`)
+        if (relationship.otherRelationship != undefined) {
+          if (relationshipTable.relationships == undefined || relationshipTable.relationships[relationship.otherRelationship] == undefined) {
+            throw new Error(`Relationship '${relationship.otherRelationship} not contained table '${relationship.otherTable}'`)
           }
   
-          let oneToOneRelationshipOfRelationship = relationshipTable.relationships[relationship.oneToOne]
-    
-          if (oneToOneRelationshipOfRelationship == undefined) {
-            throw new Error(`Relationship '${relationship.oneToOne} not contained table '${relationship.otherTable}'`)
-          }
-    
+          let oneToOneRelationshipOfRelationship = relationshipTable.relationships[relationship.otherRelationship]    
           let relationshipRow = alreadyInsertedRows.getByTableNameAndId(relationship.otherTable, relationship.otherId, insertedRow[relationship.thisId])
     
           if (relationshipRow != undefined && relationshipRow[oneToOneRelationshipOfRelationship.thisId] === undefined) {
@@ -550,7 +541,7 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
         l.debug('Coming back from recursion...')
         l.debug('deletedRows', deletedRows)
   
-        if (relationship.manyToOne || relationship.oneToOne != undefined) {
+        if (relationship.manyToOne) {
           if (deletedRows.length == 1) {
             relationshipToDeletedRows[relationshipName] = deletedRows[0]
           }
