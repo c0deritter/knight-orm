@@ -31,14 +31,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/c0deritter/mega-nice-orm.git"
+    "url": "git+https://github.com/c0deritter/mega-nice-sql-orm.git"
   },
   "keywords": [
     ""
   ],
   "author": "Coderitter GmbH",
   "bugs": {
-    "url": "https://github.com/c0deritter/mega-nice-orm/issues"
+    "url": "https://github.com/c0deritter/mega-nice-sql-orm/issues"
   },
-  "homepage": "https://github.com/c0deritter/mega-nice-orm#readme"
+  "homepage": "https://github.com/c0deritter/mega-nice-sql-orm#readme"
 }
