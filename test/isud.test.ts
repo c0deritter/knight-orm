@@ -15,7 +15,7 @@ let pool: Pool = new Pool({
   password: 'sqlorm_test'
 } as PoolConfig)
 
-describe.only('isud', function() {
+describe('isud', function() {
   describe('PostgreSQL', function () {
     after(async function() {
       await pool.end()
@@ -24,14 +24,12 @@ describe.only('isud', function() {
     beforeEach(async function() {
       await pool.query('CREATE TABLE table1 (id SERIAL, column1 VARCHAR(20), column2 INTEGER, table1_id INTEGER, table2_id VARCHAR(20))')
       await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20))')
-      await pool.query('CREATE TABLE table4 (table1_id1 INTEGER, table1_id2 INTEGER)')
       await pool.query('CREATE TABLE table_many (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20), table1_id2 INTEGER)')
     })
 
     afterEach(async function() {
       await pool.query('DROP TABLE IF EXISTS table1 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table2 CASCADE')
-      await pool.query('DROP TABLE IF EXISTS table4 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table_many CASCADE')
     })
     
@@ -226,15 +224,15 @@ describe.only('isud', function() {
         let row: any = {
           column1: 'a',
           column2: 1,
-          object41s: []
+          many: []
         }
 
-        row.object41s.push(
+        row.many.push(
           {
-            object11: row
+            object1: row
           },
           {
-            object11: row
+            object1: row
           }
         )
 
@@ -246,20 +244,24 @@ describe.only('isud', function() {
           column2: 1,
           table1_id: null,
           table2_id: null,
-          object41s: [
+          many: [
             {
-              table1_id1: 1,
-              table1_id2: null
+              table1_id: 1,
+              table2_id: null,
+              table1_id2: null,
+              column1: null
             },
             {
-              table1_id1: 1,
-              table1_id2: null
+              table1_id: 1,
+              table2_id: null,
+              table1_id2: null,
+              column1: null
             }
           ]
         }
 
-        expectedRow.object41s[0].object11 = expectedRow
-        expectedRow.object41s[1].object11 = expectedRow
+        expectedRow.many[0].object1 = expectedRow
+        expectedRow.many[1].object1 = expectedRow
 
         expect(insertedRow.id).to.equal(1)
         expect(insertedRow).to.deep.equal(expectedRow)
@@ -271,12 +273,14 @@ describe.only('isud', function() {
         expect(table1Rows[0].column1).to.equal('a')
         expect(table1Rows[0].column2).to.equal(1)
 
-        let tableManyRows = await pgQueryFn('SELECT * FROM table4')
+        let tableManyRows = await pgQueryFn('SELECT * FROM table_many')
 
         expect(tableManyRows.length).to.equal(2)
-        expect(tableManyRows[0].table1_id1).to.equal(1)
+        expect(tableManyRows[0].table1_id).to.equal(1)
+        expect(tableManyRows[0].table2_id).to.be.null
         expect(tableManyRows[0].table1_id2).to.be.null
-        expect(tableManyRows[1].table1_id1).to.equal(1)
+        expect(tableManyRows[1].table1_id).to.equal(1)
+        expect(tableManyRows[1].table2_id).to.be.null
         expect(tableManyRows[1].table1_id2).to.be.null
       })
 
@@ -329,40 +333,94 @@ describe.only('isud', function() {
 
       it('should insert a row which many-to-one relationship which refers to an object which is about to be inserted up the recursion chain', async function() {
         let row: any = {
-          object5: {}
+          object1: {}
         }
 
-        row.object5.object5 = row
+        row.object1.object1 = row
         
-        let insertedRow = await insert(schema, 'table5', 'postgres', pgQueryFn, row)
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
         let expectedRow = {
-          id: 2,
-          table5_id: 1,
-          object5: {
-            id: 1,
-            table5_id: 2
-          }
+          id: 1,
+          column1: null,
+          column2: null,
+          table1_id: 2,
+          table2_id: null,
+          object1: {
+            id: 2,
+            column1: null,
+            column2: null,
+            table1_id: 1,
+            table2_id: null
+          } as any
         }
+
+        expectedRow.object1.object1 = expectedRow
 
         expect(insertedRow).to.deep.equal(expectedRow)
 
-        let table5Rows = await pgQueryFn('SELECT * FROM table5')
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
-        expect(table5Rows.length).to.equal(2)
-        expect(table5Rows[0].id).to.equal(2)
-        expect(table5Rows[0].table5_id).to.equal(1)
-        expect(table5Rows[1].id).to.equal(1)
-        expect(table5Rows[1].table5_id).to.equal(2)
+        expect(table1Rows.length).to.equal(2)
+        expect(table1Rows[0].id).to.equal(2)
+        expect(table1Rows[0].table1_id).to.equal(1)
+        expect(table1Rows[0].table2_id).to.be.null
+        expect(table1Rows[1].id).to.equal(1)
+        expect(table1Rows[1].table1_id).to.equal(2)
+        expect(table1Rows[1].table2_id).to.be.null
       })
 
-      it.only('should insert a row with a one-to-one relationship', async function() {
+      it('should insert a row with a one-to-one relationship', async function() {
         let row: any = {
           column1: 'a',
           column2: 1,
           object1: {
             column1: 'b',
-            colunm2: 2
+            column2: 2
+          }
+        }
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let expectedRow = {
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          table1_id: 2,
+          table2_id: null,
+          object1: {
+            id: 2,
+            column1: 'b',
+            column2: 2,
+            table1_id: 1,
+            table2_id: null
+          } as any
+        }
+
+        expect(insertedRow).to.deep.equal(expectedRow)
+
+        let rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(rows.length).to.equal(2)
+        expect(rows[0].id).to.equal(2)
+        expect(rows[0].column1).to.equal('b')
+        expect(rows[0].column2).to.equal(2)
+        expect(rows[0].table1_id).to.equal(1)
+        expect(rows[0].table2_id).to.be.null
+        expect(rows[1].id).to.equal(1)
+        expect(rows[1].column1).to.equal('a')
+        expect(rows[1].column2).to.equal(1)
+        expect(rows[1].table1_id).to.equal(2)
+        expect(rows[1].table2_id).to.be.null
+      })
+
+      it('should insert a row with a one-to-one relationship where the other end of the relationship is referencing a row object', async function() {
+        let row: any = {
+          column1: 'a',
+          column2: 1,
+          object1: {
+            column1: 'b',
+            column2: 2
           }
         }
 
@@ -393,14 +451,14 @@ describe.only('isud', function() {
 
         expect(rows.length).to.equal(2)
         expect(rows[0].id).to.equal(2)
-        expect(rows[0].column1).to.equal('1')
-        expect(rows[0].column2).to.equal(1)
+        expect(rows[0].column1).to.equal('b')
+        expect(rows[0].column2).to.equal(2)
         expect(rows[0].table1_id).to.equal(1)
         expect(rows[0].table2_id).to.be.null
         expect(rows[1].id).to.equal(1)
-        expect(rows[1].column1).to.equal('b')
-        expect(rows[1].column2).to.equal(2)
-        expect(rows[1].table1_id).to.equal(1)
+        expect(rows[1].column1).to.equal('a')
+        expect(rows[1].column2).to.equal(1)
+        expect(rows[1].table1_id).to.equal(2)
         expect(rows[1].table2_id).to.be.null
       })
 
@@ -520,7 +578,7 @@ describe.only('isud', function() {
               table2_id: 'x',
               column1: null,
               table1_id2: 1
-            }]
+            } as any]
           }
         }
 
@@ -534,15 +592,15 @@ describe.only('isud', function() {
         }
 
         let row = {
-          object11: table1Row,
+          object1: table1Row,
           object12: table1Row
         }
 
-        let insertedRow = await insert(schema, 'table4', 'postgres', pgQueryFn, row)
+        let insertedRow = await insert(schema, 'table_many', 'postgres', pgQueryFn, row)
 
-        expect(insertedRow.table1_id1).to.equal(1)
+        expect(insertedRow.table1_id).to.equal(1)
         expect(insertedRow.table1_id2).to.equal(1)
-        expect(insertedRow.object11).to.deep.equal({
+        expect(insertedRow.object1).to.deep.equal({
           id: 1,
           column1: 'a',
           column2: 1,
@@ -556,7 +614,7 @@ describe.only('isud', function() {
           table1_id: null,
           table2_id: null
         })
-        expect(insertedRow.object11 === insertedRow.object12).to.be.true
+        expect(insertedRow.object1 === insertedRow.object12).to.be.true
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
@@ -922,42 +980,52 @@ describe.only('isud', function() {
       it('should delete its one-to-one relationship', async function() {
         let row1 = {
           column1: 'a',
-          object3: {
+          object1: {
             column1: 'b'
           }
         }
 
         let row2 = {
           column1: 'c',
-          object3: {
+          object1: {
             column1: 'd',
           }
         }
 
-        await insert(schema, 'table3', 'postgres', pgQueryFn, row1)
-        await insert(schema, 'table3', 'postgres', pgQueryFn, row2)
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row1)
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row2)
 
-        let deletedRows = await delete_(schema, 'table3', 'postgres', pgQueryFn, { id: 1 })
+        let deletedRows = await delete_(schema, 'table1', 'postgres', pgQueryFn, { id: 1 })
 
         expect(deletedRows.length).to.equal(1)
         expect(deletedRows).to.deep.equal([{
           id: 1,
           column1: 'a',
-          table3_id: 2,
-          object3: {
+          column2: null,
+          table1_id: 2,
+          table2_id: null,
+          object1: {
             id: 2,
             column1: 'b',
-            table3_id: 1
+            column2: null,
+            table1_id: 1,
+            table2_id: null
           }
         }])
 
-        let table3Rows = await pgQueryFn('SELECT * FROM table3')
+        let table3Rows = await pgQueryFn('SELECT * FROM table1')
 
         expect(table3Rows.length).to.equal(2)
         expect(table3Rows[0].id).to.equal(4)
         expect(table3Rows[0].column1).to.equal('d')
+        expect(table3Rows[0].column2).to.be.null
+        expect(table3Rows[0].table1_id).to.equal(3)
+        expect(table3Rows[0].table2_id).to.be.null
         expect(table3Rows[1].id).to.equal(3)
         expect(table3Rows[1].column1).to.equal('c')
+        expect(table3Rows[1].column2).to.be.null
+        expect(table3Rows[1].table1_id).to.equal(4)
+        expect(table3Rows[1].table2_id).to.be.null
       })
     })
   })

@@ -8,16 +8,16 @@ services:
       - './:/hostdir'
     depends_on: 
       - postgres
-      - mysql
+      # - mysql
   postgres:
     image: 'postgres'
     environment:
       - POSTGRES_DB=sqlorm_test
       - POSTGRES_USER=sqlorm_test
       - POSTGRES_PASSWORD=sqlorm_test
-  mysql:
-    image: 'mysql'
-    environment:
-      - MYSQL_DATABASE=sqlorm_test
-      - MYSQL_USER=sqlorm_test
-      - MYSQL_PASSWORD=sqlorm_test
+  # mysql:
+  #   image: 'mysql'
+  #   environment:
+  #     - MYSQL_DATABASE=sqlorm_test
+  #     - MYSQL_USER=sqlorm_test
+  #     - MYSQL_PASSWORD=sqlorm_test

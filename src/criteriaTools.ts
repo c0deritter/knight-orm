@@ -53,7 +53,7 @@ export function rowToUpdateCriteria(schema: Schema, tableName: string, row: any)
     if (isIdColumn(table.columns[column])) {
       updateCriteria[column] = row[column] === undefined ? null : row[column]
     }
-    else if (column in row) {
+    else if (column in row && row[column] !== undefined) {
       updateCriteria.set[column] = row[column]
     }
   }

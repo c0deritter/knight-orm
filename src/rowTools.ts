@@ -48,13 +48,13 @@ class AlreadyConverted {
 
 export function instanceToRow(schema: Schema, tableName: string, instance: any, alreadyConverted: AlreadyConverted = new AlreadyConverted): any {
   let l = log.fn('instanceToRow')
-  l.debug('tableName', tableName)
-  l.debug('instance', instance)
-  l.debug('alreadyConverted', alreadyConverted.instancesAndRows)
+  l.debug('parameter: tableName', tableName)
+  l.debug('parameter: instance', instance)
+  l.debug('parameter: alreadyConverted', alreadyConverted.instancesAndRows)
 
   let row = alreadyConverted.getRow(instance)
   if (row != undefined) {
-    l.debug('Instance was already converted. Returning it...')
+    l.debug('Instance was already converted. Returning it...', row)
     return row
   }
 
@@ -289,7 +289,6 @@ export function rowsRepresentSameEntity(table: Table, row1: any, row2: any): boo
   if (row1 == undefined || row2 == undefined) {
     return false
   }
-
   let idColumns = getIdColumns(table)
 
   if (idColumns.length == 0) {

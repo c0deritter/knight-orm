@@ -14,7 +14,9 @@ describe('rowTools', function() {
       expect(instanceToRow(schema, 'table1', object1)).to.deep.equal({
         id: 1,
         column1: 'a',
-        column2: 1
+        column2: 1 ,
+        table1_id: undefined,
+        table2_id: undefined
       })
     })
 
@@ -47,6 +49,8 @@ describe('rowTools', function() {
         id: 1,
         column1: 'a',
         column2: 1,
+        table1_id: undefined,
+        table2_id: undefined,
         many: [
           {
             table1_id: 1,
@@ -89,7 +93,9 @@ describe('rowTools', function() {
       expect(rowToInstance(schema, 'table1', row)).to.deep.equal({
         id: 1,
         property1: 'a',
-        property2: 1
+        property2: 1,
+        object1Id: undefined,
+        object2Id: undefined
       })
     })
 
@@ -131,6 +137,8 @@ describe('rowTools', function() {
         id: 1,
         property1: 'a',
         property2: 1,
+        object1Id: undefined,
+        object2Id: undefined,
         many: [
           {
             object1Id: 1,
@@ -184,9 +192,9 @@ describe('rowTools', function() {
 
       expect(instances.length).to.equal(2)
       expect(instances[0]).to.be.instanceOf(Object1)
-      expect(instances[0]).to.deep.equal({ id: 1, property1: 'a', property2: 1 })
+      expect(instances[0]).to.deep.equal({ id: 1, property1: 'a', property2: 1, object1Id: undefined, object2Id: undefined })
       expect(instances[1]).to.be.instanceOf(Object1)
-      expect(instances[1]).to.deep.equal({ id: 2, property1: 'b', property2: 2 })
+      expect(instances[1]).to.deep.equal({ id: 2, property1: 'b', property2: 2, object1Id: undefined, object2Id: undefined })
     })
 
     it('should create corresponding instance from simple rows with relationships', function() {
@@ -235,15 +243,15 @@ describe('rowTools', function() {
       expect(instances[0].many).to.be.instanceOf(Array)
       expect(instances[0].many[0]).to.be.instanceOf(ManyObjects)
       expect(instances[0].many[0].object2).to.be.instanceOf(Object2)
-      expect(instances[0]).to.deep.equal({ id: 1, property1: 'a', property2: 1, many: [{ object1Id: 1, object2Id: 1, property1: 'b', object1Id2: null, object2: { id: 1, property1: 'c' }}]})
+      expect(instances[0]).to.deep.equal({ id: 1, property1: 'a', property2: 1, object1Id: undefined, object2Id: undefined, many: [{ object1Id: 1, object2Id: 1, property1: 'b', object1Id2: null, object2: { id: 1, property1: 'c' }}]})
       expect(instances[1]).to.be.instanceOf(Object1)
       expect(instances[1].many).to.be.instanceOf(Array)
       expect(instances[1].many[0]).to.be.instanceOf(ManyObjects)
       expect(instances[1].many[0].object2).to.be.undefined
-      expect(instances[1]).to.deep.equal({ id: 2, property1: 'd', property2: 2, many: [{ object1Id: 2, object2Id: null, property1: 'e', object1Id2: null }]})
+      expect(instances[1]).to.deep.equal({ id: 2, property1: 'd', property2: 2, object1Id: undefined, object2Id: undefined, many: [{ object1Id: 2, object2Id: null, property1: 'e', object1Id2: null }]})
       expect(instances[2]).to.be.instanceOf(Object1)
       expect(instances[2].many).to.be.undefined
-      expect(instances[2]).to.deep.equal({ id: 3, property1: 'f', property2: 3 })
+      expect(instances[2]).to.deep.equal({ id: 3, property1: 'f', property2: 3, object1Id: undefined, object2Id: undefined })
     })
   })
 

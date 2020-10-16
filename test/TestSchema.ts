@@ -9,9 +9,7 @@ export class Object1 {
 
   many?: ManyObjects[]
   object1?: Object1
-  object2?: Object1
-  object41s?: Object4[]
-  object42s?: Object4[]
+  object2?: Object2
 }
 
 export class Object2 {
@@ -19,14 +17,6 @@ export class Object2 {
   property1?: string
   
   many?: ManyObjects[]
-  object1?: Object1
-}
-
-export class Object4 {
-  object1Id1?: number
-  object1Id2?: number
-  object11?: Object1
-  object12?: Object1
 }
 
 export class ManyObjects {
@@ -61,25 +51,14 @@ export const schema = {
         oneToOne: 'object1',
         thisId: 'table1_id',
         otherTable: 'table1',
-        otherId: 'id'
+        otherId: 'id',
+        delete: true
       },
       object2: {
         manyToOne: true,
         thisId: 'table2_id',
         otherTable: 'table2',
         otherId: 'id'
-      },
-      object41s: {
-        oneToMany: true,
-        thisId: 'id',
-        otherTable: 'table4',
-        otherId: 'table1_id1'
-      },
-      object42s: {
-        oneToMany: true,
-        thisId: 'id',
-        otherTable: 'table4',
-        otherId: 'table1_id2'
       }
     },
     rowToInstance: (row: any) => {
@@ -114,7 +93,7 @@ export const schema = {
         otherTable: 'table_many',
         otherId: 'table2_id',
         delete: true
-      }  
+      }
     },
     rowToInstance: (row: any) => {
       let obj2 = new Object2
@@ -125,43 +104,11 @@ export const schema = {
     instanceToRow: (object2: Object2) => {
       return {
         id: object2.id,
-        column1: object2.property1
+        column1: object2.property1,
       }
     }
   },
 
-  'table4': {
-    columns: {
-      'table1_id1': { property: 'object1Id1', id: true },
-      'table1_id2': { property: 'object1Id2', id: true }
-    },
-    relationships: {
-      object11: {
-        manyToOne: true,
-        thisId: 'table1_id1',
-        otherTable: 'table1',
-        otherId: 'id'
-      },
-      object12: {
-        manyToOne: true,
-        thisId: 'table1_id2',
-        otherTable: 'table1',
-        otherId: 'id'
-      }
-    },
-    rowToInstance: (row: any) => {
-      let obj4 = new Object4
-      obj4.object1Id1 = row.table1_id1
-      obj4.object1Id2 = row.table1_id2
-      return obj4      
-    },
-    instanceToRow: (object4: Object4) => {
-      return {
-        table1_id1: object4.object1Id1,
-        table1_id2: object4.object1Id2
-      }
-    }
-  },
   'table_many': {
     columns: {
       'table1_id': { property: 'object1Id', id: true },

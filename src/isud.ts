@@ -8,7 +8,7 @@ import { filterValidColumns, idsOnly, unjoinRows } from './rowTools'
 import { getRelationshipNameByColumn, isGeneratedIdColumn, Schema } from './Schema'
 import { FiddledRows } from './util'
 
-let log = new Log('mega-nice-sql-orm/isud.ts', 'insane')
+let log = new Log('mega-nice-sql-orm/isud.ts')
 
 /**
  * At first it goes through all columns which contain an id of a many-to-one or one-to-one relationship
