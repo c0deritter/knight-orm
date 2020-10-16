@@ -757,7 +757,7 @@ describe('isud', function() {
         })
       })
 
-      it('should select all rows', async function() {
+      it('should return only one row if there were more than one one-to-many relationship rows present', async function() {
         let row = {
           column1: 'a',
           column2: 1,
@@ -781,7 +781,7 @@ describe('isud', function() {
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
 
-        expect(rows.length).to.equal(2)
+        expect(rows.length).to.equal(1)
         expect(rows[0]).to.deep.equal({
           id: 1,
           column1: 'a',
@@ -809,7 +809,7 @@ describe('isud', function() {
         })
       })
 
-      it.only('should select a row which columns are null', async function() {
+      it('should select a row which columns are null', async function() {
         await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
         await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
         await insert(schema, 'table_many', 'postgres', pgQueryFn, {})

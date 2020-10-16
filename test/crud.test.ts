@@ -129,7 +129,7 @@ describe('crud', function() {
     })
 
     describe('read', function() {
-      it('should read an instance with relationship', async function() {
+      it.only('should read an instance with relationship', async function() {
         let object1 = new Object1
         object1.property1 = 'a'
         object1.property2 = 1
@@ -210,9 +210,10 @@ describe('crud', function() {
               object1Id: 1,
               object2Id: 'y',
               property1: 'e',
+              object1Id2: null,
               object2: {
                 id: 'y',
-                column1: 'f'
+                property1: 'f'
               }
             }
           ]

@@ -1,6 +1,6 @@
 import { ReadCriteria } from 'mega-nice-criteria'
 import Log from 'mega-nice-log'
-import { getIdColumns, isIdColumn, Schema, Table } from './Schema'
+import { getIdColumns, isIdColumn, Schema, Table, getPropertyName } from './Schema'
 
 let log = new Log('mega-nice-sql-orm/rowTools.ts')
 
@@ -177,7 +177,7 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
   return instance
 }
 
-export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: ReadCriteria, toInstances: boolean = false, alias?: string, rowFilter?: any): any[]  {
+export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: ReadCriteria, toInstances: boolean = false, alias?: string, rowFilter?: any, alreadyUnjoined: { tableName: string, rowOrInstance: any }[] = []): any[]  {
   let l = log.fn('unjoinRows')
   l.debug('parameter: joinedRows', joinedRows)
   l.debug('parameter: criteria', criteria)
@@ -228,7 +228,30 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
 
     let rowOrInstance = toInstances ? table.rowToInstance(unaliasedRow) : unaliasedRow
     l.debug('rowOrInstance', rowOrInstance)
-    rowsOrInstances.push(rowOrInstance)
+
+    let alreadyUnjoinedRow: any = undefined
+    for (let tableAndRowOrInstance of alreadyUnjoined) {
+      if (tableAndRowOrInstance.tableName != tableName) {
+        continue
+      }
+
+      if (! toInstances && rowsRepresentSameEntity(table, rowOrInstance, tableAndRowOrInstance.rowOrInstance)) {
+        alreadyUnjoinedRow = tableAndRowOrInstance.rowOrInstance
+        break
+      }
+      else if (toInstances && instancesRepresentSameEntity(table, rowOrInstance, tableAndRowOrInstance.rowOrInstance)) {
+        alreadyUnjoinedRow = tableAndRowOrInstance
+        break
+      }
+    }
+
+    if (! everyColumnIsNull && alreadyUnjoinedRow != undefined) {
+      rowOrInstance = alreadyUnjoinedRow
+    }
+    else {
+      rowsOrInstances.push(rowOrInstance)
+      alreadyUnjoined.push({ tableName: tableName, rowOrInstance: rowOrInstance })
+    }
 
     let filteredRow = getCellsBelongingToTable(table, joinedRow, alias)
     l.debug('filteredRow', filteredRow)
@@ -265,7 +288,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       l.debug('relationshipRowFilter', relationshipRowFilter)
       
       l.debug('Determining all relationship instances. Going into recursion...')
-      let relationshipInstances = unjoinRows(schema, relationshipTableName, joinedRows, criteria[relationshipName], toInstances, relationshipAlias, relationshipRowFilter)
+      let relationshipInstances = unjoinRows(schema, relationshipTableName, joinedRows, criteria[relationshipName], toInstances, relationshipAlias, relationshipRowFilter, alreadyUnjoined)
       l.debug('Coming back from recursion...', relationshipInstances)
 
       if (relationship.oneToMany && relationshipInstances.length > 0) {
@@ -290,6 +313,7 @@ export function rowsRepresentSameEntity(table: Table, row1: any, row2: any): boo
   if (row1 == undefined || row2 == undefined) {
     return false
   }
+
   let idColumns = getIdColumns(table)
 
   if (idColumns.length == 0) {
@@ -298,6 +322,28 @@ export function rowsRepresentSameEntity(table: Table, row1: any, row2: any): boo
 
   for (let idColumn of idColumns) {
     if (row1[idColumn] === undefined || row1[idColumn] !== row2[idColumn]) {
+      return false
+    }
+  }
+
+  return true
+}
+
+export function instancesRepresentSameEntity(table: Table, instance1: any, instance2: any): boolean {
+  if (instance1 == undefined || instance2 == undefined) {
+    return false
+  }
+  
+  let idColumns = getIdColumns(table)
+
+  if (idColumns.length == 0) {
+    return false
+  }
+
+  for (let idColumn of idColumns) {
+    let idProperty = getPropertyName(table.columns[idColumn])
+
+    if (instance1[idProperty] === undefined || instance1[idProperty] !== instance2[idProperty]) {
       return false
     }
   }
