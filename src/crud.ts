@@ -1,4 +1,4 @@
-import { ReadCriteria } from 'mega-nice-criteria'
+import { Criteria, ReadCriteria } from 'mega-nice-criteria'
 import Log from 'mega-nice-log'
 import sql from 'mega-nice-sql'
 import { fillReadCriteria, fillUpdateCriteria } from 'mega-nice-sql-criteria-filler'
@@ -12,9 +12,16 @@ import { FiddledRows } from './util'
 let log = new Log('mega-nice-sql-orm/crud.ts')
 
 export async function create<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
+  let l = log.fn('create')
+  l.param('db', db)
+  l.param('instance', instance)
+
   let row = instanceToRow(schema, tableName, instance)
+  l.var('row', row)
   let insertedRow = await insert(schema, tableName, db, queryFn, row)
+  l.var('insertedRow', insertedRow)
   let insertedInstance = rowToInstance(schema, tableName, insertedRow)
+  l.returning('Returning insertedInstance...', insertedInstance)
   return insertedInstance
 }
 
@@ -45,16 +52,18 @@ export async function read<T>(schema: Schema, tableName: string, db: string, que
   return instances
 }
 
-export async function count(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: ReadCriteria): Promise<number> {
+export async function count(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<number> {
   let l = log.fn('count')
+  l.param('db', db)
+  l.param('criteria', criteria)
 
   let table = schema[tableName]
-
   if (table == undefined) {
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
   let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
+  l.var('rowCriteria', rowCriteria)
 
   let query = buildCountQuery(schema, tableName, rowCriteria)
 
@@ -65,17 +74,19 @@ export async function count(schema: Schema, tableName: string, db: string, query
   l.var('values', values)
 
   let rows = await queryFn(sqlString, values)
+  let rowCount = parseInt(rows[0].count)
 
-  return parseInt(rows[0].count)
+  l.returning('Returning rowCount...', rowCount)
+  return rowCount
 }
 
 export async function update<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: Partial<T>, alreadyUpdatedRows: FiddledRows = new FiddledRows(schema)): Promise<T> {
   let l = log.fn('update')
+  l.param('db', db)
   l.param('instance', instance)
   l.param('alreadyUpdatedRows', alreadyUpdatedRows.fiddledRows)
 
   let table = schema[tableName]
-
   if (table == undefined) {
     throw new Error('Table not contained in schema: ' + tableName)
   }
@@ -204,7 +215,6 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
 
 export async function delete_<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
   let l = log.fn('delete_')
-  l.param('tableName', tableName)
   l.param('instance', instance)
 
   let table = schema[tableName]
