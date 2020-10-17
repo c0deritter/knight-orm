@@ -27,13 +27,11 @@ export async function create<T>(schema: Schema, tableName: string, db: string, q
 
 export async function read<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: ReadCriteria): Promise<T[]> {
   let l = log.fn('read')
-
-  let table = schema[tableName]
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
+  l.param('tableName', tableName)
+  l.param('criteria', criteria)
 
   let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
+  l.var('rowCriteria', rowCriteria)
 
   let query = buildSelectQuery(schema, tableName, rowCriteria)
 
@@ -47,8 +45,8 @@ export async function read<T>(schema: Schema, tableName: string, db: string, que
   l.var('joinedRows', joinedRows)
 
   let instances = unjoinRows(schema, tableName, joinedRows, criteria, true)
+  
   l.returning('Returning instances...', instances)
-
   return instances
 }
 
