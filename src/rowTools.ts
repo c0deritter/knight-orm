@@ -97,6 +97,9 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
             row[relationshipName].push(relationshipRow)
           }        
         }
+        else {
+          l.warn('Relationship is one-to-many but given relationship row object is not of type array', instance[relationshipName])
+        }
       }
       else if (instance[relationshipName] !== undefined) {
         l.debug('Relationship is not an object and not undefined')
@@ -288,24 +291,19 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       let relationshipRowOrInstances = unjoinRows(schema, relationshipTableName, [ joinedRow ], criteria[relationshipName], toInstances, relationshipAlias)
       l.debug('Coming back from recursion...', relationshipRowOrInstances)
 
-      if (relationshipRowOrInstances.length == 1) {
-        if (relationship.oneToMany) {
-          l.debug('Attaching one-to-many instance...')
-          if (rowOrInstance[relationshipName] == undefined) {
-            rowOrInstance[relationshipName] = relationshipRowOrInstances
-          }
-          else {
-            rowOrInstance[relationshipName].push(relationshipRowOrInstances[0])
-          }
+      if (relationship.oneToMany) {
+        l.debug('Attaching one-to-many instance...')
+        if (rowOrInstance[relationshipName] == undefined) {
+          rowOrInstance[relationshipName] = relationshipRowOrInstances
         }
-        else if (relationship.manyToOne) {
-          l.debug('Attaching many-to-one instance...')
-          rowOrInstance[relationshipName] = relationshipRowOrInstances[0]
-        }  
+        else {
+          rowOrInstance[relationshipName].push(relationshipRowOrInstances[0])
+        }
       }
-      else {
-        l.debug('Not attaching anything...', relationship)
-      }
+      else if (relationship.manyToOne) {
+        l.debug('Attaching many-to-one instance...')
+        rowOrInstance[relationshipName] = relationshipRowOrInstances.length == 1 ? relationshipRowOrInstances[0] : null
+      }  
     }
   }
 

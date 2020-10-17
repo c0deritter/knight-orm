@@ -177,7 +177,7 @@ describe('rowTools', function() {
   })
 
   describe('unjoinRows', function() {
-    it('should create corresponding instance from simple rows without relationships', function() {
+    it('should create an instance out of rows without relationships', function() {
       let rows = [
         {
           table1__id: 1,
@@ -203,7 +203,7 @@ describe('rowTools', function() {
       expect(instances[1]).to.deep.equal({ id: 2, property1: 'b', property2: 2, object1Id: undefined, object2Id: undefined })
     })
 
-    it('should create corresponding instance from simple rows with relationships', function() {
+    it('should create an instance out of rows with relationships', function() {
       let rows = [
         {
           table1__id: 1,
@@ -262,11 +262,11 @@ describe('rowTools', function() {
       expect(instances[1]).to.be.instanceOf(Object1)
       expect(instances[1].many).to.be.instanceOf(Array)
       expect(instances[1].many[0]).to.be.instanceOf(ManyObjects)
-      expect(instances[1].many[0].object2).to.be.undefined
-      expect(instances[1]).to.deep.equal({ id: 2, property1: 'd', property2: 2, object1Id: null, object2Id: null, many: [{ object1Id: 2, object2Id: null, property1: 'e', object1Id2: null }]})
+      expect(instances[1].many[0].object2).to.be.null
+      expect(instances[1]).to.deep.equal({ id: 2, property1: 'd', property2: 2, object1Id: null, object2Id: null, many: [{ object1Id: 2, object2Id: null, property1: 'e', object1Id2: null, object2: null }]})
       expect(instances[2]).to.be.instanceOf(Object1)
-      expect(instances[2].many).to.be.undefined
-      expect(instances[2]).to.deep.equal({ id: 3, property1: 'f', property2: 3, object1Id: null, object2Id: null })
+      expect(instances[2].many).to.be.not.undefined
+      expect(instances[2]).to.deep.equal({ id: 3, property1: 'f', property2: 3, object1Id: null, object2Id: null, many: [] })
     })
   })
 

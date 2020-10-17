@@ -761,7 +761,8 @@ describe('isud', function() {
               table1_id: 1,
               table2_id: null,
               column1: 'd',
-              table1_id2: null
+              table1_id2: null,
+              object2: null
             }
           ]
         })
@@ -815,7 +816,8 @@ describe('isud', function() {
               table1_id: 1,
               table2_id: null,
               column1: 'd',
-              table1_id2: null
+              table1_id2: null,
+              object2: null
             }
           ]
         })
