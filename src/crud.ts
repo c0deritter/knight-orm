@@ -33,14 +33,14 @@ export async function read<T>(schema: Schema, tableName: string, db: string, que
   let sqlString = query.sql(db)
   let values = query.values()
 
-  l.debug('sqlString', sqlString)
-  l.debug('values', values)
+  l.var('sqlString', sqlString)
+  l.var('values', values)
 
   let joinedRows = await queryFn(sqlString, values)
-  l.debug('joinedRows', joinedRows)
+  l.var('joinedRows', joinedRows)
 
   let instances = unjoinRows(schema, tableName, joinedRows, criteria, true)
-  l.debug('Returning instances...', instances)
+  l.returning('Returning instances...', instances)
 
   return instances
 }
@@ -61,8 +61,8 @@ export async function count(schema: Schema, tableName: string, db: string, query
   let sqlString = query.sql(db)
   let values = query.values()
 
-  l.debug('sqlString', sqlString)
-  l.debug('values', values)
+  l.var('sqlString', sqlString)
+  l.var('values', values)
 
   let rows = await queryFn(sqlString, values)
 
@@ -71,8 +71,8 @@ export async function count(schema: Schema, tableName: string, db: string, query
 
 export async function update<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: Partial<T>, alreadyUpdatedRows: FiddledRows = new FiddledRows(schema)): Promise<T> {
   let l = log.fn('update')
-  l.debug('parameter: instance', instance)
-  l.debug('parameter: alreadyUpdatedRows', alreadyUpdatedRows.fiddledRows)
+  l.param('instance', instance)
+  l.param('alreadyUpdatedRows', alreadyUpdatedRows.fiddledRows)
 
   let table = schema[tableName]
 
@@ -81,7 +81,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   }
 
   let row = table.instanceToRow(instance)
-  l.debug('row', row)
+  l.var('row', row)
 
   if (row == undefined) {
     throw new Error('Could not convert the given instance into a row')
@@ -94,7 +94,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   }
 
   let criteria = rowToUpdateCriteria(schema, tableName, row)
-  l.debug('criteria', criteria)
+  l.var('criteria', criteria)
 
   let missingIdValues = idsNotSet(table, criteria)
   if (missingIdValues.length > 0) {
@@ -125,18 +125,18 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     let sqlString = query.sql(db)
     let values = query.values()
   
-    l.debug('sqlString', sqlString)
-    l.debug('values', values)
+    l.var('sqlString', sqlString)
+    l.var('values', values)
   
     let updatedRows = await queryFn(sqlString, values)
-    l.debug('updatedRows', updatedRows)
+    l.var('updatedRows', updatedRows)
   
     if (updatedRows.length != 1) {
       throw new Error('Expected row count does not equal 1')
     }
   
     updatedRow = updatedRows[0]
-    l.debug('updatedRow', updatedRow)
+    l.var('updatedRow', updatedRow)
   }
   else {
     l.debug('No column to set given. Loading entity...')
@@ -165,7 +165,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
 
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
-      l.debug('relationshipName', relationshipName)
+      l.var('relationshipName', relationshipName)
   
       if (typeof (instance as any)[relationshipName] == 'object' && (instance as any)[relationshipName] !== null) {
         let relationship = table.relationships[relationshipName]
@@ -198,14 +198,14 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     }  
   }
 
-  l.debug('Returning updatedInstance...', updatedInstance)
+  l.returning('Returning updatedInstance...', updatedInstance)
   return updatedInstance
 }
 
 export async function delete_<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
   let l = log.fn('delete_')
-  l.debug('tableName', tableName)
-  l.debug('instance', instance)
+  l.param('tableName', tableName)
+  l.param('instance', instance)
 
   let table = schema[tableName]
 
@@ -217,14 +217,14 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
   l.debug('Converted instance to delete criteria', criteria)
 
   let missingIdValues = idsNotSet(table, criteria)
-  l.debug('missingIdValues', missingIdValues)
+  l.var('missingIdValues', missingIdValues)
 
   if (missingIdValues.length > 0) {
     throw new Error('Not all id\'s are set. ' + JSON.stringify(missingIdValues))
   }
 
   let deletedRows = await isudDelete(schema, tableName, db, queryFn, criteria)
-  l.debug('deletedRows', deletedRows)
+  l.var('deletedRows', deletedRows)
 
   if (deletedRows.length != 1) {
     throw new Error('Expected row count does not equal 1')
@@ -232,6 +232,6 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
 
   let deletedRow = deletedRows[0]
   let deletedInstance = rowToInstance(schema, tableName, deletedRow)
-  l.debug('Returning deleted instance...', deletedInstance)
+  l.returning('Returning deleted instance...', deletedInstance)
   return deletedInstance
 }

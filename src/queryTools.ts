@@ -51,7 +51,7 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
   l.debug('Iterating through all properties of the table object which contain the relationships...')
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
-      l.debug('relationshipName', relationshipName)
+      l.var('relationshipName', relationshipName)
       
       if (relationshipName == 'table' || relationshipName == 'columns') {
         l.debug('Relationship name is \'table\' or \'columns\'. Continuing...')
@@ -65,8 +65,8 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
   
       let relationship = table.relationships[relationshipName]
       let relationshipCriteria = criteria[relationshipName]
-      l.debug('relationship', relationship)
-      l.debug('relationshipCriteria', relationshipCriteria)
+      l.var('relationship', relationship)
+      l.var('relationshipCriteria', relationshipCriteria)
       
       let thisId = relationship.thisId
       let otherTableName = relationship.otherTable
@@ -84,17 +84,17 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
         throw new Error('Given relationship object does not contain property \'otherId\'')
       }
   
-      l.debug('thisId', thisId)
-      l.debug('otherTableName', otherTableName)
-      l.debug('otherId', otherId)
+      l.var('thisId', thisId)
+      l.var('otherTableName', otherTableName)
+      l.var('otherId', otherId)
   
       let joinAlias = alias != undefined && alias.length > 0 ? alias + '__' + relationshipName : relationshipName
   
-      l.debug('joinAlias', joinAlias)
+      l.var('joinAlias', joinAlias)
       
       l.debug('Adding LEFT JOIN to query')
       query.join('LEFT', otherTableName, joinAlias, '' + (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId + ' = ' + joinAlias + '.' + otherId)
-      l.debug('query', query)
+      l.var('query', query)
   
       let otherTable = schema[otherTableName]
   
@@ -104,7 +104,7 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
   
       l.debug('Filling query with the relationship criteria')
       fillCriteria(query, relationshipCriteria, Object.keys(otherTable.columns), joinAlias)
-      l.debug('query', query)
+      l.var('query', query)
   
       joinRelationships(schema, otherTableName, query, relationshipCriteria, joinAlias)
     }  

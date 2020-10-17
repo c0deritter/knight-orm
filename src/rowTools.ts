@@ -48,9 +48,9 @@ class AlreadyConverted {
 
 export function instanceToRow(schema: Schema, tableName: string, instance: any, alreadyConverted: AlreadyConverted = new AlreadyConverted): any {
   let l = log.fn('instanceToRow')
-  l.debug('parameter: tableName', tableName)
-  l.debug('parameter: instance', instance)
-  l.debug('parameter: alreadyConverted', alreadyConverted.instancesAndRows)
+  l.param('tableName', tableName)
+  l.param('instance', instance)
+  l.param('alreadyConverted', alreadyConverted.instancesAndRows)
 
   let row = alreadyConverted.getRow(instance)
   if (row != undefined) {
@@ -65,13 +65,13 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
   }
 
   row = table.instanceToRow(instance)
-  l.debug('row', row)
+  l.var('row', row)
 
   alreadyConverted.add(instance, row)
 
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
-      l.debug('relationshipName', relationshipName)
+      l.var('relationshipName', relationshipName)
   
       if (typeof instance[relationshipName] == 'object' && instance[relationshipName] !== null) {
         let relationship = table.relationships[relationshipName]
@@ -85,7 +85,7 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
           l.debug('Relationship is one-to-many')
   
           for (let relationshipInstance of instance[relationshipName]) {
-            l.debug('relationshipInstance', relationshipInstance)
+            l.var('relationshipInstance', relationshipInstance)
             l.debug('Going into recursion...')
             let relationshipRow = instanceToRow(schema, relationship.otherTable, relationshipInstance, alreadyConverted)
             l.debug('Coming back from recursion...')
@@ -108,15 +108,15 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
     }  
   }
 
-  l.debug('Returning row...', row)
+  l.returning('Returning row...', row)
   return row
 }
 
 export function rowToInstance(schema: Schema, tableName: string, row: any, alreadyConverted: AlreadyConverted = new AlreadyConverted): any {
   let l = log.fn('rowToInstance')
-  l.debug('parameter: tableName', tableName)
-  l.debug('parameter: row', row)
-  l.debug('parameter: alreadyConverted', alreadyConverted.instancesAndRows)
+  l.param('tableName', tableName)
+  l.param('row', row)
+  l.param('alreadyConverted', alreadyConverted.instancesAndRows)
 
   let instance = alreadyConverted.getInstance(row)
   if (instance != undefined) {
@@ -131,13 +131,13 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
   }
 
   instance = table.rowToInstance(row)
-  l.debug('instance', instance)
+  l.var('instance', instance)
 
   alreadyConverted.add(instance, row)
 
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
-      l.debug('relationshipName', relationshipName)
+      l.var('relationshipName', relationshipName)
   
       if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
         let relationship = table.relationships[relationshipName]
@@ -151,7 +151,7 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
           l.debug('Relationship is one-to-many')
   
           for (let relationshipRow of row[relationshipName]) {
-            l.debug('relationshipRow', relationshipRow)
+            l.var('relationshipRow', relationshipRow)
             l.debug('Going into recursion...')
             let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, relationshipRow, alreadyConverted)
             l.debug('Coming back from recursion...')
@@ -179,17 +179,17 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
 
 export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: ReadCriteria, toInstances: boolean = false, alias?: string): any[]  {
   let l = log.fn('unjoinRows')
-  l.debug('parameter: joinedRows', joinedRows)
-  l.debug('parameter: criteria', criteria)
-  l.debug('parameter: tableName', tableName)
-  l.debug('parameter: alias', alias)
+  l.param('joinedRows', joinedRows)
+  l.param('criteria', criteria)
+  l.param('tableName', tableName)
+  l.param('alias', alias)
 
   let alreadyUnjoined: { tableName: string, rowOrInstance: any }[] = []
   let rootRows = alias == undefined
   alias = alias != undefined ? alias : tableName + '__'
 
-  l.debug('rootRows', rootRows)
-  l.debug('alias', alias)
+  l.var('rootRows', rootRows)
+  l.var('alias', alias)
 
   let table = schema[tableName]
   if (table == undefined) {
@@ -197,7 +197,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
   }
 
   let relationshipNames = table.relationships != undefined ? Object.keys(table.relationships) : []
-  l.debug('relationshipNames', relationshipNames)
+  l.var('relationshipNames', relationshipNames)
 
   let rowsOrInstances: any[] = []
 
@@ -206,7 +206,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     l.debug('joinedRow in context of alias ' + alias, joinedRow)
 
     let unaliasedRow = getCellsBelongingToTableAndRemoveAlias(table, joinedRow, alias)
-    l.debug('unaliasedRow', unaliasedRow)
+    l.var('unaliasedRow', unaliasedRow)
 
     // if every column is null then there was no row in the first place
     let everyColumnIsNull = true
@@ -224,7 +224,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     }
 
     let rowOrInstance = toInstances ? table.rowToInstance(unaliasedRow) : unaliasedRow
-    l.debug('rowOrInstance', rowOrInstance)
+    l.var('rowOrInstance', rowOrInstance)
 
     let alreadyUnjoinedRowOrInstance: any = undefined
 
@@ -246,7 +246,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       }  
     }
 
-    l.debug('alreadyUnjoinedRowOrInstance', alreadyUnjoinedRowOrInstance)
+    l.var('alreadyUnjoinedRowOrInstance', alreadyUnjoinedRowOrInstance)
 
     if (alreadyUnjoinedRowOrInstance != undefined) {
       if (rowsOrInstances.indexOf(alreadyUnjoinedRowOrInstance) == -1) {
@@ -263,7 +263,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
 
     l.debug('Iterating over all relationships...')
     for (let relationshipName of relationshipNames) {
-      l.debug('relationshipName', relationshipName)
+      l.var('relationshipName', relationshipName)
 
       if (! (relationshipName in criteria)) {
         l.debug('Relationship is not contained in criteria. Continuing...')
@@ -271,7 +271,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       }
 
       let relationship = table.relationships![relationshipName]
-      l.debug('relationship', relationship)
+      l.var('relationship', relationship)
 
       if ((relationship.manyToOne) && rowOrInstance[relationshipName] != undefined) {
         l.debug('Many-to-one relationship was already determined. Continuing...')
@@ -281,8 +281,8 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       let relationshipTableName = relationship.otherTable
       let relationshipAlias = alias != undefined ? alias + relationshipName + '__' : relationshipName + '__'
 
-      l.debug('relationshipTableName', relationshipTableName)
-      l.debug('relationshipAlias', relationshipAlias)
+      l.var('relationshipTableName', relationshipTableName)
+      l.var('relationshipAlias', relationshipAlias)
       
       l.debug('Determining relationship. Going into recursion...')
       let relationshipRowOrInstances = unjoinRows(schema, relationshipTableName, [ joinedRow ], criteria[relationshipName], toInstances, relationshipAlias)
@@ -309,7 +309,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     }
   }
 
-  l.debug('Returning rowsOrInstances...', rowsOrInstances)
+  l.returning('Returning rowsOrInstances...', rowsOrInstances)
   return rowsOrInstances
 }
 

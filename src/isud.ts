@@ -32,10 +32,10 @@ export async function insert(
       alreadyInsertedRows: FiddledRows = new FiddledRows(schema)
     ): Promise<any> {
   let l = log.fn('insert')
-  l.debug('parameter: tableName', tableName)
-  l.debug('parameter: db', db)
-  l.debug('parameter: row', row)
-  l.debug('parameter: alreadyInsertedRows', alreadyInsertedRows.fiddledRows)
+  l.param('tableName', tableName)
+  l.param('db', db)
+  l.param('row', row)
+  l.param('alreadyInsertedRows', alreadyInsertedRows.fiddledRows)
 
   let alreadyInsertedRow = alreadyInsertedRows.getResultByRow(tableName, row)
   if (alreadyInsertedRow != undefined) {
@@ -99,7 +99,7 @@ export async function insert(
                 l.debug('Inserting row which was missing an id which came from a relationship which was just created...')
 
                 let insertedRow = await insert(schema, tableName, db, queryFn, row, alreadyInsertedRows)
-                l.debug('insertedRow', insertedRow)
+                l.var('insertedRow', insertedRow)
         
                 if (insertedRow == undefined) {
                   throw new Error('Expected result to be not undefined')
@@ -114,26 +114,26 @@ export async function insert(
               l.debug('Row is about to be inserted somewhere up the recursion chain. Adding handler after result is known...')
               alreadyInsertedRows.addAfterSettingResultHandler(row[relationshipName], async (insertedRelationshipRow: any) => {
                 let l = log.fn('afterSettingResultHandler')
-                l.debug('parameter: insertedRelationshipRow', insertedRelationshipRow)
-                l.debug('parameter: columnName', columnName)
-                l.debug('parameter: relationship', relationship)
+                l.param('insertedRelationshipRow', insertedRelationshipRow)
+                l.param('columnName', columnName)
+                l.param('relationship', relationship)
 
                 let insertedRow = alreadyInsertedRows.getResultByRow(tableName, row)
-                l.debug('insertedRow', insertedRow)
+                l.var('insertedRow', insertedRow)
 
                 if (insertedRow == undefined) {
                   throw new Error('Could not set many-to-one relationship id')
                 }
 
                 let updateRow = idsOnly(table, insertedRow)
-                l.debug('updateRow', updateRow)
+                l.var('updateRow', updateRow)
 
                 let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
                 updateCriteria.set[columnName] = insertedRelationshipRow[relationship.otherId]
-                l.debug('updateCriteria', updateCriteria)
+                l.var('updateCriteria', updateCriteria)
         
                 let updatedRelationshipRows = await update(schema, tableName, db, queryFn, updateCriteria)
-                l.debug('updatedRelationshipRows', updatedRelationshipRows)
+                l.var('updatedRelationshipRows', updatedRelationshipRows)
         
                 if (updatedRelationshipRows.length != 1) {
                   throw new Error('Expected row count does not equal 1')
@@ -199,11 +199,11 @@ export async function insert(
   let sqlString = query.sql(db)
   let values = query.values()
   
-  l.debug('sqlString', sqlString)
-  l.debug('values', values)
+  l.var('sqlString', sqlString)
+  l.var('values', values)
 
   let insertedRows = await queryFn(sqlString, values)
-  l.debug('insertedRows', insertedRows)
+  l.var('insertedRows', insertedRows)
 
   if (insertedRows.length != 1) {
     throw new Error('Expected row count does not equal 1')
@@ -329,13 +329,13 @@ export async function insert(
           
           let updateRow = idsOnly(relationshipTable, insertedRelationshipRow)
           updateRow[otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
-          l.debug('updateRow', updateRow)
+          l.var('updateRow', updateRow)
   
           let updateCriteria = rowToUpdateCriteria(schema, relationship.otherTable, updateRow)
-          l.debug('updateCriteria', updateCriteria)
+          l.var('updateCriteria', updateCriteria)
   
           let updatedOtherRelationshipRows = await update(schema, relationship.otherTable, db, queryFn, updateCriteria)
-          l.debug('updatedOtherRelationshipRows', updatedOtherRelationshipRows)
+          l.var('updatedOtherRelationshipRows', updatedOtherRelationshipRows)
   
           if (updatedOtherRelationshipRows.length != 1) {
             throw new Error('Expected row count does not equal 1')
@@ -398,7 +398,7 @@ export async function insert(
     }
   }
 
-  l.debug('Returning insertedRow...', insertedRow)
+  l.returning('Returning insertedRow...', insertedRow)
   return insertedRow
 }
 
@@ -416,12 +416,13 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   let sqlString = query.sql(db)
   let values = query.values()
 
-  l.debug('sqlString', sqlString)
-  l.debug('values', values)
+  l.var('sqlString', sqlString)
+  l.var('values', values)
 
   let joinedRows = await queryFn(sqlString, values)
   let rows = unjoinRows(schema, tableName, joinedRows, criteria)
 
+  l.returning('Returning rows...', rows)
   return rows
 }
 
@@ -445,20 +446,20 @@ export async function update(schema: Schema, tableName: string, db: string, quer
   let sqlString = query.sql(db)
   let values = query.values()
 
-  l.debug('sqlString', sqlString)
-  l.debug('values', values)
+  l.var('sqlString', sqlString)
+  l.var('values', values)
 
   let updatedRows = await queryFn(sqlString, values)
-  l.debug('updatedRows', updatedRows)
-
+  
+  l.returning('Returning updatedRows...', updatedRows)
   return updatedRows
 }
 
 export async function delete_(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: DeleteCriteria, alreadyDeletedRows: FiddledRows = new FiddledRows(schema)): Promise<any[]> {
   let l = log.fn('delete_')
-  l.debug('tableName', tableName)
-  l.debug('criteria', criteria)
-  l.debug('alreadyDeletedRows', alreadyDeletedRows.fiddledRows)
+  l.param('tableName', tableName)
+  l.param('criteria', criteria)
+  l.param('alreadyDeletedRows', alreadyDeletedRows.fiddledRows)
 
   let table = schema[tableName]
 
@@ -470,7 +471,7 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
   // query and thus not be taken into consideration which will have the effect of unwanted deletions
   // which we want to prevent by checking if the given criteria only contains valid column names
   let filteredCriteria = filterValidColumns(schema, tableName, criteria)
-  l.debug('filteredCriteria', filteredCriteria)
+  l.var('filteredCriteria', filteredCriteria)
 
   if (Object.keys(criteria).length != Object.keys(filteredCriteria).length) {
     throw new Error('Given criteria contained invalid columns ' + JSON.stringify(criteria))
@@ -479,7 +480,7 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
   // we need to find out what we are going to delete because it may be the case that
   // one or two or all id's are missing
   let rowsToDelete = await select(schema, tableName, db, queryFn, criteria)
-  l.debug('rowsToDelete', rowsToDelete)
+  l.var('rowsToDelete', rowsToDelete)
 
   let deletedRows: any[] = []
 
@@ -489,7 +490,7 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
   l.debug('Deleting relationships...')
 
   for (let row of rowsToDelete) {
-    l.debug('row', row)
+    l.var('row', row)
 
     if (alreadyDeletedRows.containsRow(tableName, row)) {
       l.debug('Row is already deleted or about to be deleted. Continuing...')
@@ -503,10 +504,10 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
 
     if (table.relationships != undefined) {
       for (let relationshipName of Object.keys(table.relationships)) {
-        l.debug('relationshipName', relationshipName)
+        l.var('relationshipName', relationshipName)
     
         let relationship = table.relationships[relationshipName]
-        l.debug('relationship', relationship)
+        l.var('relationship', relationship)
     
         if (! relationship.delete) {
           l.debug('Relationship should not be deleted. Continuing...')
@@ -522,7 +523,7 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
           [relationship.otherId]: row[relationship.thisId]
         }
     
-        l.debug('relationshipDeleteCriteria', relationshipDeleteCriteria)
+        l.var('relationshipDeleteCriteria', relationshipDeleteCriteria)
     
         l.debug('Deleting relationship. Going into recursion...')
         let deletedRows = await delete_(schema, relationship.otherTable, db, queryFn, relationshipDeleteCriteria, alreadyDeletedRows)
@@ -549,8 +550,8 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
     let sqlString = query.sql(db)
     let values = query.values()
   
-    l.debug('sqlString', sqlString)
-    l.debug('values', values)
+    l.var('sqlString', sqlString)
+    l.var('values', values)
   
     let deletedRowsOfSingleRow = await queryFn(sqlString, values)
 
@@ -568,6 +569,6 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
     deletedRows.push(deletedRow)
   }
     
-  l.debug('Returning deleted rows...', deletedRows)
+  l.returning('Returning deletedRows...', deletedRows)
   return deletedRows
 }
