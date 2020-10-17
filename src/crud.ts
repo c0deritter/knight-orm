@@ -71,8 +71,8 @@ export async function count(schema: Schema, tableName: string, db: string, query
 
 export async function update<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: Partial<T>, alreadyUpdatedRows: FiddledRows = new FiddledRows(schema)): Promise<T> {
   let l = log.fn('update')
-  l.debug('instance', instance)
-  l.debug('alreadyUpdatedRows', alreadyUpdatedRows.fiddledRows)
+  l.debug('parameter: instance', instance)
+  l.debug('parameter: alreadyUpdatedRows', alreadyUpdatedRows.fiddledRows)
 
   let table = schema[tableName]
 

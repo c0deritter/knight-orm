@@ -282,6 +282,7 @@ describe('crud', function() {
         object1.many[0].property1 = 'd'
         object1.many[0].object1 = object1
         object1.many[0].object2 = object1.object2
+        object1.many[0].object2.object1 = object1
         object1.many[0].object12 = object1
 
         object1.many[1].property1 = 'e'
@@ -289,6 +290,7 @@ describe('crud', function() {
         object1.many[1].object2 = new Object2
         object1.many[1].object2.id = 'y'
         object1.many[1].object2.property1 = 'f'
+        object1.many[1].object2.object1 = object1
         object1.many[1].object2.many = [ object1.many[1] ]
 
         object1.object1.object1 = object1
@@ -296,43 +298,44 @@ describe('crud', function() {
         
         await create(schema, 'table1', 'postgres', pgQueryFn, object1)
 
-        let object1Updated = new Object1
-        object1Updated.id = 1
-        object1Updated.property1 = 'g'
-        object1Updated.property2 = 3
-        object1Updated.many = [ new ManyObjects, new ManyObjects ]
+        let updateObject1 = new Object1
+        updateObject1.id = 1
+        updateObject1.property1 = 'g'
+        updateObject1.property2 = 3
 
-        object1Updated.object1 = {
+        updateObject1.object1 = {
           id: 2,
           property1: 'h',
           property2: 4
         }
 
-        object1Updated.object2 = {
+        updateObject1.object2 = {
           id: 'x',
           property1: 'i'
         }
 
-        object1Updated.many[0].object1Id = 1
-        object1Updated.many[0].object2Id = 'x'
-        object1Updated.many[0].property1 = 'j'
-        object1Updated.many[0].object1 = object1
-        object1Updated.many[0].object2 = object1Updated.object2
-        object1Updated.many[0].object12 = object1
+        updateObject1.many = [ new ManyObjects, new ManyObjects ]
 
-        object1Updated.many[1].object1Id = 1
-        object1Updated.many[1].object2Id = 'y'
-        object1Updated.many[1].property1 = 'k'
-        object1Updated.many[1].object1 = object1
-        object1Updated.many[1].object2 = new Object2
-        object1Updated.many[1].object2.id = 'y'
-        object1Updated.many[1].object2.property1 = 'l'
-        object1Updated.many[1].object2.many = [ object1Updated.many[1] ]
+        updateObject1.many[0].object1Id = 1
+        updateObject1.many[0].object2Id = 'x'
+        updateObject1.many[0].property1 = 'j'
+        updateObject1.many[0].object1 = updateObject1
+        updateObject1.many[0].object2 = updateObject1.object2
+        updateObject1.many[0].object12 = updateObject1
 
-        object1Updated.object1.object1 = object1Updated
-        object1Updated.object1.object2 = object1Updated.object2
+        updateObject1.many[1].object1Id = 1
+        updateObject1.many[1].object2Id = 'y'
+        updateObject1.many[1].property1 = 'k'
+        updateObject1.many[1].object1 = updateObject1
+        updateObject1.many[1].object2 = new Object2
+        updateObject1.many[1].object2.id = 'y'
+        updateObject1.many[1].object2.property1 = 'l'
+        updateObject1.many[1].object2.many = [ updateObject1.many[1] ]
 
-        let updatedInstance = await update(schema, 'table1', 'postgres', pgQueryFn, object1Updated)
+        updateObject1.object1.object1 = updateObject1
+        updateObject1.object1.object2 = updateObject1.object2
+
+        let updatedInstance = await update(schema, 'table1', 'postgres', pgQueryFn, updateObject1)
 
         let expectedInstance = {
           id: 1,
@@ -349,7 +352,8 @@ describe('crud', function() {
           } as any,
           object2: {
             id: 'x',
-            property1: 'i'
+            property1: 'i',
+            object1Id: 1
           },
           many: [
             {
@@ -359,7 +363,8 @@ describe('crud', function() {
               object1Id2: 1,
               object2: {
                 id: 'x',
-                property1: 'i'
+                property1: 'i',
+                object1Id: 1
               }
             } as any,
             {
@@ -369,7 +374,8 @@ describe('crud', function() {
               object1Id2: null,
               object2: {
                 id: 'y',
-                property1: 'l'
+                property1: 'l',
+                object1Id: 1
               }
             }
           ]
@@ -378,6 +384,7 @@ describe('crud', function() {
         expectedInstance.many[0].object1 = expectedInstance
         expectedInstance.many[0].object12 = expectedInstance
         expectedInstance.many[1].object1 = expectedInstance
+        expectedInstance.many[1].object2.many = [ expectedInstance.many[1] ]
         expectedInstance.object1.object1 = expectedInstance
         expectedInstance.object1.object2 = expectedInstance.object2
 
