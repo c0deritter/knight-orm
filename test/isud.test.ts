@@ -23,7 +23,7 @@ describe('isud', function() {
 
     beforeEach(async function() {
       await pool.query('CREATE TABLE table1 (id SERIAL, column1 VARCHAR(20), column2 INTEGER, table1_id INTEGER, table2_id VARCHAR(20))')
-      await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20))')
+      await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20), table1_id INTEGER)')
       await pool.query('CREATE TABLE table_many (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20), table1_id2 INTEGER)')
     })
 
@@ -171,7 +171,8 @@ describe('isud', function() {
               table1_id2: null,
               object2: {
                 id: 'x',
-                column1: 'c'
+                column1: 'c',
+                table1_id: null
               }
             } as any,
             {
@@ -181,7 +182,8 @@ describe('isud', function() {
               table1_id2: null,
               object2: {
                 id: 'y',
-                column1: 'e'
+                column1: 'e',
+                table1_id: null
               }
             }            
           ]
@@ -293,7 +295,8 @@ describe('isud', function() {
           },
           object2: {
             id: 'x',
-            column1: 'c'
+            column1: 'c',
+            table1_id: null
           }
         }
 
@@ -314,7 +317,8 @@ describe('isud', function() {
         })
         expect(insertedRow.object2).to.deep.equal({
           id: 'x',
-          column1: 'c'
+          column1: 'c',
+          table1_id: null
         })
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
@@ -490,6 +494,7 @@ describe('isud', function() {
             object2: {
               id: 'x',
               column1: null,
+              table1_id: null,
               many: [{
                 table1_id: 1,
                 table2_id: 'x',
@@ -538,6 +543,7 @@ describe('isud', function() {
           object2: {
             id: 'x',
             column1: null,
+            table1_id: 1,
             many: [{
               table1_id: 1,
               table2_id: 'x',
@@ -573,6 +579,7 @@ describe('isud', function() {
           object2: {
             id: 'x',
             column1: null,
+            table1_id: 1,
             many: [{
               table1_id: null,
               table2_id: 'x',
@@ -581,6 +588,8 @@ describe('isud', function() {
             } as any]
           }
         }
+
+        expectedRow.object2.many[0].object12 = expectedRow
 
         expect(insertedRow).to.deep.equal(expectedRow)
       })
@@ -701,7 +710,8 @@ describe('isud', function() {
               table1_id2: null,
               object2: {
                 id: 'x',
-                column1: 'c'
+                column1: 'c',
+                table1_id: null
               }
             }
           ]
@@ -766,7 +776,8 @@ describe('isud', function() {
               column1: 'b',
               object2: {
                 id: 'x',
-                column1: 'c'
+                column1: 'c',
+                table1_id: null
               }
             },
             {
@@ -796,7 +807,8 @@ describe('isud', function() {
               table1_id2: null,
               object2: {
                 id: 'x',
-                column1: 'c'
+                column1: 'c',
+                table1_id: null
               }
             },
             {

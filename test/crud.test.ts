@@ -23,7 +23,7 @@ describe('crud', function() {
 
     beforeEach(async function() {
       await pool.query('CREATE TABLE table1 (id SERIAL, column1 VARCHAR(20), column2 INTEGER, table1_id INTEGER, table2_id VARCHAR(20))')
-      await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20))')
+      await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20), table1_id INTEGER)')
       await pool.query('CREATE TABLE table_many (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20), table1_id2 INTEGER)')
     })
 
@@ -51,6 +51,7 @@ describe('crud', function() {
         object1.many[0].property1 = 'd'
         object1.many[0].object1 = object1
         object1.many[0].object2 = object1.object2
+        object1.many[0].object2.object1 = object1
         object1.many[0].object12 = object1
 
         object1.many[1].property1 = 'e'
@@ -58,6 +59,7 @@ describe('crud', function() {
         object1.many[1].object2 = new Object2
         object1.many[1].object2.id = 'y'
         object1.many[1].object2.property1 = 'f'
+        object1.many[1].object2.object1 = object1
         object1.many[1].object2.many = [ object1.many[1] ]
 
         object1.object1.object1 = object1
@@ -71,28 +73,6 @@ describe('crud', function() {
           property2: 1,
           object1Id: 2,
           object2Id: 'x',
-          many: [
-            {
-              object1Id: 1,
-              object2Id: 'x',
-              property1: 'd',
-              object1Id2: 1,
-              object2: {
-                id: 'x',
-                property1: 'c'
-              }
-            } as any,
-            {
-              object1Id: 1,
-              object2Id: 'y',
-              property1: 'e',
-              object1Id2: null,
-              object2: {
-                id: 'y',
-                property1: 'f'
-              }
-            }
-          ],
           object1: {
             id: 2,
             property1: 'b',
@@ -102,15 +82,43 @@ describe('crud', function() {
           } as any,
           object2: {
             id: 'x',
-            property1: 'c'
-          }
+            property1: 'c',
+            object1Id: 1
+          } as any,
+          many: [
+            {
+              object1Id: 1,
+              object2Id: 'x',
+              property1: 'd',
+              object1Id2: 1,
+              object2: {
+                id: 'x',
+                property1: 'c',
+                object1Id: 1
+              }
+            } as any,
+            {
+              object1Id: 1,
+              object2Id: 'y',
+              property1: 'e',
+              object1Id2: null,
+              object2: {
+                id: 'y',
+                property1: 'f',
+                object1Id: 1
+              }
+            }
+          ]
         }
 
-        expectedInstance.many[0].object1 = expectedInstance
-        expectedInstance.many[0].object12 = expectedInstance
-        expectedInstance.many[1].object1 = expectedInstance
         expectedInstance.object1.object1 = expectedInstance
         expectedInstance.object1.object2 = expectedInstance.object2
+        expectedInstance.object2.object1 = expectedInstance
+        expectedInstance.many[0].object1 = expectedInstance
+        expectedInstance.many[0].object2 = expectedInstance.object2
+        expectedInstance.many[0].object12 = expectedInstance
+        expectedInstance.many[1].object1 = expectedInstance
+        expectedInstance.many[1].object2.object1 = expectedInstance        
 
         expect(createdInstance).to.deep.equal(expectedInstance)
         expect(createdInstance).to.be.instanceOf(Object1)
@@ -148,6 +156,7 @@ describe('crud', function() {
         object1.many[0].property1 = 'd'
         object1.many[0].object1 = object1
         object1.many[0].object2 = object1.object2
+        object1.many[0].object2.object1 = object1
         object1.many[0].object12 = object1
 
         object1.many[1].property1 = 'e'
@@ -155,6 +164,7 @@ describe('crud', function() {
         object1.many[1].object2 = new Object2
         object1.many[1].object2.id = 'y'
         object1.many[1].object2.property1 = 'f'
+        object1.many[1].object2.object1 = object1
         object1.many[1].object2.many = [ object1.many[1] ]
 
         object1.object1.object1 = object1
@@ -198,12 +208,14 @@ describe('crud', function() {
             },
             object2: {
               id: 'x',
-              property1: 'c'
+              property1: 'c',
+              object1Id: 1
             }
           },
           object2: {
             id: 'x',
-            property1: 'c'
+            property1: 'c',
+            object1Id: 1
           },
           many: [
             {
@@ -220,7 +232,8 @@ describe('crud', function() {
               },
               object2: {
                 id: 'x',
-                property1: 'c'
+                property1: 'c',
+                object1Id: 1
               }
             },
             {
@@ -237,7 +250,8 @@ describe('crud', function() {
               },
               object2: {
                 id: 'y',
-                property1: 'f'
+                property1: 'f',
+                object1Id: 1
               }
             }
           ]

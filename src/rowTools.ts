@@ -188,17 +188,18 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
   let rootRows = alias == undefined
   alias = alias != undefined ? alias : tableName + '__'
 
-  let table = schema[tableName]
-  l.debug('table', table)
+  l.debug('rootRows', rootRows)
+  l.debug('alias', alias)
 
+  let table = schema[tableName]
   if (table == undefined) {
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
   let relationshipNames = table.relationships != undefined ? Object.keys(table.relationships) : []
-  let rowsOrInstances: any[] = []
-
   l.debug('relationshipNames', relationshipNames)
+
+  let rowsOrInstances: any[] = []
 
   l.debug('Iterating over all rows...')
   for (let joinedRow of joinedRows) {
@@ -210,7 +211,9 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     // if every column is null then there was no row in the first place
     let everyColumnIsNull = true
     for (let columnName of Object.keys(table.columns)) {
-      if (unaliasedRow[columnName] !== null) {
+      // we use a soft comparison to null here because if it is undefined it is as good as null
+      // though that should not really be possible
+      if (unaliasedRow[columnName] != null) {
         everyColumnIsNull = false
         break
       }
