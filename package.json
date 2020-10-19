@@ -1,7 +1,7 @@
 {
-  "name": "mega-nice-sql-orm",
+  "name": "mega-nice-orm",
   "version": "5.1.0",
-  "description": "A mega nice SQL ORM",
+  "description": "A mega nice ORM",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
@@ -31,14 +31,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/c0deritter/mega-nice-sql-orm.git"
+    "url": "git+https://github.com/c0deritter/mega-nice-orm.git"
   },
   "keywords": [
     ""
   ],
   "author": "Coderitter GmbH",
   "bugs": {
-    "url": "https://github.com/c0deritter/mega-nice-sql-orm/issues"
+    "url": "https://github.com/c0deritter/mega-nice-orm/issues"
   },
-  "homepage": "https://github.com/c0deritter/mega-nice-sql-orm#readme"
+  "homepage": "https://github.com/c0deritter/mega-nice-orm#readme"
 }
