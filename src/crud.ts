@@ -111,8 +111,8 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   }
 
   let hasValuesToSet = false
-  for (let column of Object.keys(criteria.set)) {
-    if (criteria.set[column] !== undefined) {
+  for (let column of Object.keys(criteria['@set'])) {
+    if (criteria['@set'][column] !== undefined) {
       hasValuesToSet = true
       break
     }

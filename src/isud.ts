@@ -129,7 +129,7 @@ export async function insert(
                 l.var('updateRow', updateRow)
 
                 let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
-                updateCriteria.set[columnName] = insertedRelationshipRow[relationship.otherId]
+                updateCriteria['@set'][columnName] = insertedRelationshipRow[relationship.otherId]
                 l.var('updateCriteria', updateCriteria)
         
                 let updatedRelationshipRows = await update(schema, tableName, db, queryFn, updateCriteria)
@@ -297,8 +297,8 @@ export async function insert(
           // update the relationship owning row setting new newly obtained id
           let updateRow: any = idsOnly(table, insertedRow)
           let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
-          updateCriteria.set = {}
-          updateCriteria.set[relationship.thisId] = relationshipId
+          updateCriteria['@set'] = {}
+          updateCriteria['@set'][relationship.thisId] = relationshipId
   
           let updatedRows = await update(schema, tableName, db, queryFn, updateCriteria)
   
@@ -404,9 +404,10 @@ export async function insert(
 
 export async function select(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: ReadCriteria): Promise<any[]> {
   let l = log.fn('select')
+  l.param('tableName', tableName)
+  l.param('criteria', criteria)
 
   let table = schema[tableName]
-
   if (table == undefined) {
     throw new Error('Table not contained in schema: ' + tableName)
   }
@@ -420,6 +421,8 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   l.var('values', values)
 
   let joinedRows = await queryFn(sqlString, values)
+  l.var('joinedRows', joinedRows)
+
   let rows = unjoinRows(schema, tableName, joinedRows, criteria)
 
   l.returning('Returning rows...', rows)

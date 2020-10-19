@@ -46,15 +46,15 @@ export function rowToUpdateCriteria(schema: Schema, tableName: string, row: any)
   }
 
   let updateCriteria: any = {
-    set: {}
-  }
+    '@set': {}
+  } as UpdateCriteria
 
   for (let column of Object.keys(table.columns)) {
     if (isIdColumn(table.columns[column])) {
       updateCriteria[column] = row[column] === undefined ? null : row[column]
     }
     else if (column in row && row[column] !== undefined) {
-      updateCriteria.set[column] = row[column]
+      updateCriteria['@set'][column] = row[column]
     }
   }
 
@@ -79,7 +79,7 @@ export function rowToDeleteCriteria(schema: Schema, tableName: string, row: any)
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  let deleteCriteria: any = {}
+  let deleteCriteria: any = {} as DeleteCriteria
 
   for (let column of Object.keys(table.columns)) {
     if (isIdColumn(table.columns[column]) && row[column] !== undefined) {

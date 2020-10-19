@@ -45,7 +45,7 @@ describe('criteriaTools', function() {
 
       expect(criteria).to.deep.equal({
         id: 1,
-        set: {
+        '@set': {
           column1: 'a',
           column2: 1
         }
