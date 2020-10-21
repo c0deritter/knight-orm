@@ -1,4 +1,4 @@
-import { Criteria, ReadCriteria } from 'mega-nice-criteria'
+import { Criteria, isCriteriaEmpty, ReadCriteria } from 'mega-nice-criteria'
 import Log from 'mega-nice-log'
 import { Query } from 'mega-nice-sql'
 import { fillCriteria, fillReadCriteria } from 'mega-nice-sql-criteria-filler'
@@ -39,6 +39,18 @@ export function buildCountQuery(schema: Schema, tableName: string, criteria: Cri
   return query
 }
 
+/**
+ * It will join any relationship into the given query that are either tagged with
+ * the property '@filterGlobally' or which are empty. Thus relationship criteria
+ * that should not influence the overall selected rows have to be loaded in a dedicated
+ * query.
+ * 
+ * @param schema 
+ * @param tableName 
+ * @param query 
+ * @param criteria 
+ * @param alias 
+ */
 export function joinRelationships(schema: Schema, tableName: string, query: Query, criteria: Criteria, alias?: string) {
   let l = log.fn('joinRelationships')
 
@@ -62,51 +74,56 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
         l.debug('Relationship is not contained in the criteria. Continuing...')
         continue
       }
-  
+
       let relationship = table.relationships[relationshipName]
       let relationshipCriteria = criteria[relationshipName]
       l.var('relationship', relationship)
       l.var('relationshipCriteria', relationshipCriteria)
-      
-      let thisId = relationship.thisId
-      let otherTableName = relationship.otherTable
-      let otherId = relationship.otherId
-  
-      if (typeof thisId != 'string' || thisId.length == 0) {
-        throw new Error('Given relationship object does not contain property \'thisId\'')
+
+      // 1. if the property @filterGlobally is set to true then we need to join
+      // 2. if there are not any relationship criteria then we also can join
+      if (relationshipCriteria['@filterGlobally'] === true || isCriteriaEmpty(relationshipCriteria)) {
+        let thisId = relationship.thisId
+        let otherTableName = relationship.otherTable
+        let otherId = relationship.otherId
+    
+        if (typeof thisId != 'string' || thisId.length == 0) {
+          throw new Error('Given relationship object does not contain property \'thisId\'')
+        }
+    
+        if (typeof otherTableName != 'string' || otherTableName.length == 0) {
+          throw new Error('Given relationship object do not contain property \'otherTable\'')
+        }
+    
+        if (typeof otherId != 'string' || otherId.length == 0) {
+          throw new Error('Given relationship object does not contain property \'otherId\'')
+        }
+    
+        l.var('thisId', thisId)
+        l.var('otherTableName', otherTableName)
+        l.var('otherId', otherId)
+    
+        let joinAlias = alias != undefined && alias.length > 0 ? alias + '__' + relationshipName : relationshipName
+        l.var('joinAlias', joinAlias)
+        
+        l.debug('Adding LEFT JOIN to query')
+        query.join('LEFT', otherTableName, joinAlias, '' + (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId + ' = ' + joinAlias + '.' + otherId)
+        l.var('query', query)
+    
+        let otherTable = schema[otherTableName]
+    
+        if (otherTable == undefined) {
+          throw new Error('Table not contained in schema: ' + otherTable)
+        }
+    
+        l.debug('Filling query with the relationship criteria')
+        fillCriteria(query, relationshipCriteria, Object.keys(otherTable.columns), joinAlias)
+        l.var('query', query)
+    
+        l.debug('Join the relationships of the relationship. Going into recursion...')
+        joinRelationships(schema, otherTableName, query, relationshipCriteria, joinAlias)
+        l.debug(`Coming back from recursing into '${relationshipName}'...`)
       }
-  
-      if (typeof otherTableName != 'string' || otherTableName.length == 0) {
-        throw new Error('Given relationship object do not contain property \'otherTable\'')
-      }
-  
-      if (typeof otherId != 'string' || otherId.length == 0) {
-        throw new Error('Given relationship object does not contain property \'otherId\'')
-      }
-  
-      l.var('thisId', thisId)
-      l.var('otherTableName', otherTableName)
-      l.var('otherId', otherId)
-  
-      let joinAlias = alias != undefined && alias.length > 0 ? alias + '__' + relationshipName : relationshipName
-  
-      l.var('joinAlias', joinAlias)
-      
-      l.debug('Adding LEFT JOIN to query')
-      query.join('LEFT', otherTableName, joinAlias, '' + (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId + ' = ' + joinAlias + '.' + otherId)
-      l.var('query', query)
-  
-      let otherTable = schema[otherTableName]
-  
-      if (otherTable == undefined) {
-        throw new Error('Table not contained in schema: ' + otherTable)
-      }
-  
-      l.debug('Filling query with the relationship criteria')
-      fillCriteria(query, relationshipCriteria, Object.keys(otherTable.columns), joinAlias)
-      l.var('query', query)
-  
-      joinRelationships(schema, otherTableName, query, relationshipCriteria, joinAlias)
     }  
   }
 }

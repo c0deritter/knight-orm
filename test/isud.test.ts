@@ -768,7 +768,132 @@ describe('isud', function() {
         })
       })
 
-      it('should return only one row if there were more than one one-to-many relationship rows present', async function() {
+      it('should select if the many-to-one relationship criteria do not match', async function() {
+        let row = {
+          object2: {
+            id: 'x',
+            column1: 'a'
+          }
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let criteria = {
+          object2: {
+            column1: 'b'
+          }
+        }
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+
+        expect(rows.length).to.equal(1)
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: null,
+          column2: null,
+          table1_id: null,
+          table2_id: 'x',
+          object2: null
+        })
+      })
+
+      it('should select if the many-to-one relationship criteria do not match in the second level', async function() {
+        let row = {
+          object2: {
+            id: 'x',
+            column1: 'a',
+            object1: {
+              column1: 'b'
+            }
+          }
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let criteria = {
+          column1: null,
+          object2: {
+            column1: 'a',
+            object1: {
+              column1: 'c'
+            }
+          }
+        }
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+
+        expect(rows.length).to.equal(1)
+        expect(rows[0]).to.deep.equal({
+          id: 2,
+          column1: null,
+          column2: null,
+          table1_id: null,
+          table2_id: 'x',
+          object2: {
+            id: 'x',
+            column1: 'a',
+            table1_id: 1,
+            object1: null
+          }
+        })
+      })
+
+      it('should filter globally by a many-to-one relationship and find something', async function() {
+        let row = {
+          object2: {
+            id: 'x',
+            column1: 'a'
+          }
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let criteria = {
+          object2: {
+            '@filterGlobally': true,
+            column1: 'a'
+          }
+        }
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+
+        expect(rows.length).to.equal(1)
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: null,
+          column2: null,
+          table1_id: null,
+          table2_id: 'x',
+          object2: {
+            id: 'x',
+            column1: 'a',
+            table1_id: 1
+          }
+        })
+      })
+
+      it('should filter globally by a many-to-one relationship and do not find something', async function() {
+        let row = {
+          object2: {
+            column1: 'a'
+          }
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let criteria = {
+          object2: {
+            '@filterGlobally': true,
+            column1: 'b'
+          }
+        }
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+
+        expect(rows.length).to.equal(0)
+      })
+
+      it('should all rows of a one-to-many relationship', async function() {
         let row = {
           column1: 'a',
           column2: 1,
@@ -821,6 +946,130 @@ describe('isud', function() {
             }
           ]
         })
+      })
+
+      it('it should return only those rows of a one-to-many relationship that match the given criteria', async function() {
+        let row = {
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              column1: 'b',
+              object2: {
+                id: 'x',
+                column1: 'c',
+                table1_id: null
+              }
+            },
+            {
+              column1: 'd'
+            }
+          ]
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let criteria = { many: { column1: 'b', object2: {} }}
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+
+        expect(rows.length).to.equal(1)
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          table1_id: null,
+          table2_id: null,
+          many: [
+            {
+              table1_id: 1,
+              table2_id: 'x',
+              column1: 'b',
+              table1_id2: null,
+              object2: {
+                id: 'x',
+                column1: 'c',
+                table1_id: null
+              }
+            }
+          ]
+        })
+      })
+
+      it('it should filter globally by a one-to-many relationship and find something', async function() {
+        let row = {
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              column1: 'b',
+              object2: {
+                id: 'x',
+                column1: 'c',
+                table1_id: null
+              }
+            },
+            {
+              column1: 'd'
+            }
+          ]
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let criteria = { many: { '@filterGlobally': true, column1: 'b', object2: {} }}
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+
+        expect(rows.length).to.equal(1)
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          table1_id: null,
+          table2_id: null,
+          many: [
+            {
+              table1_id: 1,
+              table2_id: 'x',
+              column1: 'b',
+              table1_id2: null,
+              object2: {
+                id: 'x',
+                column1: 'c',
+                table1_id: null
+              }
+            }
+          ]
+        })
+      })
+
+      it('it should filter globally by a one-to-many relationship and do not find something', async function() {
+        let row = {
+          column1: 'a',
+          column2: 1,
+          many: [
+            {
+              column1: 'b',
+              object2: {
+                id: 'x',
+                column1: 'c',
+                table1_id: null
+              }
+            },
+            {
+              column1: 'd'
+            }
+          ]
+        }
+
+        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let criteria = { many: { '@filterGlobally': true, column1: 'c', object2: {} }}
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+
+        expect(rows.length).to.equal(0)
       })
 
       it('should select a row which columns are null', async function() {

@@ -1,6 +1,6 @@
-import { ReadCriteria } from 'mega-nice-criteria'
+import { isCriteriaEmpty, ReadCriteria } from 'mega-nice-criteria'
 import Log from 'mega-nice-log'
-import { getIdColumns, isIdColumn, Schema, Table, getPropertyName } from './Schema'
+import { getIdColumns, getPropertyName, isIdColumn, Schema, Table } from './Schema'
 
 let log = new Log('mega-nice-sql-orm/rowTools.ts')
 
@@ -421,4 +421,99 @@ export function idsNotSet(table: Table, row: any): string[] {
   }
 
   return idsNotSet
+}
+
+export interface RelationshipsToLoad {
+  [ relationshipPath: string ]: RelationshipToLoad
+}
+
+export interface RelationshipToLoad {
+  tableName: string
+  relationshipName: string
+  relationshipCriteria: ReadCriteria
+  rows: any[]
+}
+
+export function determineRelationshipsToLoad(schema: Schema, tableName: string, rows: any[], criteria: ReadCriteria, relationshipPath: string = '', relationshipsToLoad: RelationshipsToLoad = {}): RelationshipsToLoad {
+  let l = log.fn('determineRelationshipsToLoad')
+  l.param('tableName', tableName)
+  l.param('rows', rows)
+  l.param('criteria', criteria)
+  l.param('relationshipPath', relationshipPath)
+  l.param('relationshipsToLoad', relationshipsToLoad)
+
+  let table = schema[tableName]
+  if (table == undefined) {
+    throw new Error('Table not contained in schema: ' + tableName)
+  }
+
+  if (table.relationships == undefined) {
+    l.returning('There are not any relationships. Returning...')
+    return {}
+  }
+
+  l.debug('Iterating through all given rows determining relationships to load...')
+
+  for (let row of rows) {
+    l.debug('Determining relationships to load for row', row)
+    l.debug('Iterating through all relationships...')
+
+    for (let relationshipName of Object.keys(table.relationships)) {
+      l.var('relationshipName', relationshipName)
+
+      let relationshipCriteria = criteria[relationshipName]
+      l.varInsane('relationshipCriteria', relationshipCriteria)
+
+      if (relationshipCriteria == undefined) {
+        l.debug('There are no criteria for this relationship. Continuing...')
+        continue
+      }
+
+      let relationshipValue = row[relationshipName]
+      l.var('relationshipValue', relationshipValue)
+
+      let relationship = table.relationships ? table.relationships[relationshipName] : undefined
+      if (relationship == undefined) {
+        throw new Error(`Relationship '${relationshipName}' not contained table '${tableName}'`)
+      }
+
+      let subRelationshipPath = relationshipPath + '.' + relationshipName
+      l.varInsane('subRelationshipPath', subRelationshipPath)
+      
+      if (relationshipCriteria['@filterGlobally'] === true || isCriteriaEmpty(relationshipCriteria)) {
+        if (relationship.manyToOne && relationshipValue != undefined || relationship.oneToMany && relationshipValue instanceof Array && relationshipValue.length > 0) {
+          l.debug('Relationship was joined and loaded. Going into recursion...')
+
+          determineRelationshipsToLoad(schema, 
+            relationship.otherTable, 
+            relationship.manyToOne ? [ row[relationshipName] ] : row[relationshipName], 
+            relationshipCriteria, 
+            subRelationshipPath,
+            relationshipsToLoad)
+
+          l.debug('Returning from recursion...')
+        }
+        else {
+          l.debug('Relationship was joined but it did not find anything. Continuing...')
+        }
+      }
+      else {
+        l.debug('Relationship was not joined. Adding it to relationshipsToLoad...')
+
+        if (relationshipsToLoad[subRelationshipPath] == undefined) {
+          relationshipsToLoad[subRelationshipPath] = {
+            tableName: tableName,
+            relationshipName: relationshipName,
+            relationshipCriteria: relationshipCriteria,
+            rows: []
+          }
+        }
+
+        relationshipsToLoad[subRelationshipPath].rows.push(row)
+      }
+    }
+  }
+
+  l.returning('Returning relationshipsToLoad...', relationshipsToLoad)
+  return relationshipsToLoad
 }

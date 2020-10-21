@@ -16,8 +16,10 @@ describe('queryTools', function() {
         id: 1,
         column1: 'a',
         many: {
+          '@filterGlobally': true,
           column1: 'b',
           object2: {
+            '@filterGlobally': true,
             column1: 'c'
           }
         }

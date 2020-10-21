@@ -3,9 +3,9 @@ import Log from 'mega-nice-log'
 import sql from 'mega-nice-sql'
 import { fillReadCriteria, fillUpdateCriteria } from 'mega-nice-sql-criteria-filler'
 import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
-import { delete_ as isudDelete, insert } from './isud'
-import { buildCountQuery, buildSelectQuery } from './queryTools'
-import { idsNotSet, instanceToRow, rowToInstance, unjoinRows } from './rowTools'
+import { delete_ as isudDelete, insert, select } from './isud'
+import { buildCountQuery } from './queryTools'
+import { idsNotSet, instanceToRow, rowToInstance } from './rowTools'
 import { Schema } from './Schema'
 import { FiddledRows } from './util'
 
@@ -33,18 +33,15 @@ export async function read<T>(schema: Schema, tableName: string, db: string, que
   let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
   l.var('rowCriteria', rowCriteria)
 
-  let query = buildSelectQuery(schema, tableName, rowCriteria)
+  let rows = await select(schema, tableName, db, queryFn, rowCriteria)
+  l.var('rows', rows)
 
-  let sqlString = query.sql(db)
-  let values = query.values()
+  let instances: T[] = []
 
-  l.var('sqlString', sqlString)
-  l.var('values', values)
-
-  let joinedRows = await queryFn(sqlString, values)
-  l.var('joinedRows', joinedRows)
-
-  let instances = unjoinRows(schema, tableName, joinedRows, criteria, true)
+  for (let row of rows) {
+    let instance = rowToInstance(schema, tableName, row)
+    instances.push(instance)
+  }
   
   l.returning('Returning instances...', instances)
   return instances

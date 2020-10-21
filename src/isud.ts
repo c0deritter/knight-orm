@@ -4,7 +4,7 @@ import sql, { Query } from 'mega-nice-sql'
 import { fillCreateCriteria, fillDeleteCriteria, fillUpdateCriteria } from 'mega-nice-sql-criteria-filler'
 import { rowToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { buildSelectQuery } from './queryTools'
-import { filterValidColumns, idsOnly, unjoinRows } from './rowTools'
+import { determineRelationshipsToLoad, filterValidColumns, idsOnly, RelationshipsToLoad, unjoinRows } from './rowTools'
 import { getRelationshipNameByColumn, isGeneratedIdColumn, Relationship, Schema } from './Schema'
 import { FiddledRows } from './util'
 
@@ -417,13 +417,84 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   let sqlString = query.sql(db)
   let values = query.values()
 
+  l.debug('Querying database...')
+
   l.var('sqlString', sqlString)
   l.var('values', values)
 
   let joinedRows = await queryFn(sqlString, values)
-  l.var('joinedRows', joinedRows)
+  l.varInsane('joinedRows', joinedRows)
 
   let rows = unjoinRows(schema, tableName, joinedRows, criteria)
+  l.var('rows', rows)
+
+  l.debug('Determing relationships to load...')
+  let relationshipsToLoad = determineRelationshipsToLoad(schema, tableName, rows, criteria)
+
+  l.debug('Loading all relationships that need to be loaded in a seperate query...', Object.keys(relationshipsToLoad))
+
+  for (let relationshipPath of Object.keys(relationshipsToLoad)) {
+    l.debug('Loading relationships for path', relationshipPath)
+
+    let relationshipToLoad = relationshipsToLoad[relationshipPath]
+    l.varInsane('relationshipToLoad', relationshipToLoad)
+    
+    let relationshipTable = schema[relationshipToLoad.tableName]
+    if (relationshipTable == undefined) {
+      throw new Error('Table not contained in schema: ' + relationshipToLoad.tableName)
+    }
+
+    let relationship = relationshipTable.relationships ? relationshipTable.relationships[relationshipToLoad.relationshipName] : undefined
+    if (relationship == undefined) {
+      throw new Error(`Relationship '${relationshipToLoad.relationshipName}' not contained table '${relationshipToLoad.tableName}'`)
+    }
+
+    let idsToLoad: any[] = []
+    for (let row of relationshipToLoad.rows) {
+      if (row[relationship.thisId] !== undefined) {
+        if (idsToLoad.indexOf(row[relationship.thisId]) == -1) {
+          idsToLoad.push(row[relationship.thisId])
+        }
+      }
+    }
+
+    let criteria = {
+      ...relationshipToLoad.relationshipCriteria
+    }
+
+    criteria[relationship.otherId] = idsToLoad
+
+    l.debug('Loading relationships with the following criteria', criteria)
+
+    let loadedRelationships = await select(schema, relationship.otherTable, db, queryFn, relationshipToLoad.relationshipCriteria)
+    l.varInsane('loadedRelationships', loadedRelationships)
+
+    l.debug('Attaching relationship to given rows...')
+
+    for (let row of relationshipToLoad.rows) {
+      l.debug('Attaching relationship to row', row)
+
+      if (relationship.oneToMany === true) {
+        row[relationshipToLoad.relationshipName] = []
+      }
+      else {
+        row[relationshipToLoad.relationshipName] = null
+      }
+
+      for (let loadedRelationship of loadedRelationships) {
+        if (row[relationship.thisId] == loadedRelationship[relationship.otherId]) {
+          if (relationship.oneToMany === true) {
+            l.debug('Pushing into array of one-to-many...', loadedRelationship)
+            row[relationshipToLoad.relationshipName].push(loadedRelationship)
+          }
+          else {
+            l.debug('Setting property of many-to-one..', loadedRelationship)
+            row[relationshipToLoad.relationshipName] = loadedRelationship
+          }
+        }
+      }
+    }
+  }
 
   l.returning('Returning rows...', rows)
   return rows

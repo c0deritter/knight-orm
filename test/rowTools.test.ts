@@ -258,15 +258,54 @@ describe('rowTools', function() {
       expect(instances[0].many).to.be.instanceOf(Array)
       expect(instances[0].many[0]).to.be.instanceOf(ManyObjects)
       expect(instances[0].many[0].object2).to.be.instanceOf(Object2)
-      expect(instances[0]).to.deep.equal({ id: 1, property1: 'a', property2: 1, object1Id: null, object2Id: null, many: [{ object1Id: 1, object2Id: 1, property1: 'b', object1Id2: null, object2: { id: 1, property1: 'c', object1Id: null }}]})
+      expect(instances[0]).to.deep.equal({
+        id: 1,
+        property1: 'a',
+        property2: 1,
+        object1Id: null,
+        object2Id: null,
+        many: [{
+          object1Id: 1,
+          object2Id: 1,
+          property1: 'b',
+          object1Id2: null,
+          object2: {
+            id: 1,
+            property1: 'c',
+            object1Id: null
+          }
+        }]
+      })
+
       expect(instances[1]).to.be.instanceOf(Object1)
       expect(instances[1].many).to.be.instanceOf(Array)
       expect(instances[1].many[0]).to.be.instanceOf(ManyObjects)
       expect(instances[1].many[0].object2).to.be.null
-      expect(instances[1]).to.deep.equal({ id: 2, property1: 'd', property2: 2, object1Id: null, object2Id: null, many: [{ object1Id: 2, object2Id: null, property1: 'e', object1Id2: null, object2: null }]})
+      expect(instances[1]).to.deep.equal({
+        id: 2,
+        property1: 'd',
+        property2: 2,
+        object1Id: null,
+        object2Id: null,
+        many: [{
+          object1Id: 2,
+          object2Id: null,
+          property1: 'e',
+          object1Id2: null,
+          object2: null
+        }]
+      })
+
       expect(instances[2]).to.be.instanceOf(Object1)
       expect(instances[2].many).to.be.not.undefined
-      expect(instances[2]).to.deep.equal({ id: 3, property1: 'f', property2: 3, object1Id: null, object2Id: null, many: [] })
+      expect(instances[2]).to.deep.equal({
+        id: 3,
+        property1: 'f',
+        property2: 3,
+        object1Id: null,
+        object2Id: null,
+        many: []
+      })
     })
   })
 
