@@ -30,6 +30,22 @@ describe('criteriaTools', function() {
         }
       })
     })
+
+    it('should preserve criteria specific properties that start with @', function() {
+      let instanceCriteria = {
+        many: {
+          '@filterGlobally': true
+        }
+      }
+
+      let rowCriteria = instanceCriteriaToRowCriteria(schema, 'table1', instanceCriteria)
+
+      expect(rowCriteria).to.deep.equal({
+        many: {
+          '@filterGlobally': true
+        }
+      })
+    })
   })
 
   describe('instanceToUpdateCriteria', function() {

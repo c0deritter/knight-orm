@@ -1,7 +1,7 @@
-import { DeleteCriteria, UpdateCriteria } from 'mega-nice-criteria'
+import { Criteria, DeleteCriteria, UpdateCriteria } from 'mega-nice-criteria'
 import { getPropertyName, isIdColumn, Schema } from './Schema'
 
-export function instanceCriteriaToRowCriteria<T>(schema: Schema, tableName: string, instanceCriteria: T): T {
+export function instanceCriteriaToRowCriteria<T extends Criteria>(schema: Schema, tableName: string, instanceCriteria: T): T {
   let table = schema[tableName]
 
   if (table == undefined) {
@@ -32,6 +32,12 @@ export function instanceCriteriaToRowCriteria<T>(schema: Schema, tableName: stri
   
       let relationshipTable = relationship.otherTable
       rowCriteria[relationshipName] = instanceCriteriaToRowCriteria(schema, relationshipTable, relationshipValue)
+    }
+  }
+
+  for (let propertyName of Object.keys(instanceCriteria)) {
+    if (propertyName[0] == '@') {
+      rowCriteria[propertyName] = (instanceCriteria as any)[propertyName]
     }
   }
 
