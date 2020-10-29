@@ -95,7 +95,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
 
   if (alreadyUpdatedRows.containsRow(tableName, row)) {
     let alreadyUpdatedRow = alreadyUpdatedRows.getResultByRow(tableName, row)
-    l.debug('Row object was already inserted. Returning already updated row...', alreadyUpdatedRow)
+    l.dev('Row object was already inserted. Returning already updated row...', alreadyUpdatedRow)
     return alreadyUpdatedRow
   }
 
@@ -118,7 +118,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   let updatedRow = undefined
 
   if (hasValuesToSet) {
-    l.debug('There is something to set. Updating...')
+    l.user('There is something to set. Updating...')
     let query = sql.update(tableName)
     fillUpdateCriteria(query, criteria, Object.keys(table.columns))
 
@@ -145,7 +145,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     l.var('updatedRow', updatedRow)
   }
   else {
-    l.debug('No column to set given. Loading entity...')
+    l.user('No column to set given. Loading entity...')
     // remove the set property from the criteria to only have left the ids for selecting
     delete (criteria as any).set
 
@@ -167,7 +167,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   let updatedInstance = table.rowToInstance(updatedRow)
   alreadyUpdatedRows.add(tableName, row, updatedInstance)
 
-  l.debug('Update relationships...')
+  l.user('Update relationships...')
 
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
@@ -177,29 +177,29 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
         let relationship = table.relationships[relationshipName]
   
         if (relationship.manyToOne) {
-          l.debug('Many-to-one relationship')
-          l.debug('Updating. Going into recursion...')
+          l.user('Many-to-one relationship')
+          l.user('Updating. Going into recursion...')
           let updatedRelationshipInstance = await update(schema, relationship.otherTable, db, queryFn, (instance as any)[relationshipName], alreadyUpdatedRows)
-          l.debug('Coming back from recursion...')
+          l.returning('Returning from recursion...')
           updatedInstance[relationshipName] = updatedRelationshipInstance
         }
         else if ((instance as any)[relationshipName] instanceof Array) {
-          l.debug('One-to-many relationship. Iterating through all relationhip rows...')
+          l.user('One-to-many relationship. Iterating through all relationhip rows...')
           updatedInstance[relationshipName] = []
   
           for (let relationshipInstance of (instance as any)[relationshipName]) {
-            l.debug('Updating. Going into recursion...')
+            l.user('Updating. Going into recursion...')
             let updatedRelationshipInstance = await update(schema, relationship.otherTable, db, queryFn, relationshipInstance, alreadyUpdatedRows)
-            l.debug('Coming back from recursion...')            
+            l.returning('Returning from recursion...')            
             updatedInstance[relationshipName].push(updatedRelationshipInstance)
           }
         }
         else {
-          l.debug('Was neither a many-to-one relationship nor was the correspinding object of type Array')
+          l.user('Was neither a many-to-one relationship nor was the correspinding object of type Array')
         }
       }
       else {
-        l.debug('Relationship is not of type object or null. Continuing...')
+        l.user('Relationship is not of type object or null. Continuing...')
       }
     }  
   }
@@ -219,7 +219,7 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
   }
 
   let criteria = instanceToDeleteCriteria(schema, tableName, instance)
-  l.debug('Converted instance to delete criteria', criteria)
+  l.user('Converted instance to delete criteria', criteria)
 
   let missingIdValues = idsNotSet(table, criteria)
   l.var('missingIdValues', missingIdValues)
