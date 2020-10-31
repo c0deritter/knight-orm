@@ -7,7 +7,7 @@ export class Object1 {
   object1Id?: number
   object2Id?: number
 
-  many?: ManyObjects[]
+  manyObjects?: ManyObject[]
   object1?: Object1
   object2?: Object2
 }
@@ -18,10 +18,10 @@ export class Object2 {
   object1Id?: number|null
   
   object1?: Object1
-  many?: ManyObjects[]
+  manyObjects?: ManyObject[]
 }
 
-export class ManyObjects {
+export class ManyObject {
   object1Id?: number
   object2Id?: string
   property1?: string
@@ -38,11 +38,11 @@ export const schema = {
       'id': { property: 'id', id: true },
       'column1': 'property1',
       'column2': 'property2',
-      'table1_id': 'object1id',
-      'table2_id': 'object2id'
+      'table1_id': 'object1Id',
+      'table2_id': 'object2Id'
     },
     relationships: {
-      many: {
+      manyObjects: {
         oneToMany: true,
         thisId: 'id',
         otherTable: 'table_many',
@@ -99,7 +99,7 @@ export const schema = {
         otherId: 'id',
         otherRelationship: 'object2'
       },
-      many: {
+      manyObjects: {
         oneToMany: true,
         thisId: 'id',
         otherTable: 'table_many',
@@ -151,14 +151,14 @@ export const schema = {
       }
     },
     rowToInstance: (row: any) => {
-      let many = new ManyObjects
+      let many = new ManyObject
       many.object1Id = row.table1_id
       many.object2Id = row.table2_id
       many.property1 = row.column1
       many.object1Id2 = row.table1_id2
       return many
     },
-    instanceToRow: (many: ManyObjects) => {
+    instanceToRow: (many: ManyObject) => {
       return {
         table1_id: many.object1Id,
         table2_id: many.object2Id,

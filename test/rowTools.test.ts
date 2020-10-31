@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import 'mocha'
 import { instanceToRow, rowsRepresentSameEntity, rowToInstance, unjoinRows } from '../src/rowTools'
-import { ManyObjects, Object1, Object2, schema } from './testSchema'
+import { ManyObject, Object1, Object2, schema } from './testSchema'
 
 describe('rowTools', function() {
   describe('instanceToRow', function() {
@@ -25,25 +25,25 @@ describe('rowTools', function() {
       object1.id = 1
       object1.property1 = 'a'
       object1.property2 = 1
-      object1.many = [new ManyObjects, new ManyObjects]
-      object1.many[0].object1Id = 1
-      object1.many[0].object2Id = 'x'
-      object1.many[0].property1 = 'b'
-      object1.many[0].object1Id2 = null
-      object1.many[0].object1 = object1
-      object1.many[0].object2 = new Object2
-      object1.many[0].object2.id = 'x'
-      object1.many[0].object2.property1 = 'c'
-      object1.many[0].object2.object1Id = null
-      object1.many[1].object1Id = 1
-      object1.many[1].object2Id = 'y'
-      object1.many[1].property1 = 'd'
-      object1.many[1].object1Id2 = null
-      object1.many[1].object1 = object1
-      object1.many[1].object2 = new Object2
-      object1.many[1].object2.id = 'y'
-      object1.many[1].object2.property1 = 'e'
-      object1.many[1].object2.object1Id = null
+      object1.manyObjects = [new ManyObject, new ManyObject]
+      object1.manyObjects[0].object1Id = 1
+      object1.manyObjects[0].object2Id = 'x'
+      object1.manyObjects[0].property1 = 'b'
+      object1.manyObjects[0].object1Id2 = null
+      object1.manyObjects[0].object1 = object1
+      object1.manyObjects[0].object2 = new Object2
+      object1.manyObjects[0].object2.id = 'x'
+      object1.manyObjects[0].object2.property1 = 'c'
+      object1.manyObjects[0].object2.object1Id = null
+      object1.manyObjects[1].object1Id = 1
+      object1.manyObjects[1].object2Id = 'y'
+      object1.manyObjects[1].property1 = 'd'
+      object1.manyObjects[1].object1Id2 = null
+      object1.manyObjects[1].object1 = object1
+      object1.manyObjects[1].object2 = new Object2
+      object1.manyObjects[1].object2.id = 'y'
+      object1.manyObjects[1].object2.property1 = 'e'
+      object1.manyObjects[1].object2.object1Id = null
 
       let row = instanceToRow(schema, 'table1', object1)
 
@@ -53,7 +53,7 @@ describe('rowTools', function() {
         column2: 1,
         table1_id: undefined,
         table2_id: undefined,
-        many: [
+        manyObjects: [
           {
             table1_id: 1,
             table2_id: 'x',
@@ -79,8 +79,8 @@ describe('rowTools', function() {
         ]
       }
 
-      expectedRow.many[0].object1 = expectedRow
-      expectedRow.many[1].object1 = expectedRow
+      expectedRow.manyObjects[0].object1 = expectedRow
+      expectedRow.manyObjects[1].object1 = expectedRow
 
       expect(row).to.deep.equal(expectedRow)
     })
@@ -108,7 +108,7 @@ describe('rowTools', function() {
         id: 1,
         column1: 'a',
         column2: 1,
-        many: [
+        manyObjects: [
           {
             table1_id: 1,
             table2_id: 'x',
@@ -132,8 +132,8 @@ describe('rowTools', function() {
         ]
       }
 
-      row.many[0].object1 = row
-      row.many[1].object1 = row
+      row.manyObjects[0].object1 = row
+      row.manyObjects[1].object1 = row
 
       let instance = rowToInstance(schema, 'table1', row)
 
@@ -143,7 +143,7 @@ describe('rowTools', function() {
         property2: 1,
         object1Id: undefined,
         object2Id: undefined,
-        many: [
+        manyObjects: [
           {
             object1Id: 1,
             object2Id: 'x',
@@ -154,7 +154,7 @@ describe('rowTools', function() {
               property1: 'c',
               object1Id: undefined
             }
-          } as ManyObjects,
+          } as ManyObject,
           {
             object1Id: 1,
             object2Id: 'y',
@@ -165,12 +165,12 @@ describe('rowTools', function() {
               property1: 'e',
               object1Id: undefined
             }
-          } as ManyObjects
+          } as ManyObject
         ]
       }
 
-      expectedInstance.many[0].object1 = expectedInstance
-      expectedInstance.many[1].object1 = expectedInstance
+      expectedInstance.manyObjects[0].object1 = expectedInstance
+      expectedInstance.manyObjects[1].object1 = expectedInstance
 
       expect(instance).to.deep.equal(expectedInstance)
     })
@@ -211,13 +211,13 @@ describe('rowTools', function() {
           table1__column2: 1,
           table1__table1_id: null,
           table1__table2_id: null,
-          table1__many__table1_id: 1,
-          table1__many__table2_id: 1,
-          table1__many__column1: 'b',
-          table1__many__table1_id2: null,
-          table1__many__object2__id: 1,
-          table1__many__object2__column1: 'c',
-          table1__many__object2__table1_id: null
+          table1__manyObjects__table1_id: 1,
+          table1__manyObjects__table2_id: 1,
+          table1__manyObjects__column1: 'b',
+          table1__manyObjects__table1_id2: null,
+          table1__manyObjects__object2__id: 1,
+          table1__manyObjects__object2__column1: 'c',
+          table1__manyObjects__object2__table1_id: null
         },
         {
           table1__id: 2,
@@ -225,13 +225,13 @@ describe('rowTools', function() {
           table1__column2: 2,
           table1__table1_id: null,
           table1__table2_id: null,
-          table1__many__table1_id: 2,
-          table1__many__table2_id: null,
-          table1__many__column1: 'e',
-          table1__many__table1_id2: null,
-          table1__many__object2__id: null,
-          table1__many__object2__column1: null,
-          table1__many__object2__table1_id: null
+          table1__manyObjects__table1_id: 2,
+          table1__manyObjects__table2_id: null,
+          table1__manyObjects__column1: 'e',
+          table1__manyObjects__table1_id2: null,
+          table1__manyObjects__object2__id: null,
+          table1__manyObjects__object2__column1: null,
+          table1__manyObjects__object2__table1_id: null
         },
         {
           table1__id: 3,
@@ -239,32 +239,32 @@ describe('rowTools', function() {
           table1__column2: 3,
           table1__table1_id: null,
           table1__table2_id: null,
-          table1__many__table1_id: null,
-          table1__many__table2_id: null,
-          table1__many__column1: null,
-          table1__many__table1_id2: null,
-          table1__many__object2__id: null,
-          table1__many__object2__column1: null,
-          table1__many__object2__table1_id: null
+          table1__manyObjects__table1_id: null,
+          table1__manyObjects__table2_id: null,
+          table1__manyObjects__column1: null,
+          table1__manyObjects__table1_id2: null,
+          table1__manyObjects__object2__id: null,
+          table1__manyObjects__object2__column1: null,
+          table1__manyObjects__object2__table1_id: null
         }
       ]
 
-      let criteria = { many: { object2: {} }}
+      let criteria = { manyObjects: { object2: {} }}
 
       let instances = unjoinRows(schema, 'table1', rows, criteria, true)
 
       expect(instances.length).to.equal(3)
       expect(instances[0]).to.be.instanceOf(Object1)
-      expect(instances[0].many).to.be.instanceOf(Array)
-      expect(instances[0].many[0]).to.be.instanceOf(ManyObjects)
-      expect(instances[0].many[0].object2).to.be.instanceOf(Object2)
+      expect(instances[0].manyObjects).to.be.instanceOf(Array)
+      expect(instances[0].manyObjects[0]).to.be.instanceOf(ManyObject)
+      expect(instances[0].manyObjects[0].object2).to.be.instanceOf(Object2)
       expect(instances[0]).to.deep.equal({
         id: 1,
         property1: 'a',
         property2: 1,
         object1Id: null,
         object2Id: null,
-        many: [{
+        manyObjects: [{
           object1Id: 1,
           object2Id: 1,
           property1: 'b',
@@ -278,16 +278,16 @@ describe('rowTools', function() {
       })
 
       expect(instances[1]).to.be.instanceOf(Object1)
-      expect(instances[1].many).to.be.instanceOf(Array)
-      expect(instances[1].many[0]).to.be.instanceOf(ManyObjects)
-      expect(instances[1].many[0].object2).to.be.null
+      expect(instances[1].manyObjects).to.be.instanceOf(Array)
+      expect(instances[1].manyObjects[0]).to.be.instanceOf(ManyObject)
+      expect(instances[1].manyObjects[0].object2).to.be.null
       expect(instances[1]).to.deep.equal({
         id: 2,
         property1: 'd',
         property2: 2,
         object1Id: null,
         object2Id: null,
-        many: [{
+        manyObjects: [{
           object1Id: 2,
           object2Id: null,
           property1: 'e',
@@ -297,14 +297,14 @@ describe('rowTools', function() {
       })
 
       expect(instances[2]).to.be.instanceOf(Object1)
-      expect(instances[2].many).to.be.not.undefined
+      expect(instances[2].manyObjects).to.be.not.undefined
       expect(instances[2]).to.deep.equal({
         id: 3,
         property1: 'f',
         property2: 3,
         object1Id: null,
         object2Id: null,
-        many: []
+        manyObjects: []
       })
     })
   })

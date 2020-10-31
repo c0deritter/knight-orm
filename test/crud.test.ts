@@ -3,7 +3,7 @@ import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
 import { create, delete_, read, update } from '../src/crud'
-import { ManyObjects, Object1, Object2, schema } from './testSchema'
+import { ManyObject, Object1, Object2, schema } from './testSchema'
 
 chai.use(chaiAsPromised)
 const expect = chai.expect
@@ -38,7 +38,7 @@ describe('crud', function() {
         let object1 = new Object1
         object1.property1 = 'a'
         object1.property2 = 1
-        object1.many = [ new ManyObjects, new ManyObjects ]
+        object1.manyObjects = [ new ManyObject, new ManyObject ]
         object1.object1 = {
           property1: 'b',
           property2: 2
@@ -48,19 +48,19 @@ describe('crud', function() {
           property1: 'c'
         }
 
-        object1.many[0].property1 = 'd'
-        object1.many[0].object1 = object1
-        object1.many[0].object2 = object1.object2
-        object1.many[0].object2.object1 = object1
-        object1.many[0].object12 = object1
+        object1.manyObjects[0].property1 = 'd'
+        object1.manyObjects[0].object1 = object1
+        object1.manyObjects[0].object2 = object1.object2
+        object1.manyObjects[0].object2.object1 = object1
+        object1.manyObjects[0].object12 = object1
 
-        object1.many[1].property1 = 'e'
-        object1.many[1].object1 = object1
-        object1.many[1].object2 = new Object2
-        object1.many[1].object2.id = 'y'
-        object1.many[1].object2.property1 = 'f'
-        object1.many[1].object2.object1 = object1
-        object1.many[1].object2.many = [ object1.many[1] ]
+        object1.manyObjects[1].property1 = 'e'
+        object1.manyObjects[1].object1 = object1
+        object1.manyObjects[1].object2 = new Object2
+        object1.manyObjects[1].object2.id = 'y'
+        object1.manyObjects[1].object2.property1 = 'f'
+        object1.manyObjects[1].object2.object1 = object1
+        object1.manyObjects[1].object2.manyObjects = [ object1.manyObjects[1] ]
 
         object1.object1.object1 = object1
         object1.object1.object2 = object1.object2
@@ -85,7 +85,7 @@ describe('crud', function() {
             property1: 'c',
             object1Id: 1
           } as any,
-          many: [
+          manyObjects: [
             {
               object1Id: 1,
               object2Id: 'x',
@@ -114,23 +114,23 @@ describe('crud', function() {
         expectedInstance.object1.object1 = expectedInstance
         expectedInstance.object1.object2 = expectedInstance.object2
         expectedInstance.object2.object1 = expectedInstance
-        expectedInstance.many[0].object1 = expectedInstance
-        expectedInstance.many[0].object2 = expectedInstance.object2
-        expectedInstance.many[0].object12 = expectedInstance
-        expectedInstance.many[1].object1 = expectedInstance
-        expectedInstance.many[1].object2.object1 = expectedInstance        
+        expectedInstance.manyObjects[0].object1 = expectedInstance
+        expectedInstance.manyObjects[0].object2 = expectedInstance.object2
+        expectedInstance.manyObjects[0].object12 = expectedInstance
+        expectedInstance.manyObjects[1].object1 = expectedInstance
+        expectedInstance.manyObjects[1].object2.object1 = expectedInstance        
 
         expect(createdInstance).to.deep.equal(expectedInstance)
         expect(createdInstance).to.be.instanceOf(Object1)
-        expect(createdInstance.many).to.be.not.undefined
+        expect(createdInstance.manyObjects).to.be.not.undefined
 
-        if (createdInstance.many == undefined) {
+        if (createdInstance.manyObjects == undefined) {
           return
         }
 
-        expect(createdInstance.many[0].object1).to.be.instanceOf(Object1)
-        expect(createdInstance.many[0].object12).to.be.instanceOf(Object1)
-        expect(createdInstance.many[1].object1).to.be.instanceOf(Object1)
+        expect(createdInstance.manyObjects[0].object1).to.be.instanceOf(Object1)
+        expect(createdInstance.manyObjects[0].object12).to.be.instanceOf(Object1)
+        expect(createdInstance.manyObjects[1].object1).to.be.instanceOf(Object1)
         expect(createdInstance.object1).to.be.instanceOf(Object1)
         expect(createdInstance.object2).to.be.instanceOf(Object2)
       })
@@ -141,7 +141,7 @@ describe('crud', function() {
         let object1 = new Object1
         object1.property1 = 'a'
         object1.property2 = 1
-        object1.many = [ new ManyObjects, new ManyObjects ]
+        object1.manyObjects = [ new ManyObject, new ManyObject ]
 
         object1.object1 = {
           property1: 'b',
@@ -153,19 +153,19 @@ describe('crud', function() {
           property1: 'c'
         }
 
-        object1.many[0].property1 = 'd'
-        object1.many[0].object1 = object1
-        object1.many[0].object2 = object1.object2
-        object1.many[0].object2.object1 = object1
-        object1.many[0].object12 = object1
+        object1.manyObjects[0].property1 = 'd'
+        object1.manyObjects[0].object1 = object1
+        object1.manyObjects[0].object2 = object1.object2
+        object1.manyObjects[0].object2.object1 = object1
+        object1.manyObjects[0].object12 = object1
 
-        object1.many[1].property1 = 'e'
-        object1.many[1].object1 = object1
-        object1.many[1].object2 = new Object2
-        object1.many[1].object2.id = 'y'
-        object1.many[1].object2.property1 = 'f'
-        object1.many[1].object2.object1 = object1
-        object1.many[1].object2.many = [ object1.many[1] ]
+        object1.manyObjects[1].property1 = 'e'
+        object1.manyObjects[1].object1 = object1
+        object1.manyObjects[1].object2 = new Object2
+        object1.manyObjects[1].object2.id = 'y'
+        object1.manyObjects[1].object2.property1 = 'f'
+        object1.manyObjects[1].object2.object1 = object1
+        object1.manyObjects[1].object2.manyObjects = [ object1.manyObjects[1] ]
 
         object1.object1.object1 = object1
         object1.object1.object2 = object1.object2
@@ -174,7 +174,7 @@ describe('crud', function() {
 
         let criteria = {
           id: 1,
-          many: {
+          manyObjects: {
             object1: {},
             object2: {}
           },
@@ -217,7 +217,7 @@ describe('crud', function() {
             property1: 'c',
             object1Id: 1
           },
-          many: [
+          manyObjects: [
             {
               object1Id: 1,
               object2Id: 'x',
@@ -267,7 +267,7 @@ describe('crud', function() {
         let object1 = new Object1
         object1.property1 = 'a'
         object1.property2 = 1
-        object1.many = [ new ManyObjects, new ManyObjects ]
+        object1.manyObjects = [ new ManyObject, new ManyObject ]
 
         object1.object1 = {
           property1: 'b',
@@ -279,19 +279,19 @@ describe('crud', function() {
           property1: 'c'
         }
 
-        object1.many[0].property1 = 'd'
-        object1.many[0].object1 = object1
-        object1.many[0].object2 = object1.object2
-        object1.many[0].object2.object1 = object1
-        object1.many[0].object12 = object1
+        object1.manyObjects[0].property1 = 'd'
+        object1.manyObjects[0].object1 = object1
+        object1.manyObjects[0].object2 = object1.object2
+        object1.manyObjects[0].object2.object1 = object1
+        object1.manyObjects[0].object12 = object1
 
-        object1.many[1].property1 = 'e'
-        object1.many[1].object1 = object1
-        object1.many[1].object2 = new Object2
-        object1.many[1].object2.id = 'y'
-        object1.many[1].object2.property1 = 'f'
-        object1.many[1].object2.object1 = object1
-        object1.many[1].object2.many = [ object1.many[1] ]
+        object1.manyObjects[1].property1 = 'e'
+        object1.manyObjects[1].object1 = object1
+        object1.manyObjects[1].object2 = new Object2
+        object1.manyObjects[1].object2.id = 'y'
+        object1.manyObjects[1].object2.property1 = 'f'
+        object1.manyObjects[1].object2.object1 = object1
+        object1.manyObjects[1].object2.manyObjects = [ object1.manyObjects[1] ]
 
         object1.object1.object1 = object1
         object1.object1.object2 = object1.object2
@@ -314,23 +314,23 @@ describe('crud', function() {
           property1: 'i'
         }
 
-        updateObject1.many = [ new ManyObjects, new ManyObjects ]
+        updateObject1.manyObjects = [ new ManyObject, new ManyObject ]
 
-        updateObject1.many[0].object1Id = 1
-        updateObject1.many[0].object2Id = 'x'
-        updateObject1.many[0].property1 = 'j'
-        updateObject1.many[0].object1 = updateObject1
-        updateObject1.many[0].object2 = updateObject1.object2
-        updateObject1.many[0].object12 = updateObject1
+        updateObject1.manyObjects[0].object1Id = 1
+        updateObject1.manyObjects[0].object2Id = 'x'
+        updateObject1.manyObjects[0].property1 = 'j'
+        updateObject1.manyObjects[0].object1 = updateObject1
+        updateObject1.manyObjects[0].object2 = updateObject1.object2
+        updateObject1.manyObjects[0].object12 = updateObject1
 
-        updateObject1.many[1].object1Id = 1
-        updateObject1.many[1].object2Id = 'y'
-        updateObject1.many[1].property1 = 'k'
-        updateObject1.many[1].object1 = updateObject1
-        updateObject1.many[1].object2 = new Object2
-        updateObject1.many[1].object2.id = 'y'
-        updateObject1.many[1].object2.property1 = 'l'
-        updateObject1.many[1].object2.many = [ updateObject1.many[1] ]
+        updateObject1.manyObjects[1].object1Id = 1
+        updateObject1.manyObjects[1].object2Id = 'y'
+        updateObject1.manyObjects[1].property1 = 'k'
+        updateObject1.manyObjects[1].object1 = updateObject1
+        updateObject1.manyObjects[1].object2 = new Object2
+        updateObject1.manyObjects[1].object2.id = 'y'
+        updateObject1.manyObjects[1].object2.property1 = 'l'
+        updateObject1.manyObjects[1].object2.manyObjects = [ updateObject1.manyObjects[1] ]
 
         updateObject1.object1.object1 = updateObject1
         updateObject1.object1.object2 = updateObject1.object2
@@ -355,7 +355,7 @@ describe('crud', function() {
             property1: 'i',
             object1Id: 1
           },
-          many: [
+          manyObjects: [
             {
               object1Id: 1,
               object2Id: 'x',
@@ -381,10 +381,10 @@ describe('crud', function() {
           ]
         }
 
-        expectedInstance.many[0].object1 = expectedInstance
-        expectedInstance.many[0].object12 = expectedInstance
-        expectedInstance.many[1].object1 = expectedInstance
-        expectedInstance.many[1].object2.many = [ expectedInstance.many[1] ]
+        expectedInstance.manyObjects[0].object1 = expectedInstance
+        expectedInstance.manyObjects[0].object12 = expectedInstance
+        expectedInstance.manyObjects[1].object1 = expectedInstance
+        expectedInstance.manyObjects[1].object2.manyObjects = [ expectedInstance.manyObjects[1] ]
         expectedInstance.object1.object1 = expectedInstance
         expectedInstance.object1.object2 = expectedInstance.object2
 
@@ -397,7 +397,7 @@ describe('crud', function() {
         let object1 = new Object1
         object1.property1 = 'a'
         object1.property2 = 1
-        object1.many = [ new ManyObjects, new ManyObjects ]
+        object1.manyObjects = [ new ManyObject, new ManyObject ]
 
         object1.object1 = {
           property1: 'b',
@@ -409,17 +409,17 @@ describe('crud', function() {
           property1: 'c'
         }
 
-        object1.many[0].property1 = 'd'
-        object1.many[0].object1 = object1
-        object1.many[0].object2 = object1.object2
-        object1.many[0].object12 = object1
+        object1.manyObjects[0].property1 = 'd'
+        object1.manyObjects[0].object1 = object1
+        object1.manyObjects[0].object2 = object1.object2
+        object1.manyObjects[0].object12 = object1
 
-        object1.many[1].property1 = 'e'
-        object1.many[1].object1 = object1
-        object1.many[1].object2 = new Object2
-        object1.many[1].object2.id = 'y'
-        object1.many[1].object2.property1 = 'f'
-        object1.many[1].object2.many = [ object1.many[1] ]
+        object1.manyObjects[1].property1 = 'e'
+        object1.manyObjects[1].object1 = object1
+        object1.manyObjects[1].object2 = new Object2
+        object1.manyObjects[1].object2.id = 'y'
+        object1.manyObjects[1].object2.property1 = 'f'
+        object1.manyObjects[1].object2.manyObjects = [ object1.manyObjects[1] ]
 
         object1.object1.object1 = object1
         object1.object1.object2 = object1.object2
@@ -434,7 +434,7 @@ describe('crud', function() {
           property2: 1,
           object1Id: 2,
           object2Id: 'x',
-          many: [
+          manyObjects: [
             {
               object1Id: 1,
               object2Id: 'x',

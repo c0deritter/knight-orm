@@ -58,10 +58,10 @@ describe('isud', function() {
         let row: any = {
           column1: 'a',
           column2: 1,
-          many: []
+          manyObjects: []
         }
 
-        row.many.push(
+        row.manyObjects.push(
           {
             column1: 'b',
             object1: row
@@ -80,7 +80,7 @@ describe('isud', function() {
           column2: 1,
           table1_id: null,
           table2_id: null,
-          many: [
+          manyObjects: [
             {
               table1_id: 1,
               table2_id: null,
@@ -96,8 +96,8 @@ describe('isud', function() {
           ]
         }
 
-        expectedRow.many[0].object1 = expectedRow
-        expectedRow.many[1].object1 = expectedRow
+        expectedRow.manyObjects[0].object1 = expectedRow
+        expectedRow.manyObjects[1].object1 = expectedRow
 
         expect(insertedRow.id).to.equal(1)
         expect(insertedRow).to.deep.equal(expectedRow)
@@ -130,10 +130,10 @@ describe('isud', function() {
         let row: any = {
           column1: 'a',
           column2: 1,
-          many: [{}, {}]
+          manyObjects: [{}, {}]
         }
 
-        row.many[0] = {
+        row.manyObjects[0] = {
           column1: 'b',
           object1: row,
           object2: {
@@ -142,9 +142,9 @@ describe('isud', function() {
           }
         }
 
-        row.many[0].object2.many = [ row.many[0] ]
+        row.manyObjects[0].object2.manyObjects = [ row.manyObjects[0] ]
 
-        row.many[1] = {
+        row.manyObjects[1] = {
           column1: 'd',
           object1: row,
           object2: {
@@ -153,7 +153,7 @@ describe('isud', function() {
           }
         }
 
-        row.many[1].object2.many = [ row.many[1] ]
+        row.manyObjects[1].object2.manyObjects = [ row.manyObjects[1] ]
         
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
@@ -163,7 +163,7 @@ describe('isud', function() {
           column2: 1,
           table1_id: null,
           table2_id: null,
-          many: [
+          manyObjects: [
             {
               table1_id: 1,
               table2_id: 'x',
@@ -189,8 +189,8 @@ describe('isud', function() {
           ]
         }
 
-        expectedRow.many[0].object1 = expectedRow
-        expectedRow.many[1].object1 = expectedRow
+        expectedRow.manyObjects[0].object1 = expectedRow
+        expectedRow.manyObjects[1].object1 = expectedRow
 
         expect(insertedRow).to.deep.equal(expectedRow)
 
@@ -226,10 +226,10 @@ describe('isud', function() {
         let row: any = {
           column1: 'a',
           column2: 1,
-          many: []
+          manyObjects: []
         }
 
-        row.many.push(
+        row.manyObjects.push(
           {
             object1: row
           },
@@ -246,7 +246,7 @@ describe('isud', function() {
           column2: 1,
           table1_id: null,
           table2_id: null,
-          many: [
+          manyObjects: [
             {
               table1_id: 1,
               table2_id: null,
@@ -262,8 +262,8 @@ describe('isud', function() {
           ]
         }
 
-        expectedRow.many[0].object1 = expectedRow
-        expectedRow.many[1].object1 = expectedRow
+        expectedRow.manyObjects[0].object1 = expectedRow
+        expectedRow.manyObjects[1].object1 = expectedRow
 
         expect(insertedRow.id).to.equal(1)
         expect(insertedRow).to.deep.equal(expectedRow)
@@ -300,8 +300,8 @@ describe('isud', function() {
           }
         }
 
-        row.object1.many = [ row ]
-        row.object2.many = [ row ]
+        row.object1.manyObjects = [ row ]
+        row.object2.manyObjects = [ row ]
         
         let insertedRow = await insert(schema, 'table_many', 'postgres', pgQueryFn, row)
 
@@ -468,15 +468,15 @@ describe('isud', function() {
 
       it('should insert a row with a many-to-many relationship which also has a many-to-many relationship which references back to the root row', async function() {
         let row: any = {
-          many: [{
+          manyObjects: [{
             object2: {
               id: 'x',
-              many: [{}]
+              manyObjects: [{}]
             }
           }]
         }
 
-        row.many[0].object2.many[0].object1 = row
+        row.manyObjects[0].object2.manyObjects[0].object1 = row
         
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
@@ -486,7 +486,7 @@ describe('isud', function() {
           column2: null,
           table1_id: null,
           table2_id: null,
-          many: [{
+          manyObjects: [{
             table1_id: 1,
             table2_id: 'x',
             column1: null,
@@ -495,7 +495,7 @@ describe('isud', function() {
               id: 'x',
               column1: null,
               table1_id: null,
-              many: [{
+              manyObjects: [{
                 table1_id: 1,
                 table2_id: 'x',
                 column1: null,
@@ -505,7 +505,7 @@ describe('isud', function() {
           }]
         }
 
-        expectedRow.many[0].object2.many[0].object1 = expectedRow
+        expectedRow.manyObjects[0].object2.manyObjects[0].object1 = expectedRow
 
         expect(insertedRow).to.deep.equal(expectedRow)
 
@@ -526,11 +526,11 @@ describe('isud', function() {
         let row = {
           object2: {
             id: 'x',
-            many: [{} as any]
+            manyObjects: [{} as any]
           }
         }
 
-        row.object2.many[0].object1 = row
+        row.object2.manyObjects[0].object1 = row
 
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
@@ -544,7 +544,7 @@ describe('isud', function() {
             id: 'x',
             column1: null,
             table1_id: 1,
-            many: [{
+            manyObjects: [{
               table1_id: 1,
               table2_id: 'x',
               column1: null,
@@ -553,7 +553,7 @@ describe('isud', function() {
           }
         }
 
-        expectedRow.object2.many[0].object1 = expectedRow
+        expectedRow.object2.manyObjects[0].object1 = expectedRow
 
         expect(insertedRow).to.deep.equal(expectedRow)
       })
@@ -562,11 +562,11 @@ describe('isud', function() {
         let row = {
           object2: {
             id: 'x',
-            many: [{} as any]
+            manyObjects: [{} as any]
           }
         }
 
-        row.object2.many[0].object12 = row
+        row.object2.manyObjects[0].object12 = row
 
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
@@ -580,7 +580,7 @@ describe('isud', function() {
             id: 'x',
             column1: null,
             table1_id: 1,
-            many: [{
+            manyObjects: [{
               table1_id: null,
               table2_id: 'x',
               column1: null,
@@ -589,7 +589,7 @@ describe('isud', function() {
           }
         }
 
-        expectedRow.object2.many[0].object12 = expectedRow
+        expectedRow.object2.manyObjects[0].object12 = expectedRow
 
         expect(insertedRow).to.deep.equal(expectedRow)
       })
@@ -639,13 +639,13 @@ describe('isud', function() {
         }
 
         let row = {
-          many: [ tableManyRow, tableManyRow, tableManyRow ]
+          manyObjects: [ tableManyRow, tableManyRow, tableManyRow ]
         }
 
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
         expect(insertedRow.id).to.equal(1)
-        expect(insertedRow.many).to.deep.equal([{
+        expect(insertedRow.manyObjects).to.deep.equal([{
           table1_id: 1,
           table2_id: null,
           column1: 'a',
@@ -666,7 +666,7 @@ describe('isud', function() {
         let row = {
           column1: 'a',
           column2: 1,
-          many: [
+          manyObjects: [
             {
               column1: 'b',
               object2: {
@@ -685,7 +685,7 @@ describe('isud', function() {
         let criteria = {
           id: 1,
           column1: 'a',
-          many: {
+          manyObjects: {
             column1: 'b',
             object2: {
               column1: 'c'
@@ -702,7 +702,7 @@ describe('isud', function() {
           column2: 1,
           table1_id: null,
           table2_id: null,
-          many: [
+          manyObjects: [
             {
               table1_id: 1,
               table2_id: 'x',
@@ -722,7 +722,7 @@ describe('isud', function() {
         let row = {
           column1: 'a',
           column2: 1,
-          many: [
+          manyObjects: [
             {
               column1: 'b',
               object2: {
@@ -741,7 +741,7 @@ describe('isud', function() {
         let criteria = {
           id: 1,
           column1: 'a',
-          many: {
+          manyObjects: {
             column1: 'd',
             object2: {}
           }
@@ -756,7 +756,7 @@ describe('isud', function() {
           column2: 1,
           table1_id: null,
           table2_id: null,
-          many: [
+          manyObjects: [
             {
               table1_id: 1,
               table2_id: null,
@@ -897,7 +897,7 @@ describe('isud', function() {
         let row = {
           column1: 'a',
           column2: 1,
-          many: [
+          manyObjects: [
             {
               column1: 'b',
               object2: {
@@ -914,7 +914,7 @@ describe('isud', function() {
 
         await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let criteria = { many: { object2: {} }}
+        let criteria = { manyObjects: { object2: {} }}
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
 
@@ -925,7 +925,7 @@ describe('isud', function() {
           column2: 1,
           table1_id: null,
           table2_id: null,
-          many: [
+          manyObjects: [
             {
               table1_id: 1,
               table2_id: 'x',
@@ -952,7 +952,7 @@ describe('isud', function() {
         let row = {
           column1: 'a',
           column2: 1,
-          many: [
+          manyObjects: [
             {
               column1: 'b',
               object2: {
@@ -969,7 +969,7 @@ describe('isud', function() {
 
         await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let criteria = { many: { column1: 'b', object2: {} }}
+        let criteria = { manyObjects: { column1: 'b', object2: {} }}
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
 
@@ -980,7 +980,7 @@ describe('isud', function() {
           column2: 1,
           table1_id: null,
           table2_id: null,
-          many: [
+          manyObjects: [
             {
               table1_id: 1,
               table2_id: 'x',
@@ -996,11 +996,11 @@ describe('isud', function() {
         })
       })
 
-      it('it should filter globally by a one-to-many relationship and find something', async function() {
+      it.only('it should filter globally by a one-to-many relationship and find something', async function() {
         let row = {
           column1: 'a',
           column2: 1,
-          many: [
+          manyObjects: [
             {
               column1: 'b',
               object2: {
@@ -1017,10 +1017,10 @@ describe('isud', function() {
 
         await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let criteria = { many: { '@filterGlobally': true, column1: 'b', object2: {} }}
+        let criteria = { manyObjects: { '@filterGlobally': true, column1: 'b', object2: {} }}
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
-
+console.log(rows[0])
         expect(rows.length).to.equal(1)
         expect(rows[0]).to.deep.equal({
           id: 1,
@@ -1028,7 +1028,7 @@ describe('isud', function() {
           column2: 1,
           table1_id: null,
           table2_id: null,
-          many: [
+          manyObjects: [
             {
               table1_id: 1,
               table2_id: 'x',
@@ -1048,7 +1048,7 @@ describe('isud', function() {
         let row = {
           column1: 'a',
           column2: 1,
-          many: [
+          manyObjects: [
             {
               column1: 'b',
               object2: {
@@ -1065,7 +1065,7 @@ describe('isud', function() {
 
         await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let criteria = { many: { '@filterGlobally': true, column1: 'c', object2: {} }}
+        let criteria = { manyObjects: { '@filterGlobally': true, column1: 'c', object2: {} }}
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
 
@@ -1167,7 +1167,7 @@ describe('isud', function() {
         let row1 = {
           column1: 'a',
           column2: 1,
-          many: [
+          manyObjects: [
             {
               column1: 'b',
               object2: {
@@ -1181,7 +1181,7 @@ describe('isud', function() {
         let row2 = {
           column1: 'b',
           column2: 2,
-          many: [
+          manyObjects: [
             {
               column1: 'c',
               object2: {
@@ -1204,7 +1204,7 @@ describe('isud', function() {
           column2: 1,
           table1_id: null,
           table2_id: null,
-          many: [
+          manyObjects: [
             {
               table1_id: 1,
               table2_id: 'x',

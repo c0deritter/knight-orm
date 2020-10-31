@@ -138,7 +138,7 @@ export function selectAllColumnsExplicitly(schema: Schema, query: Query) {
 
     for (let column of Object.keys(fromTable.columns)) {
       let alias = from.alias != undefined && from.alias.length > 0 ? from.alias : undefined
-      query.select((alias != undefined ? alias + '.' : '' ) + column, (alias != undefined ? alias + '__' + column : undefined))
+      query.select((alias != undefined ? alias + '.' : '' ) + column, (alias != undefined ? '"' + alias + '__' + column + '"' : undefined))
     }
   }
 
@@ -151,7 +151,7 @@ export function selectAllColumnsExplicitly(schema: Schema, query: Query) {
 
     for (let column of Object.keys(joinTable.columns)) {
       let alias = join.alias != undefined && join.alias.length > 0 ? join.alias : undefined
-      query.select((alias != undefined ? alias + '.' : '' ) + column, (alias != undefined ? alias + '__' + column : undefined))
+      query.select((alias != undefined ? alias + '.' : '' ) + column, (alias != undefined ? '"' + alias + '__' + column + '"' : undefined))
     }
   }
 }
