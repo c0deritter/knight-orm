@@ -79,7 +79,7 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
         if (relationship.manyToOne) {
           l.user('Relationship is many-to-one. Going into recursion...')
           row[relationshipName] = instanceToRow(schema, relationship.otherTable, instance[relationshipName], alreadyConverted)
-          l.user('Coming back from recursion...')
+          l.returning('Returning from recursion...')
         }
         else if (instance[relationshipName] instanceof Array) {
           l.user('Relationship is one-to-many')
@@ -88,7 +88,7 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
             l.var('relationshipInstance', relationshipInstance)
             l.user('Going into recursion...')
             let relationshipRow = instanceToRow(schema, relationship.otherTable, relationshipInstance, alreadyConverted)
-            l.user('Coming back from recursion...')
+            l.returning('Returning from recursion...')
   
             if (row[relationshipName] == undefined) {
               row[relationshipName] = []
@@ -117,7 +117,7 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
 
 export function rowToInstance(schema: Schema, tableName: string, row: any, alreadyConverted: AlreadyConverted = new AlreadyConverted): any {
   let l = log.fn('rowToInstance')
-  l.param('tableName', tableName)
+  l.location = [ tableName ]
   l.param('row', row)
   l.param('alreadyConverted', alreadyConverted.instancesAndRows)
 
@@ -138,45 +138,60 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
 
   alreadyConverted.add(instance, row)
 
+  l.user('Converting relationships...')
+
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
-      l.var('relationshipName', relationshipName)
+      l.location.push('.' + relationshipName)
+      l.dev('Converting next relationship...')
+      l.var('row', row)
   
       if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
         let relationship = table.relationships[relationshipName]
   
         if (relationship.manyToOne) {
-          l.user('Relationship is many-to-one or one-to-one. Going into recursion...')
-          instance[relationshipName] = rowToInstance(schema, table.relationships[relationshipName].otherTable, row[relationshipName], alreadyConverted)
-          l.user('Coming back from recursion...')
+          l.user('Converting many-to-one. Going into recursion...')
+          let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, row[relationshipName], alreadyConverted)
+          l.returning('Returning from recursion...')
+          
+          l.user('Setting converted relationship instance...', relationshipInstance)
+          l.user('...on row', row)
+          instance[relationshipName] = relationshipInstance
         }
         else if (row[relationshipName] instanceof Array) {
-          l.user('Relationship is one-to-many')
+          l.user('Relationship is one-to-many. Converting every relationship row...')
   
           for (let relationshipRow of row[relationshipName]) {
-            l.var('relationshipRow', relationshipRow)
+            l.user('Converting next relationship row...', relationshipRow)
+            l.var('row', row)
             l.user('Going into recursion...')
             let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, relationshipRow, alreadyConverted)
-            l.user('Coming back from recursion...')
+            l.returning('Returning from recursion...')
   
             if (instance[relationshipName] == undefined) {
               instance[relationshipName] = []
             }
   
+            l.user('Adding converted relationship instance to relationship...', relationshipInstance)
+            l.user('...on row', row)
+            l.dev('...to array', instance.relationshipName)
             instance[relationshipName].push(relationshipInstance)
           }        
         }
       }
       else if (row[relationshipName] !== undefined) {
-        l.user('Relationship is not an object and not undefined')
+        l.user('Relationship is not an object but also not undefined. Setting given value without converting...')
         row[relationshipName] = instance[relationshipName]
       }
       else {
-        l.user('Relationship does not exist on this instance. Continuing...')
+        l.user('Relationship is not set. Continuing...')
       }
-    }      
+
+      l.location.pop()
+    }
   }
 
+  l.returning('Returning instance...')
   return instance
 }
 

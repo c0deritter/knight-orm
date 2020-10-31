@@ -996,7 +996,7 @@ describe('isud', function() {
         })
       })
 
-      it.only('it should filter globally by a one-to-many relationship and find something', async function() {
+      it('it should filter globally by a one-to-many relationship and find something', async function() {
         let row = {
           column1: 'a',
           column2: 1,
@@ -1020,7 +1020,7 @@ describe('isud', function() {
         let criteria = { manyObjects: { '@filterGlobally': true, column1: 'b', object2: {} }}
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
-console.log(rows[0])
+
         expect(rows.length).to.equal(1)
         expect(rows[0]).to.deep.equal({
           id: 1,
