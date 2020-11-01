@@ -461,7 +461,7 @@ export interface RelationshipToLoad {
 
 export function determineRelationshipsToLoad(schema: Schema, tableName: string, rows: any[], criteria: ReadCriteria, relationshipPath: string = '', relationshipsToLoad: RelationshipsToLoad = {}): RelationshipsToLoad {
   let l = log.fn('determineRelationshipsToLoad')
-  l.param('tableName', tableName)
+  l.location = [ tableName ]
   l.param('rows', rows)
   l.param('criteria', criteria)
   l.param('relationshipPath', relationshipPath)

@@ -1,4 +1,4 @@
-import { Criteria, isCriteriaEmpty, ReadCriteria } from 'mega-nice-criteria'
+import { Criteria, ReadCriteria } from 'mega-nice-criteria'
 import Log from 'mega-nice-log'
 import { Query } from 'mega-nice-sql'
 import { fillCriteria, fillReadCriteria } from 'mega-nice-sql-criteria-filler'
@@ -64,12 +64,7 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
       l.var('relationshipName', relationshipName)
-      
-      if (relationshipName == 'table' || relationshipName == 'columns') {
-        l.user('Relationship name is \'table\' or \'columns\'. Continuing...')
-        continue
-      }
-  
+
       if (! (relationshipName in criteria)) {
         l.user('Relationship is not contained in the criteria. Continuing...')
         continue
@@ -77,12 +72,26 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
 
       let relationship = table.relationships[relationshipName]
       let relationshipCriteria = criteria[relationshipName]
+
+      let otherTable = schema[relationship.otherTable]
+      if (otherTable == undefined) {
+        throw new Error('Table not contained in schema: ' + relationship.otherTable)
+      }
+
       l.var('relationship', relationship)
       l.var('relationshipCriteria', relationshipCriteria)
 
+      let relationshipCriteriaDoesNotFilterForColumns = true
+      for (let prop of Object.keys(relationshipCriteria)) {
+        if (prop in otherTable.columns) {
+          relationshipCriteriaDoesNotFilterForColumns = false
+          break
+        }
+      }
+
       // 1. if the property @filterGlobally is set to true then we need to join
       // 2. if there are not any relationship criteria then we also can join
-      if (relationshipCriteria['@filterGlobally'] === true || isCriteriaEmpty(relationshipCriteria)) {
+      if (relationshipCriteria['@filterGlobally'] === true || relationshipCriteriaDoesNotFilterForColumns) {
         let thisId = relationship.thisId
         let otherTableName = relationship.otherTable
         let otherId = relationship.otherId

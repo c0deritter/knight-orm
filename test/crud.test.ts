@@ -137,7 +137,7 @@ describe('crud', function() {
     })
 
     describe('read', function() {
-      it.only('should read an instance with relationship', async function() {
+      it('should read an instance with relationship', async function() {
         let object1 = new Object1
         object1.property1 = 'a'
         object1.property2 = 1
@@ -186,7 +186,7 @@ describe('crud', function() {
         }  
 
         let instances: any[] = await read(schema, 'table1', 'postgres', pgQueryFn, criteria)
-console.log('DS', instances[0].manyObjects)
+
         let expectedInstance = {
           id: 1,
           property1: 'a',
@@ -231,7 +231,7 @@ console.log('DS', instances[0].manyObjects)
         expectedInstance.manyObjects[0].object1 = expectedInstance
         expectedInstance.manyObjects[0].object2 = expectedInstance.object2
         expectedInstance.manyObjects[1].object1 = expectedInstance
-        console.log('DS', expectedInstance.manyObjects)
+
         expect(instances.length).to.equal(1)
         expect(instances[0]).to.deep.equal(expectedInstance)
       })

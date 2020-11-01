@@ -404,7 +404,7 @@ export async function insert(
 
 export async function select(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: ReadCriteria): Promise<any[]> {
   let l = log.fn('select')
-  l.param('tableName', tableName)
+  l.location = [ tableName ]
   l.param('criteria', criteria)
 
   let table = schema[tableName]
@@ -417,11 +417,10 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   let sqlString = query.sql(db)
   let values = query.values()
 
-  l.user('Querying database...')
-
   l.var('sqlString', sqlString)
   l.var('values', values)
 
+  l.user('Querying database...')
   let joinedRows = await queryFn(sqlString, values)
   l.var('joinedRows', joinedRows)
 
