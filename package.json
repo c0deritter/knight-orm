@@ -1,6 +1,6 @@
 {
   "name": "mega-nice-orm",
-  "version": "5.2.7",
+  "version": "5.2.8",
   "description": "A mega nice ORM",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -11,7 +11,7 @@
     "mega-nice-criteria": "^5.2.0",
     "mega-nice-log": "^3.1.0",
     "mega-nice-sql": "^2.2.0",
-    "mega-nice-sql-criteria-filler": "^6.1.1"
+    "mega-nice-sql-criteria-filler": "^6.1.2"
   },
   "devDependencies": {
     "@types/chai": "^4.2.14",
