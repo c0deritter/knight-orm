@@ -137,7 +137,7 @@ describe('crud', function() {
     })
 
     describe('read', function() {
-      it('should read an instance with relationship', async function() {
+      it.only('should read an instance with relationship', async function() {
         let object1 = new Object1
         object1.property1 = 'a'
         object1.property2 = 1
@@ -185,8 +185,8 @@ describe('crud', function() {
           object2: {}
         }  
 
-        let instances = await read(schema, 'table1', 'postgres', pgQueryFn, criteria)
-
+        let instances: any[] = await read(schema, 'table1', 'postgres', pgQueryFn, criteria)
+console.log('DS', instances[0].manyObjects)
         let expectedInstance = {
           id: 1,
           property1: 'a',
@@ -198,19 +198,7 @@ describe('crud', function() {
             property1: 'b',
             property2: 2,
             object1Id: 1,
-            object2Id: 'x',
-            object1: {
-              id: 1,
-              property1: 'a',
-              property2: 1,
-              object1Id: 2,
-              object2Id: 'x'    
-            },
-            object2: {
-              id: 'x',
-              property1: 'c',
-              object1Id: 1
-            }
+            object2Id: 'x'
           },
           object2: {
             id: 'x',
@@ -222,32 +210,13 @@ describe('crud', function() {
               object1Id: 1,
               object2Id: 'x',
               property1: 'd',
-              object1Id2: 1,
-              object1: {
-                id: 1,
-                property1: 'a',
-                property2: 1,
-                object1Id: 2,
-                object2Id: 'x'
-              },
-              object2: {
-                id: 'x',
-                property1: 'c',
-                object1Id: 1
-              }
+              object1Id2: 1
             },
             {
               object1Id: 1,
               object2Id: 'y',
               property1: 'e',
               object1Id2: null,
-              object1: {
-                id: 1,
-                property1: 'a',
-                property2: 1,
-                object1Id: 2,
-                object2Id: 'x'
-              },
               object2: {
                 id: 'y',
                 property1: 'f',
@@ -255,8 +224,14 @@ describe('crud', function() {
               }
             }
           ]
-        }
+        } as any
 
+        expectedInstance.object1.object1 = expectedInstance
+        expectedInstance.object1.object2 = expectedInstance.object2
+        expectedInstance.manyObjects[0].object1 = expectedInstance
+        expectedInstance.manyObjects[0].object2 = expectedInstance.object2
+        expectedInstance.manyObjects[1].object1 = expectedInstance
+        console.log('DS', expectedInstance.manyObjects)
         expect(instances.length).to.equal(1)
         expect(instances[0]).to.deep.equal(expectedInstance)
       })

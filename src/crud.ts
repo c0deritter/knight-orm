@@ -9,7 +9,7 @@ import { idsNotSet, instanceToRow, rowToInstance } from './rowTools'
 import { Schema } from './Schema'
 import { FiddledRows } from './util'
 
-let log = new Log('mega-nice-sql-orm/crud.ts')
+let log = new Log('mega-nice-orm/crud.ts')
 
 export async function create<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
   let l = log.fn('create')

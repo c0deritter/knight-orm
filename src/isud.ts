@@ -8,7 +8,7 @@ import { determineRelationshipsToLoad, filterValidColumns, idsOnly, Relationship
 import { getRelationshipNameByColumn, isGeneratedIdColumn, Relationship, Schema } from './Schema'
 import { FiddledRows } from './util'
 
-let log = new Log('mega-nice-sql-orm/isud.ts')
+let log = new Log('mega-nice-orm/isud.ts')
 
 /**
  * At first it goes through all columns which contain an id of a many-to-one relationship

@@ -307,6 +307,144 @@ describe('rowTools', function() {
         manyObjects: []
       })
     })
+
+    it('should not add a relationship row more than once', function() {
+      let rows = [
+        {
+          table1__id: 1,
+          table1__column1: 'a',
+          table1__column2: 1,
+          table1__table1_id: null,
+          table1__table2_id: null,
+          table1__manyObjects__table1_id: 1,
+          table1__manyObjects__table2_id: 'x',
+          table1__manyObjects__column1: 'b',
+          table1__manyObjects__table1_id2: null,
+          table1__manyObjects__object2__id: 'x',
+          table1__manyObjects__object2__column1: 'c',
+          table1__manyObjects__object2__table1_id: null,
+          table1__manyObjects__object2__manyObjects__table1_id: 2,
+          table1__manyObjects__object2__manyObjects__table2_id: 'x',
+          table1__manyObjects__object2__manyObjects__column1: 'd',
+          table1__manyObjects__object2__manyObjects__table1_id2: null,
+        },
+        {
+          table1__id: 1,
+          table1__column1: 'a',
+          table1__column2: 1,
+          table1__table1_id: null,
+          table1__table2_id: null,
+          table1__manyObjects__table1_id: 1,
+          table1__manyObjects__table2_id: 'x',
+          table1__manyObjects__column1: 'b',
+          table1__manyObjects__table1_id2: null,
+          table1__manyObjects__object2__id: 'x',
+          table1__manyObjects__object2__column1: 'c',
+          table1__manyObjects__object2__table1_id: null,
+          table1__manyObjects__object2__manyObjects__table1_id: 3,
+          table1__manyObjects__object2__manyObjects__table2_id: 'x',
+          table1__manyObjects__object2__manyObjects__column1: 'e',
+          table1__manyObjects__object2__manyObjects__table1_id2: null,
+        }
+      ]
+
+      let criteria = { manyObjects: { object2: { manyObjects: {} }}}
+
+      let instances = unjoinRows(schema, 'table1', rows, criteria, true)
+
+      expect(instances.length).to.equal(1)
+      expect(instances[0]).to.be.instanceOf(Object1)
+      expect(instances[0].manyObjects).to.be.instanceOf(Array)
+      expect(instances[0].manyObjects[0]).to.be.instanceOf(ManyObject)
+      expect(instances[0].manyObjects[0].object2).to.be.instanceOf(Object2)
+      expect(instances[0]).to.deep.equal({
+        id: 1,
+        property1: 'a',
+        property2: 1,
+        object1Id: null,
+        object2Id: null,
+        manyObjects: [{
+          object1Id: 1,
+          object2Id: 'x',
+          property1: 'b',
+          object1Id2: null,
+          object2: {
+            id: 'x',
+            property1: 'c',
+            object1Id: null,
+            manyObjects: [
+              {
+                object1Id: 2,
+                object2Id: 'x',
+                property1: 'd',
+                object1Id2: null
+              },
+              {
+                object1Id: 3,
+                object2Id: 'x',
+                property1: 'e',
+                object1Id2: null
+              }
+            ]
+          }
+        }]
+      })
+    })
+
+    it('should not fill an empty one to many relationship with undefined', function() {
+      let rows = [
+        {
+          table1__id: 1,
+          table1__column1: 'a',
+          table1__column2: 1,
+          table1__table1_id: null,
+          table1__table2_id: 'x',
+          table1__object2__id: 'x',
+          table1__object2__column1: 'c',
+          table1__object2__table1_id: null,
+          table1__manyObjects__table1_id: null,
+          table1__manyObjects__table2_id: null,
+          table1__manyObjects__column1: null,
+          table1__manyObjects__table1_id2: null,
+        },
+        {
+          table1__id: 1,
+          table1__column1: 'a',
+          table1__column2: 1,
+          table1__table1_id: null,
+          table1__table2_id: 'x',
+          table1__object2__id: 'x',
+          table1__object2__column1: 'c',
+          table1__object2__table1_id: null,
+          table1__manyObjects__table1_id: null,
+          table1__manyObjects__table2_id: null,
+          table1__manyObjects__column1: null,
+          table1__manyObjects__table1_id2: null,
+        }
+      ]
+
+      let criteria = { object2: {}, manyObjects: { object2: {} }}
+
+      let instances = unjoinRows(schema, 'table1', rows, criteria, true)
+
+      expect(instances.length).to.equal(1)
+
+      let expectedInstance = {
+        id: 1,
+        property1: 'a',
+        property2: 1,
+        object1Id: null,
+        object2Id: 'x',
+        object2: {
+          id: 'x',
+          property1: 'c',
+          object1Id: null
+        },
+        manyObjects: []
+      } as any
+
+      expect(instances[0]).to.deep.equal(expectedInstance)
+    })
   })
 
   describe('rowsRepresentSameEntity', function() {

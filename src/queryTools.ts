@@ -4,7 +4,7 @@ import { Query } from 'mega-nice-sql'
 import { fillCriteria, fillReadCriteria } from 'mega-nice-sql-criteria-filler'
 import { Schema } from './Schema'
 
-let log = new Log('mega-nice-sql-orm/queryTools.ts')
+let log = new Log('mega-nice-orm/queryTools.ts')
 
 export function buildSelectQuery(schema: Schema, tableName: string, criteria: ReadCriteria): Query {
   let table = schema[tableName]

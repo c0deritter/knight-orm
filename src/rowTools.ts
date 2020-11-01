@@ -2,7 +2,7 @@ import { isCriteriaEmpty, ReadCriteria } from 'mega-nice-criteria'
 import Log from 'mega-nice-log'
 import { getIdColumns, getPropertyName, isIdColumn, Schema, Table } from './Schema'
 
-let log = new Log('mega-nice-sql-orm/rowTools.ts')
+let log = new Log('mega-nice-orm/rowTools.ts')
 
 export function filterValidColumns(schema: Schema, tableName: string, row: any): any {
   let table = schema[tableName]
@@ -128,7 +128,6 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
   }
 
   let table = schema[tableName]
-
   if (table == undefined) {
     throw new Error('Table not contained in schema: ' + tableName)
   }
@@ -142,8 +141,9 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
 
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
+      l.location.push(' ' + relationshipName)
+      l.dev('Converting next relationship...', relationshipName)
       l.location.push('.' + relationshipName)
-      l.dev('Converting next relationship...')
       l.var('row', row)
   
       if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
@@ -172,9 +172,8 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
               instance[relationshipName] = []
             }
   
-            l.user('Adding converted relationship instance to relationship...', relationshipInstance)
+            l.user('Adding converted relationship instance to relationship array...', relationshipInstance)
             l.user('...on row', row)
-            l.dev('...to array', instance.relationshipName)
             instance[relationshipName].push(relationshipInstance)
           }        
         }
@@ -191,23 +190,21 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
     }
   }
 
-  l.returning('Returning instance...')
+  l.returning('Returning instance...' ,instance)
   return instance
 }
 
-export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: ReadCriteria, toInstances: boolean = false, alias?: string): any[]  {
+export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: ReadCriteria, toInstances: boolean = false, alias?: string, alreadyUnjoined: { tableName: string, rowOrInstance: any }[] = []): any[]  {
   let l = log.fn('unjoinRows')
-  l.param('joinedRows', joinedRows)
-  l.param('criteria', criteria)
-  l.param('tableName', tableName)
-  l.param('alias', alias)
 
-  let alreadyUnjoined: { tableName: string, rowOrInstance: any }[] = []
   let rootRows = alias == undefined
   alias = alias != undefined ? alias : tableName + '__'
 
-  l.var('rootRows', rootRows)
-  l.var('alias', alias)
+  l.location = [ alias, '' ]
+
+  l.param('joinedRows', joinedRows)
+  l.param('criteria', criteria)
+  l.param('tableName', tableName)
 
   let table = schema[tableName]
   if (table == undefined) {
@@ -219,9 +216,9 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
 
   let rowsOrInstances: any[] = []
 
-  l.user('Iterating over all rows...')
+  l.user('Unjoining rows...')
   for (let joinedRow of joinedRows) {
-    l.user('joinedRow in context of alias ' + alias, joinedRow)
+    l.user('Unjoining next row', joinedRow)
 
     let unaliasedRow = getCellsBelongingToTableAndRemoveAlias(table, joinedRow, alias)
     l.var('unaliasedRow', unaliasedRow)
@@ -238,6 +235,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     }
 
     if (! rootRows && everyColumnIsNull) {
+      l.dev('Every column is null and it is not the root row thus there is no row. Continuing...')
       continue
     }
 
@@ -268,20 +266,23 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
 
     if (alreadyUnjoinedRowOrInstance != undefined) {
       if (rowsOrInstances.indexOf(alreadyUnjoinedRowOrInstance) == -1) {
-        l.user('Already unjoined row was not contained. Pushing into result array...')
+        l.user('Adding already converted row or instance to the result array...')
         rowsOrInstances.push(alreadyUnjoinedRowOrInstance)
       }
 
       rowOrInstance = alreadyUnjoinedRowOrInstance
     }
     else {
+      l.user('Adding just converted row or instance to the result array...')
       rowsOrInstances.push(rowOrInstance)
+      l.user('Adding just converted row or instance to list if already unjoined rows or instances...')
       alreadyUnjoined.push({ tableName: tableName, rowOrInstance: rowOrInstance })
     }
 
-    l.user('Iterating over all relationships...')
+    l.user('Unjoining relationships...')
     for (let relationshipName of relationshipNames) {
-      l.var('relationshipName', relationshipName)
+      l.location[1] = ' > ' + relationshipName
+      l.var('Unjoining next relationship...', relationshipName)
 
       if (! (relationshipName in criteria)) {
         l.user('Relationship is not contained in criteria. Continuing...')
@@ -291,11 +292,6 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       let relationship = table.relationships![relationshipName]
       l.var('relationship', relationship)
 
-      if ((relationship.manyToOne) && rowOrInstance[relationshipName] != undefined) {
-        l.user('Many-to-one relationship was already determined. Continuing...')
-        continue
-      }
-
       let relationshipTableName = relationship.otherTable
       let relationshipAlias = alias != undefined ? alias + relationshipName + '__' : relationshipName + '__'
 
@@ -303,23 +299,37 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       l.var('relationshipAlias', relationshipAlias)
       
       l.user('Determining relationship. Going into recursion...')
-      let relationshipRowOrInstances = unjoinRows(schema, relationshipTableName, [ joinedRow ], criteria[relationshipName], toInstances, relationshipAlias)
-      l.user('Coming back from recursion...', relationshipRowOrInstances)
+      let relationshipRowOrInstances = unjoinRows(schema, relationshipTableName, [ joinedRow ], criteria[relationshipName], toInstances, relationshipAlias, alreadyUnjoined)
+      l.returning('Returning from recursion...', relationshipRowOrInstances)
 
       if (relationship.oneToMany) {
-        l.user('Attaching one-to-many instance...')
         if (rowOrInstance[relationshipName] == undefined) {
+          l.user('Setting one-to-many rows or instances array...', relationshipRowOrInstances)
           rowOrInstance[relationshipName] = relationshipRowOrInstances
         }
-        else {
+        else if (relationshipRowOrInstances[0] != undefined && rowOrInstance[relationshipName].indexOf(relationshipRowOrInstances[0]) == -1) {
+          l.user('Adding relationship row or instance to array...', relationshipRowOrInstances[0])
           rowOrInstance[relationshipName].push(relationshipRowOrInstances[0])
+        }
+        else if (relationshipRowOrInstances[0] == undefined) {
+          l.user('One-to-many relationship row or instance is empty in this row. Not adding anything...')
+        }
+        else {
+          l.user('One-to-many relationship row or instance was already added to array. Not adding again...')
         }
       }
       else if (relationship.manyToOne) {
-        l.user('Attaching many-to-one instance...')
-        rowOrInstance[relationshipName] = relationshipRowOrInstances.length == 1 ? relationshipRowOrInstances[0] : null
-      }  
+        if (rowOrInstance[relationshipName] == undefined) {
+          l.user('Setting many-to-one row or instance...')
+          rowOrInstance[relationshipName] = relationshipRowOrInstances.length == 1 ? relationshipRowOrInstances[0] : null  
+        }
+        else {
+          l.user('Many-to-one relationship row or instance was already set. Not setting again...')
+        }
+      }
     }
+
+    l.location[1] = ''
   }
 
   l.returning('Returning rowsOrInstances...', rowsOrInstances)
