@@ -1,5 +1,6 @@
-import { isCriteriaEmpty, ReadCriteria } from 'mega-nice-criteria'
+import { ReadCriteria } from 'mega-nice-criteria'
 import Log from 'mega-nice-log'
+import { criteriaDoesNotContainColumns } from './criteriaTools'
 import { getIdColumns, getPropertyName, isIdColumn, Schema, Table } from './Schema'
 
 let log = new Log('mega-nice-orm/rowTools.ts')
@@ -502,10 +503,15 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
         throw new Error(`Relationship '${relationshipName}' not contained table '${tableName}'`)
       }
 
+      let otherTable = schema[relationship.otherTable]
+      if (otherTable == undefined) {
+        throw new Error('Table not contained in schema: ' + relationship.otherTable)
+      }
+
       let subRelationshipPath = relationshipPath + '.' + relationshipName
       l.var('subRelationshipPath', subRelationshipPath)
       
-      if (relationshipCriteria['@filterGlobally'] === true || isCriteriaEmpty(relationshipCriteria)) {
+      if (relationshipCriteria['@filterGlobally'] === true || criteriaDoesNotContainColumns(otherTable, relationshipCriteria)) {
         if (relationship.manyToOne && relationshipValue != undefined || relationship.oneToMany && relationshipValue instanceof Array && relationshipValue.length > 0) {
           l.user('Relationship was joined and loaded. Going into recursion...')
 

@@ -1,5 +1,5 @@
-import { Criteria, DeleteCriteria, UpdateCriteria } from 'mega-nice-criteria'
-import { getPropertyName, isIdColumn, Schema } from './Schema'
+import { CreateCriteria, Criteria, DeleteCriteria, ReadCriteria, UpdateCriteria } from 'mega-nice-criteria'
+import { getPropertyName, isIdColumn, Schema, Table } from './Schema'
 
 export function instanceCriteriaToRowCriteria<T extends Criteria>(schema: Schema, tableName: string, instanceCriteria: T): T {
   let table = schema[tableName]
@@ -105,4 +105,14 @@ export function instanceToDeleteCriteria(schema: Schema, tableName: string, inst
 
   let row = table.instanceToRow(instance)
   return rowToDeleteCriteria(schema, tableName, row)
+}
+
+export function criteriaDoesNotContainColumns(table: Table, criteria: Criteria|CreateCriteria|ReadCriteria|UpdateCriteria|DeleteCriteria): boolean {
+  for (let prop of Object.keys(criteria)) {
+    if (prop in table.columns) {
+      return false
+    }
+  }
+
+  return true
 }

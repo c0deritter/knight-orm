@@ -2,6 +2,7 @@ import { Criteria, ReadCriteria } from 'mega-nice-criteria'
 import Log from 'mega-nice-log'
 import { Query } from 'mega-nice-sql'
 import { fillCriteria, fillReadCriteria } from 'mega-nice-sql-criteria-filler'
+import { criteriaDoesNotContainColumns } from './criteriaTools'
 import { Schema } from './Schema'
 
 let log = new Log('mega-nice-orm/queryTools.ts')
@@ -81,17 +82,9 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
       l.var('relationship', relationship)
       l.var('relationshipCriteria', relationshipCriteria)
 
-      let relationshipCriteriaDoesNotFilterForColumns = true
-      for (let prop of Object.keys(relationshipCriteria)) {
-        if (prop in otherTable.columns) {
-          relationshipCriteriaDoesNotFilterForColumns = false
-          break
-        }
-      }
-
       // 1. if the property @filterGlobally is set to true then we need to join
       // 2. if there are not any relationship criteria then we also can join
-      if (relationshipCriteria['@filterGlobally'] === true || relationshipCriteriaDoesNotFilterForColumns) {
+      if (relationshipCriteria['@filterGlobally'] === true || criteriaDoesNotContainColumns(otherTable, relationshipCriteria)) {
         let thisId = relationship.thisId
         let otherTableName = relationship.otherTable
         let otherId = relationship.otherId
