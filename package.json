@@ -1,17 +1,17 @@
 {
-  "name": "mega-nice-orm",
-  "version": "5.2.8",
-  "description": "A mega nice ORM",
+  "name": "knight-orm",
+  "version": "0.1.0",
+  "description": "A libary-style ORM",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
     "lib/**/*"
   ],
   "dependencies": {
-    "mega-nice-criteria": "^5.2.0",
-    "mega-nice-log": "^3.1.0",
-    "mega-nice-sql": "^2.2.0",
-    "mega-nice-sql-criteria-filler": "^6.1.2"
+    "knight-criteria": "^1.0.0",
+    "knight-log": "^1.0.0",
+    "knight-sql": "^1.0.0",
+    "knight-sql-criteria-filler": "^1.0.0"
   },
   "devDependencies": {
     "@types/chai": "^4.2.14",
@@ -31,14 +31,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/c0deritter/mega-nice-orm.git"
+    "url": "git+https://github.com/c0deritter/knight-orm.git"
   },
   "keywords": [
     ""
   ],
   "author": "Coderitter GmbH",
   "bugs": {
-    "url": "https://github.com/c0deritter/mega-nice-orm/issues"
+    "url": "https://github.com/c0deritter/knight-orm/issues"
   },
-  "homepage": "https://github.com/c0deritter/mega-nice-orm#readme"
+  "homepage": "https://github.com/c0deritter/knight-orm#readme"
 }

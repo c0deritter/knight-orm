@@ -1,11 +1,11 @@
-import { Criteria, ReadCriteria } from 'mega-nice-criteria'
-import Log from 'mega-nice-log'
-import { Query } from 'mega-nice-sql'
-import { fillCriteria, fillReadCriteria } from 'mega-nice-sql-criteria-filler'
+import { Criteria, ReadCriteria } from 'knight-criteria'
+import Log from 'knight-log'
+import { Query } from 'knight-sql'
+import { fillCriteria, fillReadCriteria } from 'knight-sql-criteria-filler'
 import { criteriaDoesNotContainColumns } from './criteriaTools'
 import { Schema } from './Schema'
 
-let log = new Log('mega-nice-orm/queryTools.ts')
+let log = new Log('knight-orm/queryTools.ts')
 
 export function buildSelectQuery(schema: Schema, tableName: string, criteria: ReadCriteria): Query {
   let table = schema[tableName]

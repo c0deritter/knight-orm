@@ -1,7 +1,7 @@
-import { Criteria, ReadCriteria } from 'mega-nice-criteria'
-import Log from 'mega-nice-log'
-import sql from 'mega-nice-sql'
-import { fillReadCriteria, fillUpdateCriteria } from 'mega-nice-sql-criteria-filler'
+import { Criteria, ReadCriteria } from 'knight-criteria'
+import Log from 'knight-log'
+import sql from 'knight-sql'
+import { fillReadCriteria, fillUpdateCriteria } from 'knight-sql-criteria-filler'
 import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { delete_ as isudDelete, insert, select } from './isud'
 import { buildCountQuery } from './queryTools'
@@ -9,7 +9,7 @@ import { idsNotSet, instanceToRow, rowToInstance } from './rowTools'
 import { Schema } from './Schema'
 import { FiddledRows } from './util'
 
-let log = new Log('mega-nice-orm/crud.ts')
+let log = new Log('knight-orm/crud.ts')
 
 export async function create<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
   let l = log.fn('create')

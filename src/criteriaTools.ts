@@ -1,4 +1,4 @@
-import { CreateCriteria, Criteria, DeleteCriteria, ReadCriteria, UpdateCriteria } from 'mega-nice-criteria'
+import { CreateCriteria, Criteria, DeleteCriteria, ReadCriteria, UpdateCriteria } from 'knight-criteria'
 import { getPropertyName, isIdColumn, Schema, Table } from './Schema'
 
 export function instanceCriteriaToRowCriteria<T extends Criteria>(schema: Schema, tableName: string, instanceCriteria: T): T {

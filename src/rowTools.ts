@@ -1,9 +1,9 @@
-import { ReadCriteria } from 'mega-nice-criteria'
-import Log from 'mega-nice-log'
+import { ReadCriteria } from 'knight-criteria'
+import Log from 'knight-log'
 import { criteriaDoesNotContainColumns } from './criteriaTools'
 import { getIdColumns, getPropertyName, isIdColumn, Schema, Table } from './Schema'
 
-let log = new Log('mega-nice-orm/rowTools.ts')
+let log = new Log('knight-orm/rowTools.ts')
 
 export function filterValidColumns(schema: Schema, tableName: string, row: any): any {
   let table = schema[tableName]

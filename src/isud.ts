@@ -1,14 +1,14 @@
-import { DeleteCriteria, ReadCriteria, UpdateCriteria } from 'mega-nice-criteria'
-import Log from 'mega-nice-log'
-import sql, { Query } from 'mega-nice-sql'
-import { fillCreateCriteria, fillDeleteCriteria, fillUpdateCriteria } from 'mega-nice-sql-criteria-filler'
+import { DeleteCriteria, ReadCriteria, UpdateCriteria } from 'knight-criteria'
+import Log from 'knight-log'
+import sql, { Query } from 'knight-sql'
+import { fillCreateCriteria, fillDeleteCriteria, fillUpdateCriteria } from 'knight-sql-criteria-filler'
 import { rowToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { buildSelectQuery } from './queryTools'
-import { determineRelationshipsToLoad, filterValidColumns, idsOnly, RelationshipsToLoad, unjoinRows } from './rowTools'
+import { determineRelationshipsToLoad, filterValidColumns, idsOnly, unjoinRows } from './rowTools'
 import { getRelationshipNameByColumn, isGeneratedIdColumn, Relationship, Schema } from './Schema'
 import { FiddledRows } from './util'
 
-let log = new Log('mega-nice-orm/isud.ts')
+let log = new Log('knight-orm/isud.ts')
 
 /**
  * At first it goes through all columns which contain an id of a many-to-one relationship
@@ -514,7 +514,10 @@ export async function update(schema: Schema, tableName: string, db: string, quer
   let query = new Query
   query.update(tableName)
   fillUpdateCriteria(query, criteria, Object.keys(table.columns))
-  query.returning('*')
+
+  if (db == 'postgres') {
+    query.returning('*')
+  }
 
   let sqlString = query.sql(db)
   let values = query.values()
@@ -618,7 +621,10 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
 
     let query = sql.deleteFrom(tableName)
     fillDeleteCriteria(query, rowDeleteCriteria, Object.keys(table.columns))
-    query.returning('*')
+
+    if (db == 'postgres') {
+      query.returning('*')
+    }
   
     let sqlString = query.sql(db)
     let values = query.values()
