@@ -6,7 +6,7 @@ A library-style ORM.
 
 This packages uses [knight-criteria](https://github.com/c0deritter/knight-criteria) for its query interface and in the background [knight-sql](https://github.com/c0deritter/knight-sql) for representing SQL strings and [knight-sql-criteria-filler](https://github.com/c0deritter/knight-sql-criteria-filler) to translate criteria into SQL queries.
 
-For PostgreSQL databases there is also a package for schema migrations [knight-migration](https://github.com/c0deritter/knight-pg-migration) and a package for transaction handling [knight-transaction](https://github.com/c0deritter/knight-pg-transaction).
+For PostgreSQL databases there is also a package for migrations [knight-pg-migration](https://github.com/c0deritter/knight-pg-migration) and a package for transaction handling [knight-pg-transaction](https://github.com/c0deritter/knight-pg-transaction).
 
 There is also an in-memory object database [knight-object-db](https://github.com/c0deritter/knight-object-db) if you are looking for something which can be used in a browser.
 
@@ -470,7 +470,7 @@ The CRUD functions offer an object centric access to the database. That means th
 
 #### create()
 
-Creating works exactly like ISUD `insert()` but you will use your domain objects instead of row objects and the result will also be a domain object instead of a row.
+Creating works exactly like `insert()` but you will use your domain objects instead of row objects and the result will also be a domain object instead of a row.
 
 ```typescript
 import { create } from 'knight-orm'
@@ -490,7 +490,7 @@ created == {
 
 #### read()
 
-Reading works exactly like ISUD `select()` but you will use your domain objects instead of row objects and the result consists also be domain objects instead of rows.
+Reading works exactly like `select()` but you will use your domain objects instead of row objects and the result consists also be domain objects instead of rows.
 
 ```typescript
 import { read } from 'knight-orm'
