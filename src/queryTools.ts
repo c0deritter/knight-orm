@@ -1,5 +1,5 @@
 import { Criteria, ReadCriteria } from 'knight-criteria'
-import Log from 'knight-log'
+import { Log } from 'knight-log'
 import { Query } from 'knight-sql'
 import { fillCriteria, fillReadCriteria } from 'knight-sql-criteria-filler'
 import { criteriaDoesNotContainColumns } from './criteriaTools'
@@ -61,13 +61,13 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  l.user('Iterating through all properties of the table object which contain the relationships...')
+  l.libUser('Iterating through all properties of the table object which contain the relationships...')
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
-      l.var('relationshipName', relationshipName)
+      l.libUser('relationshipName', relationshipName)
 
       if (! (relationshipName in criteria)) {
-        l.user('Relationship is not contained in the criteria. Continuing...')
+        l.libUser('Relationship is not contained in the criteria. Continuing...')
         continue
       }
 
@@ -79,8 +79,8 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
         throw new Error('Table not contained in schema: ' + relationship.otherTable)
       }
 
-      l.var('relationship', relationship)
-      l.var('relationshipCriteria', relationshipCriteria)
+      l.libUser('relationship', relationship)
+      l.libUser('relationshipCriteria', relationshipCriteria)
 
       // 1. if the property @filterGlobally is set to true then we need to join
       // 2. if there are not any relationship criteria then we also can join
@@ -101,16 +101,16 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
           throw new Error('Given relationship object does not contain property \'otherId\'')
         }
     
-        l.var('thisId', thisId)
-        l.var('otherTableName', otherTableName)
-        l.var('otherId', otherId)
+        l.libUser('thisId', thisId)
+        l.libUser('otherTableName', otherTableName)
+        l.libUser('otherId', otherId)
     
         let joinAlias = alias != undefined && alias.length > 0 ? alias + '__' + relationshipName : relationshipName
-        l.var('joinAlias', joinAlias)
+        l.libUser('joinAlias', joinAlias)
         
-        l.user('Adding LEFT JOIN to query')
+        l.libUser('Adding LEFT JOIN to query')
         query.join('LEFT', otherTableName, joinAlias, '' + (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId + ' = ' + joinAlias + '.' + otherId)
-        l.var('query', query)
+        l.libUser('query', query)
     
         let otherTable = schema[otherTableName]
     
@@ -118,13 +118,13 @@ export function joinRelationships(schema: Schema, tableName: string, query: Quer
           throw new Error('Table not contained in schema: ' + otherTable)
         }
     
-        l.user('Filling query with the relationship criteria')
+        l.libUser('Filling query with the relationship criteria')
         fillCriteria(query, relationshipCriteria, Object.keys(otherTable.columns), joinAlias)
-        l.var('query', query)
+        l.libUser('query', query)
     
-        l.user('Join the relationships of the relationship. Going into recursion...')
+        l.libUser('Join the relationships of the relationship. Going into recursion...')
         joinRelationships(schema, otherTableName, query, relationshipCriteria, joinAlias)
-        l.user(`Coming back from recursing into '${relationshipName}'...`)
+        l.libUser(`Coming back from recursing into '${relationshipName}'...`)
       }
     }  
   }

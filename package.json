@@ -1,6 +1,6 @@
 {
   "name": "knight-orm",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A libary-style ORM",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -9,7 +9,7 @@
   ],
   "dependencies": {
     "knight-criteria": "^1.0.0",
-    "knight-log": "^1.0.0",
+    "knight-log": "^1.0.2",
     "knight-sql": "^1.0.0",
     "knight-sql-criteria-filler": "^1.0.0"
   },
