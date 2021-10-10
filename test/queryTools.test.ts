@@ -4,7 +4,7 @@ import 'mocha'
 import { addCriteria, buildSelectQuery } from '../src/queryTools'
 import { schema } from './testSchema'
 
-describe.only('queryTools', function() {
+describe('queryTools', function() {
   describe('addCriteria', function() {
     it('should add a simple equals comparison', function() {
       let criteria = {
@@ -495,7 +495,7 @@ describe.only('queryTools', function() {
       expect(query._where.values()).to.deep.equal(['a'])
     })
 
-    it('should accept an array and connect two criteria objects with OR', function() {
+    it('should accept a criteria array', function() {
       let criteria = [
         'AND',
         {
@@ -517,7 +517,7 @@ describe.only('queryTools', function() {
       expect(query._where.values()).to.deep.equal(['a',1,'b',2])
     })
 
-    it('should accept an array and connect two criteria objects with OR', function() {
+    it('should accept an criteria array inside an criteria array', function() {
       let criteria = [
         {
           column1: 'a',

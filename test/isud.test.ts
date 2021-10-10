@@ -780,6 +780,7 @@ describe('isud', function() {
 
         let criteria = {
           object2: {
+            '@loadSeparately': true,
             column1: 'b'
           }
         }
@@ -815,6 +816,7 @@ describe('isud', function() {
           object2: {
             column1: 'a',
             object1: {
+              '@loadSeparately': true,
               column1: 'c'
             }
           }
@@ -850,7 +852,6 @@ describe('isud', function() {
 
         let criteria = {
           object2: {
-            '@filterGlobally': true,
             column1: 'a'
           }
         }
@@ -883,7 +884,6 @@ describe('isud', function() {
 
         let criteria = {
           object2: {
-            '@filterGlobally': true,
             column1: 'b'
           }
         }
@@ -1017,7 +1017,7 @@ describe('isud', function() {
 
         await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let criteria = { manyObjects: { '@filterGlobally': true, column1: 'b', object2: {} }}
+        let criteria = { manyObjects: { column1: 'b', object2: {} }}
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
 
@@ -1065,7 +1065,7 @@ describe('isud', function() {
 
         await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let criteria = { manyObjects: { '@filterGlobally': true, column1: 'c', object2: {} }}
+        let criteria = { manyObjects: { column1: 'c', object2: {} }}
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
 
