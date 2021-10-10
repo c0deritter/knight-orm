@@ -542,6 +542,34 @@ describe('queryTools', function() {
       expect(query._where.mysql()).to.equal('(column1 = ? AND column2 = ?) XOR ((column1 = ? AND column2 = ?) OR (column1 = ? AND column2 = ?))')
       expect(query._where.values()).to.deep.equal(['a',1,'b',2,'c',3])
     })
+
+    it('should join a table for a the same property only once', function() {
+      let criteria = [
+        {
+          object1: {
+            column1: 'a'
+          }
+        },
+        {
+          object1: {
+            column1: 'b'
+          }
+        }
+      ]
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._join.length).to.equal(1)
+      expect(query._join[0]).to.deep.equal({
+        type: 'LEFT',
+        table: 'table1',
+        alias: 'object1',
+        on: 'table1_id = object1.id'
+      })
+      expect(query._where.mysql()).to.equal('(object1.column1 = ?) OR (object1.column1 = ?)')
+      expect(query._where.values()).to.deep.equal(['a','b'])
+    })
   })  
 
   describe('buildSelectQuery', function() {

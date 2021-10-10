@@ -231,7 +231,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
           }
 
           l.libUser('Filling query with the relationship criteria')
-          addCriteria(schema, otherTableName, query, relationshipCriteria, joinAlias)
+          addCriteria(schema, otherTableName, query, relationshipCriteria, joinAlias, condition)
         }
       }
     }
