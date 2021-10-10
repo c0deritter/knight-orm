@@ -1,13 +1,257 @@
-import { Criteria, ReadCriteria } from 'knight-criteria'
-import { Log } from 'knight-log'
-import { Query } from 'knight-sql'
-import { fillCriteria, fillReadCriteria } from 'knight-sql-criteria-filler'
-import { criteriaDoesNotContainColumns } from './criteriaTools'
+import { Criteria, isComparison, Operator } from 'knight-criteria'
+import { Log } from 'knight-log'
+import { Brackets, comparison, Query } from 'knight-sql'
 import { Schema } from './Schema'
 
 let log = new Log('knight-orm/queryTools.ts')
 
-export function buildSelectQuery(schema: Schema, tableName: string, criteria: ReadCriteria): Query {
+export function addCriteria(schema: Schema, tableName: string, query: Query, criteria: Criteria | undefined, alias?: string) {
+  let l = log.fn('addCriteria')
+  l.param('tableName', tableName)
+  l.param('query', query)
+  l.param('criteria', criteria)
+  l.param('alias', alias)
+
+  if (criteria == undefined) {
+    l.returning('Criteria are undefined or null. Returning...')
+    return
+  }
+
+  let table = schema[tableName]
+
+  if (table == undefined) {
+    throw new Error('Table not contained in schema: ' + tableName)
+  }
+
+  if (criteria instanceof Array) {
+    l.libUser('Given criteria are an array')
+
+    let logical = 'OR'
+
+    for (let arrayValue of criteria) {
+      l.libUser('Processing arrayValue', arrayValue)
+
+      if (typeof arrayValue == 'string') {
+        let upperCase = arrayValue.toUpperCase()
+
+        if (upperCase == 'AND' || upperCase == 'OR' || upperCase == 'XOR') {
+          logical = upperCase
+          l.libUser('Setting logical operator to', logical)
+          continue
+        }
+      }
+
+      if (typeof arrayValue == 'object') {
+
+      }
+    }
+  }
+  else {
+    l.libUser('Given criteria are an object')
+
+    let aliasPrefix = alias != undefined && alias.length > 0 ? alias + '.' : ''
+    let columns = Object.keys(table.columns)
+
+    l.libUser('Iterating through all columns', columns)
+
+    for (let column of columns) {
+      l.location = [column]
+
+      if (criteria[column] === undefined) {
+        l.libUser('Skipping column because it is not contained in the given criteria')
+        continue
+      }
+
+      let value: any = criteria[column]
+      l.libUser('Processing column using criterium', value)
+
+      l.libUser('Adding logical operator AND')
+      query.where('AND')
+
+      if (isComparison(value)) {
+        l.libUser('Given object represents a comparison')
+
+        let operator = value['@operator'].toUpperCase()
+
+        if (!(operator in Operator)) {
+          l.libUser(`Operator '${operator}' is not supported. Continuing...`)
+          continue
+        }
+
+        if (value['@value'] !== undefined) {
+          l.libUser('Adding comparison')
+          query.where(comparison(aliasPrefix + column, operator, value['@value']))
+        }
+        else {
+          l.libUser('Not adding comparison because the value is undefined')
+        }
+      }
+
+      else if (value instanceof Array) {
+        l.libUser('The given criterium is an array')
+
+        let atLeastOneComparison = false
+
+        for (let arrayValue of value) {
+          if (isComparison(arrayValue)) {
+            atLeastOneComparison = true
+            break
+          }
+        }
+
+        if (!atLeastOneComparison) {
+          l.libUser('Array represents an SQL IN operation')
+          query.where(comparison(aliasPrefix + column, value))
+        }
+        else {
+          l.libUser('Array represents connected comparisons')
+
+          let logical = 'OR'
+          let brackets = new Brackets
+          query.where(brackets)
+
+          for (let arrayValue of value) {
+            if (typeof arrayValue == 'string') {
+              let upperCase = arrayValue.toUpperCase()
+
+              if (upperCase == 'AND' || upperCase == 'OR' || upperCase == 'XOR') {
+                logical = upperCase
+                l.libUser('Setting logical operator to', logical)
+                continue
+              }
+            }
+
+            if (isComparison(arrayValue)) {
+              if (arrayValue['@value'] === undefined) {
+                l.libUser('Skipping comparison because its value is undefined', arrayValue)
+                continue
+              }
+
+              l.libUser('Processing comparison', arrayValue)
+
+              let operator = arrayValue['@operator'].toUpperCase()
+
+              if (!(operator in Operator)) {
+                l.libUser(`Comparison operator '${operator}' is not supported. Continuing...`)
+                continue
+              }
+
+              l.libUser('Adding logical operator', logical)
+              brackets.condition.pieces.push(logical)
+
+              let comp = comparison(aliasPrefix + column, operator, arrayValue['@value'])
+              l.libUser('Adding comparison', comp)
+              brackets.condition.pieces.push(comp)
+            }
+
+            l.libUser('Setting logical operator back to the default OR')
+            logical = 'OR'
+          }
+
+          l.libUser('Created brackets', brackets)
+        }
+      }
+      else {
+        let comp = comparison(aliasPrefix + column, value)
+        l.libUser('Adding comparison with default operator =', comp)
+        query.where(comp)
+      }
+    }
+
+    l.location = undefined
+
+    if (table.relationships != undefined) {
+      let relationships = Object.keys(table.relationships)
+      l.libUser('Iterating through all relationships', relationships)
+
+      for (let relationshipName of relationships) {
+        l.location = [ relationshipName ]
+
+        if (!(relationshipName in criteria)) {
+          l.libUser('Skipping relationship because it is not contained in the given criteria')
+          continue
+        }
+
+        let relationship = table.relationships[relationshipName]
+        let relationshipCriteria = criteria[relationshipName]
+        let otherTable = schema[relationship.otherTable]
+
+        if (otherTable == undefined) {
+          throw new Error('Table not contained in schema: ' + relationship.otherTable)
+        }
+
+        l.libUser('Processing given criterium', relationshipCriteria)
+
+        if (relationshipCriteria['@loadWithNewQuery'] !== true) {
+          let thisId = relationship.thisId
+          let otherTableName = relationship.otherTable
+          let otherId = relationship.otherId
+
+          if (typeof thisId != 'string' || thisId.length == 0) {
+            throw new Error('Given relationship object does not contain property \'thisId\'')
+          }
+
+          if (typeof otherTableName != 'string' || otherTableName.length == 0) {
+            throw new Error('Given relationship object do not contain property \'otherTable\'')
+          }
+
+          if (typeof otherId != 'string' || otherId.length == 0) {
+            throw new Error('Given relationship object does not contain property \'otherId\'')
+          }
+
+          l.dev('thisId', thisId)
+          l.dev('otherTableName', otherTableName)
+          l.dev('otherId', otherId)
+
+          let joinAlias = alias != undefined && alias.length > 0 ? alias + '__' + relationshipName : relationshipName
+          l.dev('joinAlias', joinAlias)
+
+          query.join('LEFT', otherTableName, joinAlias, (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId + ' = ' + joinAlias + '.' + otherId)
+          l.libUser('Adding LEFT JOIN to query', query._join[query._join.length - 1])
+
+          let otherTable = schema[otherTableName]
+
+          if (otherTable == undefined) {
+            throw new Error('Table not contained in schema: ' + otherTable)
+          }
+
+          l.libUser('Filling query with the relationship criteria')
+          addCriteria(schema, otherTableName, query, relationshipCriteria, joinAlias)
+        }
+      }
+    }
+  }
+}
+
+export function selectAllColumnsExplicitly(schema: Schema, query: Query) {
+  for (let from of query._from) {
+    let fromTable = schema[from.table]
+
+    if (fromTable == undefined) {
+      throw new Error('Table not contained in schema: ' + from.table)
+    }
+
+    for (let column of Object.keys(fromTable.columns)) {
+      let alias = from.alias != undefined && from.alias.length > 0 ? from.alias : undefined
+      query.select((alias != undefined ? alias + '.' : '') + column + ' ' + (alias != undefined ? '"' + alias + '__' + column + '"' : ''))
+    }
+  }
+
+  for (let join of query._join) {
+    let joinTable = schema[join.table]
+
+    if (joinTable == undefined) {
+      throw new Error('Table not contained in schema: ' + join.table)
+    }
+
+    for (let column of Object.keys(joinTable.columns)) {
+      let alias = join.alias != undefined && join.alias.length > 0 ? join.alias : undefined
+      query.select((alias != undefined ? alias + '.' : '') + column + ' ' + (alias != undefined ? '"' + alias + '__' + column + '"' : ''))
+    }
+  }
+}
+
+export function buildSelectQuery(schema: Schema, tableName: string, criteria: Criteria): Query {
   let table = schema[tableName]
 
   if (table == undefined) {
@@ -17,8 +261,7 @@ export function buildSelectQuery(schema: Schema, tableName: string, criteria: Re
   let query = new Query
   query.from(tableName, tableName)
 
-  fillReadCriteria(query, criteria, Object.keys(schema[tableName].columns))
-  joinRelationships(schema, tableName, query, criteria, tableName)
+  addCriteria(schema, tableName, query, criteria)
   selectAllColumnsExplicitly(schema, query)
 
   return query
@@ -33,127 +276,7 @@ export function buildCountQuery(schema: Schema, tableName: string, criteria: Cri
 
   let query = new Query
   query.from(tableName, tableName).select('COUNT(*)')
-
-  fillReadCriteria(query, criteria, Object.keys(schema[tableName].columns))
-  joinRelationships(schema, tableName, query, criteria, tableName)
+  addCriteria(schema, tableName, query, criteria)
 
   return query
-}
-
-/**
- * It will join any relationship into the given query that are either tagged with
- * the property '@filterGlobally' or which are empty. Thus relationship criteria
- * that should not influence the overall selected rows have to be loaded in a dedicated
- * query.
- * 
- * @param schema 
- * @param tableName 
- * @param query 
- * @param criteria 
- * @param alias 
- */
-export function joinRelationships(schema: Schema, tableName: string, query: Query, criteria: Criteria, alias?: string) {
-  let l = log.fn('joinRelationships')
-
-  let table = schema[tableName]
-
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
-  l.libUser('Iterating through all properties of the table object which contain the relationships...')
-  if (table.relationships != undefined) {
-    for (let relationshipName of Object.keys(table.relationships)) {
-      l.libUser('relationshipName', relationshipName)
-
-      if (! (relationshipName in criteria)) {
-        l.libUser('Relationship is not contained in the criteria. Continuing...')
-        continue
-      }
-
-      let relationship = table.relationships[relationshipName]
-      let relationshipCriteria = criteria[relationshipName]
-
-      let otherTable = schema[relationship.otherTable]
-      if (otherTable == undefined) {
-        throw new Error('Table not contained in schema: ' + relationship.otherTable)
-      }
-
-      l.libUser('relationship', relationship)
-      l.libUser('relationshipCriteria', relationshipCriteria)
-
-      // 1. if the property @filterGlobally is set to true then we need to join
-      // 2. if there are not any relationship criteria then we also can join
-      if (relationshipCriteria['@filterGlobally'] === true || criteriaDoesNotContainColumns(otherTable, relationshipCriteria)) {
-        let thisId = relationship.thisId
-        let otherTableName = relationship.otherTable
-        let otherId = relationship.otherId
-    
-        if (typeof thisId != 'string' || thisId.length == 0) {
-          throw new Error('Given relationship object does not contain property \'thisId\'')
-        }
-    
-        if (typeof otherTableName != 'string' || otherTableName.length == 0) {
-          throw new Error('Given relationship object do not contain property \'otherTable\'')
-        }
-    
-        if (typeof otherId != 'string' || otherId.length == 0) {
-          throw new Error('Given relationship object does not contain property \'otherId\'')
-        }
-    
-        l.libUser('thisId', thisId)
-        l.libUser('otherTableName', otherTableName)
-        l.libUser('otherId', otherId)
-    
-        let joinAlias = alias != undefined && alias.length > 0 ? alias + '__' + relationshipName : relationshipName
-        l.libUser('joinAlias', joinAlias)
-        
-        l.libUser('Adding LEFT JOIN to query')
-        query.join('LEFT', otherTableName, joinAlias, '' + (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId + ' = ' + joinAlias + '.' + otherId)
-        l.libUser('query', query)
-    
-        let otherTable = schema[otherTableName]
-    
-        if (otherTable == undefined) {
-          throw new Error('Table not contained in schema: ' + otherTable)
-        }
-    
-        l.libUser('Filling query with the relationship criteria')
-        fillCriteria(query, relationshipCriteria, Object.keys(otherTable.columns), joinAlias)
-        l.libUser('query', query)
-    
-        l.libUser('Join the relationships of the relationship. Going into recursion...')
-        joinRelationships(schema, otherTableName, query, relationshipCriteria, joinAlias)
-        l.libUser(`Coming back from recursing into '${relationshipName}'...`)
-      }
-    }  
-  }
-}
-
-export function selectAllColumnsExplicitly(schema: Schema, query: Query) {
-  for (let from of query._froms) {
-    let fromTable = schema[from.table]
-    
-    if (fromTable == undefined) {
-      throw new Error('Table not contained in schema: ' + from.table)
-    }
-
-    for (let column of Object.keys(fromTable.columns)) {
-      let alias = from.alias != undefined && from.alias.length > 0 ? from.alias : undefined
-      query.select((alias != undefined ? alias + '.' : '' ) + column, (alias != undefined ? '"' + alias + '__' + column + '"' : undefined))
-    }
-  }
-
-  for (let join of query._joins) {
-    let joinTable = schema[join.table]
-    
-    if (joinTable == undefined) {
-      throw new Error('Table not contained in schema: ' + join.table)
-    }
-
-    for (let column of Object.keys(joinTable.columns)) {
-      let alias = join.alias != undefined && join.alias.length > 0 ? join.alias : undefined
-      query.select((alias != undefined ? alias + '.' : '' ) + column, (alias != undefined ? '"' + alias + '__' + column + '"' : undefined))
-    }
-  }
 }

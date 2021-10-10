@@ -1,7 +1,6 @@
-import { DeleteCriteria, ReadCriteria, UpdateCriteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { Query } from 'knight-sql'
-import { fillCreateCriteria, fillDeleteCriteria, fillUpdateCriteria } from 'knight-sql-criteria-filler'
+import { addCriteria, DeleteCriteria, ReadCriteria, UpdateCriteria } from '.'
 import { rowToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { buildSelectQuery } from './queryTools'
 import { determineRelationshipsToLoad, filterValidColumns, idsOnly, unjoinRows } from './rowTools'
@@ -128,7 +127,7 @@ export async function insert(
                 let updateRow = idsOnly(table, insertedRow)
                 l.libUser('updateRow', updateRow)
 
-                let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
+                let updateCriteria: any = rowToUpdateCriteria(schema, tableName, updateRow) // TODO: remove :any
                 updateCriteria['@set'][columnName] = insertedRelationshipRow[relationship.otherId]
                 l.libUser('updateCriteria', updateCriteria)
         
@@ -190,7 +189,13 @@ export async function insert(
   l.libUser('Inserting the given row...')
 
   let query = sql.insertInto(tableName)
-  fillCreateCriteria(query, row, Object.keys(table.columns))
+
+  for (let column of Object.keys(table.columns)) {
+    if (row[column] !== undefined) {
+      let value = row[column]
+      query.value(column, value)
+    }
+  }
 
   if (db == 'postgres') {
     query.returning('*')
@@ -296,7 +301,7 @@ export async function insert(
   
           // update the relationship owning row setting new newly obtained id
           let updateRow: any = idsOnly(table, insertedRow)
-          let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
+          let updateCriteria: any = rowToUpdateCriteria(schema, tableName, updateRow) // TODO: Remove :any
           updateCriteria['@set'] = {}
           updateCriteria['@set'][relationship.thisId] = relationshipId
   
@@ -513,7 +518,21 @@ export async function update(schema: Schema, tableName: string, db: string, quer
 
   let query = new Query
   query.update(tableName)
-  fillUpdateCriteria(query, criteria, Object.keys(table.columns))
+
+  for (let column of Object.keys(table.columns)) {
+    if (criteria['@set'][column] !== undefined) {
+      let value = criteria['@set'][column]
+      query.set(column, value)
+    }
+  }
+
+  let criteriaWithoutSet = {
+    ...criteria
+  } as any
+
+  delete criteriaWithoutSet['@set']
+
+  addCriteria(schema, tableName, query, criteriaWithoutSet)
 
   if (db == 'postgres') {
     query.returning('*')
@@ -620,7 +639,7 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
     let rowDeleteCriteria = rowToDeleteCriteria(schema, tableName, row)
 
     let query = sql.deleteFrom(tableName)
-    fillDeleteCriteria(query, rowDeleteCriteria, Object.keys(table.columns))
+    addCriteria(schema, tableName, query, rowDeleteCriteria)
 
     if (db == 'postgres') {
       query.returning('*')

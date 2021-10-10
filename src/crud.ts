@@ -1,7 +1,6 @@
-import { Criteria, ReadCriteria } from 'knight-criteria'
+import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql from 'knight-sql'
-import { fillReadCriteria, fillUpdateCriteria } from 'knight-sql-criteria-filler'
 import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { delete_ as isudDelete, insert, select } from './isud'
 import { buildCountQuery } from './queryTools'
@@ -25,7 +24,7 @@ export async function create<T>(schema: Schema, tableName: string, db: string, q
   return insertedInstance
 }
 
-export async function read<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: ReadCriteria): Promise<T[]> {
+export async function read<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<T[]> {
   let l = log.fn('read')
   l.param('tableName', tableName)
   l.param('criteria', criteria)
@@ -99,7 +98,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     return alreadyUpdatedRow
   }
 
-  let criteria = rowToUpdateCriteria(schema, tableName, row)
+  let criteria: any = rowToUpdateCriteria(schema, tableName, row) // TODO: Remove :any
   l.libUser('criteria', criteria)
 
   let missingIdValues = idsNotSet(table, criteria)
@@ -120,9 +119,9 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   if (hasValuesToSet) {
     l.libUser('There is something to set. Updating...')
     let query = sql.update(tableName)
-    fillUpdateCriteria(query, criteria, Object.keys(table.columns))
+    // fillUpdateCriteria(query, criteria, Object.keys(table.columns))
 
-    if (query._wheres.length > 0)
+    if (query._where.pieces.length > 0)
 
     if (db == 'postgres') {
       query.returning('*')
@@ -150,7 +149,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     delete (criteria as any).set
 
     let query = sql.select('*').from(tableName)
-    fillReadCriteria(query, criteria, Object.keys(table.columns))
+    // fillReadCriteria(query, criteria, Object.keys(table.columns))
 
     let sqlString = query.sql(db)
     let values = query.values()

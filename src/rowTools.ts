@@ -1,4 +1,4 @@
-import { ReadCriteria } from 'knight-criteria'
+import { CriteriaObject } from 'knight-criteria'
 import { Log } from 'knight-log'
 import { criteriaDoesNotContainColumns } from './criteriaTools'
 import { getIdColumns, getPropertyName, isIdColumn, Schema, Table } from './Schema'
@@ -195,7 +195,7 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
   return instance
 }
 
-export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: ReadCriteria, toInstances: boolean = false, alias?: string, alreadyUnjoined: { tableName: string, rowOrInstance: any }[] = []): any[]  {
+export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: CriteriaObject, toInstances: boolean = false, alias?: string, alreadyUnjoined: { tableName: string, rowOrInstance: any }[] = []): any[]  {
   let l = log.fn('unjoinRows')
 
   let rootRows = alias == undefined
@@ -456,11 +456,11 @@ export interface RelationshipsToLoad {
 export interface RelationshipToLoad {
   tableName: string
   relationshipName: string
-  relationshipCriteria: ReadCriteria
+  relationshipCriteria: CriteriaObject
   rows: any[]
 }
 
-export function determineRelationshipsToLoad(schema: Schema, tableName: string, rows: any[], criteria: ReadCriteria, relationshipPath: string = '', relationshipsToLoad: RelationshipsToLoad = {}): RelationshipsToLoad {
+export function determineRelationshipsToLoad(schema: Schema, tableName: string, rows: any[], criteria: CriteriaObject, relationshipPath: string = '', relationshipsToLoad: RelationshipsToLoad = {}): RelationshipsToLoad {
   let l = log.fn('determineRelationshipsToLoad')
   l.location = [ tableName ]
   l.param('rows', rows)

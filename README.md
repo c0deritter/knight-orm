@@ -302,7 +302,7 @@ The rule here is, if it should work it will work.
 
 #### select()
 
-The interface for selecting is realized through ReadCriteria from [knight-criteria](https://github.com/c0deritter/knight-criteria).
+The interface for selecting is realized through the Criteria from [knight-criteria](https://github.com/c0deritter/knight-criteria).
 
 A simple query looks like this.
 

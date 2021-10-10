@@ -1,5 +1,13 @@
-import { CreateCriteria, Criteria, DeleteCriteria, ReadCriteria, UpdateCriteria } from 'knight-criteria'
+import { Criteria } from 'knight-criteria'
 import { getPropertyName, isIdColumn, Schema, Table } from './Schema'
+
+export interface CreateCriteria {}
+export interface DeleteCriteria {}
+export interface ReadCriteria {}
+
+export interface UpdateCriteria {
+  '@set': any
+}
 
 export function instanceCriteriaToRowCriteria<T extends Criteria>(schema: Schema, tableName: string, instanceCriteria: T): T {
   let table = schema[tableName]
