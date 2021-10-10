@@ -4,7 +4,7 @@ import 'mocha'
 import { addCriteria, buildSelectQuery } from '../src/queryTools'
 import { schema } from './testSchema'
 
-describe('queryTools', function() {
+describe.only('queryTools', function() {
   describe('addCriteria', function() {
     it('should add a simple equals comparison', function() {
       let criteria = {
@@ -434,7 +434,7 @@ describe('queryTools', function() {
     it('should not join criteria for a relationship if it is to load with new query', function() {
       let criteria = {
         manyObjects: {
-          '@loadWithNewQuery': true,
+          '@loadSeparately': true,
           column1: 'a'
         }
       }
@@ -477,7 +477,7 @@ describe('queryTools', function() {
         manyObjects: {
           column1: 'a',
           object1: {
-            '@loadWithNewQuery': true,
+            '@loadSeparately': true,
             column1: 'b'
           }
         }
@@ -495,23 +495,52 @@ describe('queryTools', function() {
       expect(query._where.values()).to.deep.equal(['a'])
     })
 
-    it('should accept an array and connect two criteria with OR', function() {
+    it('should accept an array and connect two criteria objects with OR', function() {
       let criteria = [
+        'AND',
         {
           column1: 'a',
           column2: 1
         },
+        'XOR',
         {
           column1: 'b',
           column2: 2
-        }
+        },
+        'OR'
       ]
 
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
 
-      expect(query._where.mysql()).to.equal('column1 = ? AND manyObjects__object1.column1 = ?')
+      expect(query._where.mysql()).to.equal('(column1 = ? AND column2 = ?) XOR (column1 = ? AND column2 = ?)')
       expect(query._where.values()).to.deep.equal(['a',1,'b',2])
+    })
+
+    it('should accept an array and connect two criteria objects with OR', function() {
+      let criteria = [
+        {
+          column1: 'a',
+          column2: 1
+        },
+        'XOR',
+        [
+          {
+            column1: 'b',
+            column2: 2
+          },
+          {
+            column1: 'c',
+            column2: 3
+          }
+        ]
+      ]
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._where.mysql()).to.equal('(column1 = ? AND column2 = ?) XOR ((column1 = ? AND column2 = ?) OR (column1 = ? AND column2 = ?))')
+      expect(query._where.values()).to.deep.equal(['a',1,'b',2,'c',3])
     })
   })  
 
@@ -519,7 +548,7 @@ describe('queryTools', function() {
     it('should handle a simple select query', function() {
       let criteria = { column1: 'a', column2: 1 }
       let query = buildSelectQuery(schema, 'table1', criteria)
-      expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.table1_id "table1__table1_id", table1.table2_id "table1__table2_id" FROM table1 table1 WHERE table1.column1 = ? AND table1.column2 = ?;')
+      expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.table1_id "table1__table1_id", table1.table2_id "table1__table2_id" FROM table1 table1 WHERE table1.column1 = ? AND table1.column2 = ?')
     })
   
     it('should handle inter table relationships', function() {
@@ -552,7 +581,7 @@ describe('queryTools', function() {
       expect(query._select[10]).to.equal('table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1"')
       expect(query._select[11]).to.equal('table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id"')
   
-      expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.table1_id "table1__table1_id", table1.table2_id "table1__table2_id", table1__manyObjects.table1_id "table1__manyObjects__table1_id", table1__manyObjects.table2_id "table1__manyObjects__table2_id", table1__manyObjects.column1 "table1__manyObjects__column1", table1__manyObjects.table1_id2 "table1__manyObjects__table1_id2", table1__manyObjects__object2.id "table1__manyObjects__object2__id", table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1", table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id" FROM table1 table1 LEFT JOIN table_many table1__manyObjects ON table1.id = table1__manyObjects.table1_id LEFT JOIN table2 table1__manyObjects__object2 ON table1__manyObjects.table2_id = table1__manyObjects__object2.id WHERE table1.id = ? AND table1.column1 = ? AND table1__manyObjects.column1 = ? AND table1__manyObjects__object2.column1 = ?;')
+      expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.table1_id "table1__table1_id", table1.table2_id "table1__table2_id", table1__manyObjects.table1_id "table1__manyObjects__table1_id", table1__manyObjects.table2_id "table1__manyObjects__table2_id", table1__manyObjects.column1 "table1__manyObjects__column1", table1__manyObjects.table1_id2 "table1__manyObjects__table1_id2", table1__manyObjects__object2.id "table1__manyObjects__object2__id", table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1", table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id" FROM table1 table1 LEFT JOIN table_many table1__manyObjects ON table1.id = table1__manyObjects.table1_id LEFT JOIN table2 table1__manyObjects__object2 ON table1__manyObjects.table2_id = table1__manyObjects__object2.id WHERE table1.id = ? AND table1.column1 = ? AND table1__manyObjects.column1 = ? AND table1__manyObjects__object2.column1 = ?')
     })
 
     it('should join one-to-many relationships which are criteria-less', function() {
@@ -578,7 +607,7 @@ describe('queryTools', function() {
       expect(query._select[10]).to.equal('table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1"')
       expect(query._select[11]).to.equal('table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id"')
 
-      expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.table1_id "table1__table1_id", table1.table2_id "table1__table2_id", table1__manyObjects.table1_id "table1__manyObjects__table1_id", table1__manyObjects.table2_id "table1__manyObjects__table2_id", table1__manyObjects.column1 "table1__manyObjects__column1", table1__manyObjects.table1_id2 "table1__manyObjects__table1_id2", table1__manyObjects__object2.id "table1__manyObjects__object2__id", table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1", table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id" FROM table1 table1 LEFT JOIN table_many table1__manyObjects ON table1.id = table1__manyObjects.table1_id LEFT JOIN table2 table1__manyObjects__object2 ON table1__manyObjects.table2_id = table1__manyObjects__object2.id;')
+      expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.table1_id "table1__table1_id", table1.table2_id "table1__table2_id", table1__manyObjects.table1_id "table1__manyObjects__table1_id", table1__manyObjects.table2_id "table1__manyObjects__table2_id", table1__manyObjects.column1 "table1__manyObjects__column1", table1__manyObjects.table1_id2 "table1__manyObjects__table1_id2", table1__manyObjects__object2.id "table1__manyObjects__object2__id", table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1", table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id" FROM table1 table1 LEFT JOIN table_many table1__manyObjects ON table1.id = table1__manyObjects.table1_id LEFT JOIN table2 table1__manyObjects__object2 ON table1__manyObjects.table2_id = table1__manyObjects__object2.id')
     })
   })
 })

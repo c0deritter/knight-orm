@@ -1,16 +1,17 @@
 import { Criteria, isComparison, Operator } from 'knight-criteria'
 import { Log } from 'knight-log'
-import { Brackets, comparison, Query } from 'knight-sql'
+import { comparison, Condition, Query } from 'knight-sql'
 import { Schema } from './Schema'
 
 let log = new Log('knight-orm/queryTools.ts')
 
-export function addCriteria(schema: Schema, tableName: string, query: Query, criteria: Criteria | undefined, alias?: string) {
+export function addCriteria(schema: Schema, tableName: string, query: Query, criteria: Criteria | undefined, alias?: string, condition?: Condition) {
   let l = log.fn('addCriteria')
   l.param('tableName', tableName)
   l.param('query', query)
   l.param('criteria', criteria)
   l.param('alias', alias)
+  l.param('condition', condition)
 
   if (criteria == undefined) {
     l.returning('Criteria are undefined or null. Returning...')
@@ -23,14 +24,19 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
+  if (condition == undefined) {
+    condition = query._where
+  }
+  else {
+    condition.removeOuterLogicalOperators = true
+  }
+
   if (criteria instanceof Array) {
-    l.libUser('Given criteria are an array')
+    l.libUser('Given criteria is an array')
 
     let logical = 'OR'
 
     for (let arrayValue of criteria) {
-      l.libUser('Processing arrayValue', arrayValue)
-
       if (typeof arrayValue == 'string') {
         let upperCase = arrayValue.toUpperCase()
 
@@ -41,12 +47,18 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
         }
       }
 
-      if (typeof arrayValue == 'object') {
+      l.libUser('Adding logical operator', logical)
+      condition.push(logical)
 
-      }
+      let subCondition = new Condition
+      subCondition.surroundWithBrackets = true
+      condition.push(subCondition)
+
+      l.libUser('Add sub criteria through recursion', arrayValue)
+      addCriteria(schema, tableName, query, arrayValue as any, undefined, subCondition)
     }
   }
-  else {
+  else if (typeof criteria == 'object') {
     l.libUser('Given criteria are an object')
 
     let aliasPrefix = alias != undefined && alias.length > 0 ? alias + '.' : ''
@@ -66,7 +78,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
       l.libUser('Processing column using criterium', value)
 
       l.libUser('Adding logical operator AND')
-      query.where('AND')
+      condition.push('AND')
 
       if (isComparison(value)) {
         l.libUser('Given object represents a comparison')
@@ -80,7 +92,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
         if (value['@value'] !== undefined) {
           l.libUser('Adding comparison')
-          query.where(comparison(aliasPrefix + column, operator, value['@value']))
+          condition.push(comparison(aliasPrefix + column, operator, value['@value']))
         }
         else {
           l.libUser('Not adding comparison because the value is undefined')
@@ -101,14 +113,17 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
         if (!atLeastOneComparison) {
           l.libUser('Array represents an SQL IN operation')
-          query.where(comparison(aliasPrefix + column, value))
+          condition.push(comparison(aliasPrefix + column, value))
         }
         else {
           l.libUser('Array represents connected comparisons')
 
           let logical = 'OR'
-          let brackets = new Brackets
-          query.where(brackets)
+          
+          let subCondition = new Condition
+          subCondition.removeOuterLogicalOperators = true
+          subCondition.surroundWithBrackets = true
+          condition.push(subCondition)
 
           for (let arrayValue of value) {
             if (typeof arrayValue == 'string') {
@@ -137,24 +152,24 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
               }
 
               l.libUser('Adding logical operator', logical)
-              brackets.condition.pieces.push(logical)
+              subCondition.pieces.push(logical)
 
               let comp = comparison(aliasPrefix + column, operator, arrayValue['@value'])
               l.libUser('Adding comparison', comp)
-              brackets.condition.pieces.push(comp)
+              subCondition.pieces.push(comp)
             }
 
             l.libUser('Setting logical operator back to the default OR')
             logical = 'OR'
           }
 
-          l.libUser('Created brackets', brackets)
+          l.libUser('Created brackets', subCondition)
         }
       }
       else {
         let comp = comparison(aliasPrefix + column, value)
         l.libUser('Adding comparison with default operator =', comp)
-        query.where(comp)
+        condition.push(comp)
       }
     }
 
@@ -182,7 +197,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
         l.libUser('Processing given criterium', relationshipCriteria)
 
-        if (relationshipCriteria['@loadWithNewQuery'] !== true) {
+        if (relationshipCriteria['@loadSeparately'] !== true) {
           let thisId = relationship.thisId
           let otherTableName = relationship.otherTable
           let otherId = relationship.otherId
@@ -220,6 +235,9 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
         }
       }
     }
+  }
+  else {
+    l.warn('Given criteria type is not supported. It needs to be either an object or an array.', typeof criteria)
   }
 }
 
@@ -261,7 +279,7 @@ export function buildSelectQuery(schema: Schema, tableName: string, criteria: Cr
   let query = new Query
   query.from(tableName, tableName)
 
-  addCriteria(schema, tableName, query, criteria)
+  addCriteria(schema, tableName, query, criteria, tableName)
   selectAllColumnsExplicitly(schema, query)
 
   return query
@@ -276,7 +294,7 @@ export function buildCountQuery(schema: Schema, tableName: string, criteria: Cri
 
   let query = new Query
   query.from(tableName, tableName).select('COUNT(*)')
-  addCriteria(schema, tableName, query, criteria)
+  addCriteria(schema, tableName, query, criteria, tableName)
 
   return query
 }
