@@ -5,7 +5,7 @@ import { addCriteria, buildSelectQuery } from '../src/queryTools'
 import { schema } from './testSchema'
 
 describe('queryTools', function() {
-  describe('addCriteria', function() {
+  describe.only('addCriteria', function() {
     it('should add a simple equals comparison', function() {
       let criteria = {
         column1: 'a'
@@ -569,6 +569,276 @@ describe('queryTools', function() {
       })
       expect(query._where!.mysql()).to.equal('(object1.column1 = ?) OR (object1.column1 = ?)')
       expect(query._where!.values()).to.deep.equal(['a','b'])
+    })
+
+    it('should add an order by condition', function() {
+      let criteria = {
+        '@orderBy': 'column1'
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.not.undefined
+      expect(query._orderBy!.sql('mysql')).to.equal('column1')
+    })
+
+    it('should not add an order by condition if the column is invalid', function() {
+      let criteria = {
+        '@orderBy': 'column3'
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.undefined
+    })
+
+    it('should alias an order by condition in case of a relationship', function() {
+      let criteria = {
+        '@orderBy': 'column1',
+        manyObjects: {
+          '@orderBy': 'column1'
+        }
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.not.undefined
+      expect(query._orderBy!.sql('mysql')).to.equal('column1, manyObjects.column1')
+    })
+
+    it('should add multiple order by conditions', function() {
+      let criteria = {
+        '@orderBy': ['column1', 'column2']
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.not.undefined
+      expect(query._orderBy!.sql('mysql')).to.equal('column1, column2')
+    })
+
+    it('should alias multiple order by conditions in case of a relationship', function() {
+      let criteria = {
+        '@orderBy': ['column1', 'column2'],
+        manyObjects: {
+          '@orderBy': ['column1']
+        }
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.not.undefined
+      expect(query._orderBy!.sql('mysql')).to.equal('column1, column2, manyObjects.column1')
+    })
+
+    it('should add multiple order by conditions if they are invalid', function() {
+      let criteria = {
+        '@orderBy': ['column3', 'column4']
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.undefined
+    })
+
+    it('should add an order by condition with a given direction', function() {
+      let criteria = {
+        '@orderBy': {
+          field: 'column1',
+          direction: 'DESC'
+        }
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.not.undefined
+      expect(query._orderBy!.sql('mysql')).to.equal('column1 DESC')
+    })
+
+    it('should alias an order by condition with a given direction in case of a relationship', function() {
+      let criteria = {
+        '@orderBy': {
+          field: 'column1',
+          direction: 'DESC'
+        },
+        manyObjects: {
+          '@orderBy': {
+            field: 'column1',
+            direction: 'ASC'
+          }
+        }
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.not.undefined
+      expect(query._orderBy!.sql('mysql')).to.equal('column1 DESC, manyObjects.column1 ASC')
+    })
+
+    it('should not add an order by condition with a given direction if the column is invalid', function() {
+      let criteria = {
+        '@orderBy': {
+          field: 'column3',
+          direction: 'DESC'
+        }
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.undefined
+    })
+
+    it('should add multiple order by conditions with a given direction', function() {
+      let criteria = {
+        '@orderBy': [
+          {
+            field: 'column1',
+            direction: 'DESC'
+          },
+          {
+            field: 'column2',
+            direction: 'ASC'
+          }
+        ]
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.not.undefined
+      expect(query._orderBy!.sql('mysql')).to.equal('column1 DESC, column2 ASC')
+    })
+
+    it('should alias multiple order by conditions with a given direction in case of a relationship', function() {
+      let criteria = {
+        '@orderBy': [
+          {
+            field: 'column1',
+            direction: 'DESC'
+          },
+          {
+            field: 'column2',
+            direction: 'ASC'
+          }
+        ],
+        manyObjects: {
+          '@orderBy': [
+            {
+              field: 'column1',
+              direction: 'ASC'
+            }
+          ]
+        }
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.not.undefined
+      expect(query._orderBy!.sql('mysql')).to.equal('column1 DESC, column2 ASC, manyObjects.column1 ASC')
+    })
+
+    it('should not add multiple order by conditions with a given direction if the columns are invalid', function() {
+      let criteria = {
+        '@orderBy': [
+          {
+            field: 'column3',
+            direction: 'DESC'
+          },
+          {
+            field: 'column4',
+            direction: 'ASC'
+          }
+        ]
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._orderBy).to.be.undefined
+    })
+
+    it('should set a limit', function() {
+      let criteria = {
+        '@limit': 10
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._limit).to.equal(10)
+    })
+
+    it('should not overwrite an already existing limit', function() {
+      let criteria = {
+        '@limit': 10
+      }
+
+      let query = new Query
+      query.limit(5)
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._limit).to.equal(5)
+    })
+
+    it('should not overwrite with a limit given in relationship criteria', function() {
+      let criteria = {
+        '@limit': 10,
+        manyObjects: {
+          '@limit': 15
+        }
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._limit).to.equal(10)
+    })
+
+    it('should set an offset', function() {
+      let criteria = {
+        '@offset': 10
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._offset).to.equal(10)
+    })
+
+    it('should not overwrite an already existing offset', function() {
+      let criteria = {
+        '@offset': 10
+      }
+
+      let query = new Query
+      query.offset(5)
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._offset).to.equal(5)
+    })
+
+    it('should not overwrite with an offset given in relationship criteria', function() {
+      let criteria = {
+        '@offset': 10,
+        manyObjects: {
+          '@offset': 15
+        }
+      }
+
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+
+      expect(query._offset).to.equal(10)
     })
   })  
 

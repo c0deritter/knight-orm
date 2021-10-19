@@ -36,6 +36,8 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
     condition.removeOuterLogicalOperators = true
   }
 
+  let aliasPrefix = alias != undefined && alias.length > 0 ? alias + '.' : ''
+
   if (criteria instanceof Array) {
     l.libUser('Given criteria is an array')
 
@@ -60,16 +62,120 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
       condition.push(subCondition)
 
       l.libUser('Add sub criteria through recursion', arrayValue)
-      addCriteria(schema, tableName, query, arrayValue as any, undefined, subCondition)
+      addCriteria(schema, tableName, query, arrayValue as any, undefined, subCondition) //TODO: test case for bug
     }
   }
   else if (typeof criteria == 'object') {
-    l.libUser('Given criteria are an object')
+    l.libUser('Given criteria is an object')
 
-    let aliasPrefix = alias != undefined && alias.length > 0 ? alias + '.' : ''
+    if (criteria['@orderBy'] != undefined) {
+      if (typeof criteria['@orderBy'] == 'string') {
+        if (table.columns[criteria['@orderBy']] != undefined) {
+          l.libUser('Adding order by', criteria['@orderBy'])
+          query.orderBy(aliasPrefix + criteria['@orderBy'])
+        }
+        else {
+          l.libUser('Not adding order by because the given column is not contained in the table', criteria['@orderBy'])
+        }
+      }
+      else if (criteria['@orderBy'] instanceof Array) {
+        l.libUser('Found an array of order by conditions', criteria['@orderBy'])
+
+        for (let orderBy of criteria['@orderBy']) {
+          if (typeof orderBy == 'string') {
+            if (table.columns[orderBy] != undefined) {
+              l.libUser('Adding order by', orderBy)
+              query.orderBy(aliasPrefix + orderBy)
+            }
+            else {
+              l.libUser('Not adding order by because the given column is not contained in the table', orderBy)
+            }    
+          }
+          else if (typeof orderBy == 'object') {
+            if (typeof orderBy.field == 'string') {
+              if (table.columns[orderBy.field] == undefined) {
+                l.libUser('Not adding order by because the given column is not contained in the table', orderBy)
+                continue
+              }
+  
+              let direction: string|undefined = undefined
+  
+              if (typeof orderBy.direction == 'string') {
+                let upperCase = orderBy.direction.toUpperCase()
+  
+                if (upperCase == 'ASC' || upperCase == 'DESC') {
+                  direction = upperCase
+                }
+              }
+  
+              if (direction == undefined) {
+                l.libUser('Adding order by', orderBy)
+                query.orderBy(aliasPrefix + orderBy.field)
+              }
+              else {
+                l.libUser('Adding order by', orderBy)
+                query.orderBy(aliasPrefix + orderBy.field + ' ' + direction)
+              }  
+            }
+            else {
+              l.libUser('Not adding order by because the given field property is not of type object', orderBy)
+            }
+          }
+          else {
+            l.libUser('Not adding order by because the given element was not neither a string nor an object', orderBy)
+          }
+        }
+      }
+      else if (typeof criteria['@orderBy'] == 'object') {
+        if (typeof criteria['@orderBy'].field == 'string') {
+          if (table.columns[criteria['@orderBy'].field] != undefined) {
+            let direction: string|undefined = undefined
+
+            if (typeof criteria['@orderBy'].direction == 'string') {
+              let upperCase = criteria['@orderBy'].direction.toUpperCase()
+  
+              if (upperCase == 'ASC' || upperCase == 'DESC') {
+                direction = upperCase
+              }
+            }
+  
+            if (direction == undefined) {
+              l.libUser('Adding order by', criteria['@orderBy'])
+              query.orderBy(aliasPrefix + criteria['@orderBy'].field)
+            }
+            else {
+              l.libUser('Adding order by', criteria['@orderBy'])
+              query.orderBy(aliasPrefix + criteria['@orderBy'].field + ' ' + direction)
+            }
+          }
+          else {
+            l.libUser('Not adding order by because the given column is not contained in the table', criteria['@orderBy'])
+          }
+        }
+        else {
+          l.libUser('Not adding order by because the given field property is not a string', criteria['@orderBy'])
+        }
+      }
+      else {
+        l.libUser('Not adding order by because it was neither a string, an array nor an object', criteria['@orderBy'])
+      }
+
+      query._limit = criteria['@limit']
+    }
+
+    if (query._limit == undefined && typeof criteria['@limit'] == 'number' && ! isNaN(criteria['@limit'])) {
+      l.libUser('Setting limit', criteria['@limit'])
+      query._limit = criteria['@limit']
+    }
+
+    if (query._offset == undefined && typeof criteria['@offset'] == 'number' && ! isNaN(criteria['@offset'])) {
+      l.libUser('Setting offset', criteria['@offset'])
+      query._offset = criteria['@offset']
+    }
+
     let columns = Object.keys(table.columns)
 
-    l.libUser('Iterating through all columns', columns)
+    l.libUser('Iterating over all columns', columns)
 
     for (let column of columns) {
       l.location = [column]
@@ -182,7 +288,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
     if (table.relationships != undefined) {
       let relationships = Object.keys(table.relationships)
-      l.libUser('Iterating through all relationships', relationships)
+      l.libUser('Iterating over all relationships', relationships)
 
       for (let relationshipName of relationships) {
         l.location = [ relationshipName ]
