@@ -62,7 +62,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
       condition.push(subCondition)
 
       l.libUser('Add sub criteria through recursion', arrayValue)
-      addCriteria(schema, tableName, query, arrayValue as any, undefined, subCondition) //TODO: test case for bug
+      addCriteria(schema, tableName, query, arrayValue as any, alias, subCondition)
     }
   }
   else if (typeof criteria == 'object') {

@@ -511,9 +511,9 @@ describe('queryTools', function() {
       ]
 
       let query = new Query
-      addCriteria(schema, 'table1', query, criteria)
+      addCriteria(schema, 'table1', query, criteria, 'alias')
 
-      expect(query._where!.mysql()).to.equal('(column1 = ? AND column2 = ?) XOR (column1 = ? AND column2 = ?)')
+      expect(query._where!.mysql()).to.equal('(alias.column1 = ? AND alias.column2 = ?) XOR (alias.column1 = ? AND alias.column2 = ?)')
       expect(query._where!.values()).to.deep.equal(['a',1,'b',2])
     })
 
