@@ -10,7 +10,7 @@
   "dependencies": {
     "knight-criteria": "^2.0.2",
     "knight-log": "^1.0.2",
-    "knight-sql": "^2.1.0"
+    "knight-sql": "^2.1.7"
   },
   "devDependencies": {
     "@types/chai": "^4.2.14",

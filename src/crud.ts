@@ -121,7 +121,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     let query = sql.update(tableName)
     // fillUpdateCriteria(query, criteria, Object.keys(table.columns))
 
-    if (query._where.pieces.length > 0)
+    // if (query._where && query._where.pieces && query._where.pieces.length > 0)
 
     if (db == 'postgres') {
       query.returning('*')

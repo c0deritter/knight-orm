@@ -1,6 +1,6 @@
 import { Criteria, isComparison, Operator } from 'knight-criteria'
 import { Log } from 'knight-log'
-import { comparison, Condition, Query } from 'knight-sql'
+import { comparison, Condition, Query, Join, From } from 'knight-sql'
 import { Schema } from './Schema'
 
 let log = new Log('knight-orm/queryTools.ts')
@@ -25,6 +25,11 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
   }
 
   if (condition == undefined) {
+    if (query._where == undefined) {
+      query._where = new Condition
+      query._where.removeOuterLogicalOperators = true
+    }
+
     condition = query._where
   }
   else {
@@ -152,11 +157,11 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
               }
 
               l.libUser('Adding logical operator', logical)
-              subCondition.pieces.push(logical)
+              subCondition.push(logical)
 
               let comp = comparison(aliasPrefix + column, operator, arrayValue['@value'])
               l.libUser('Adding comparison', comp)
-              subCondition.pieces.push(comp)
+              subCondition.push(comp)
             }
 
             l.libUser('Setting logical operator back to the default OR')
@@ -222,7 +227,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
           l.dev('joinAlias', joinAlias)
 
           query.join('LEFT', otherTableName, joinAlias, (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId + ' = ' + joinAlias + '.' + otherId)
-          l.libUser('Adding LEFT JOIN to query', query._join[query._join.length - 1])
+          l.libUser('Adding LEFT JOIN to query', query._join!.pieces![query._join!.pieces!.length - 1])
 
           let otherTable = schema[otherTableName]
 
@@ -242,29 +247,37 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 }
 
 export function selectAllColumnsExplicitly(schema: Schema, query: Query) {
-  for (let from of query._from) {
-    let fromTable = schema[from.table]
-
-    if (fromTable == undefined) {
-      throw new Error('Table not contained in schema: ' + from.table)
-    }
-
-    for (let column of Object.keys(fromTable.columns)) {
-      let alias = from.alias != undefined && from.alias.length > 0 ? from.alias : undefined
-      query.select((alias != undefined ? alias + '.' : '') + column + ' ' + (alias != undefined ? '"' + alias + '__' + column + '"' : ''))
+  if (query._from && query._from.pieces) {
+    for (let from of query._from.pieces) {
+      if (from instanceof From) {
+        let fromTable = schema[from.table]
+  
+        if (fromTable == undefined) {
+          throw new Error('Table not contained in schema: ' + from.table)
+        }
+    
+        for (let column of Object.keys(fromTable.columns)) {
+          let alias = from.alias != undefined && from.alias.length > 0 ? from.alias : undefined
+          query.select((alias != undefined ? alias + '.' : '') + column + ' ' + (alias != undefined ? '"' + alias + '__' + column + '"' : ''))
+        }  
+      }
     }
   }
 
-  for (let join of query._join) {
-    let joinTable = schema[join.table]
-
-    if (joinTable == undefined) {
-      throw new Error('Table not contained in schema: ' + join.table)
-    }
-
-    for (let column of Object.keys(joinTable.columns)) {
-      let alias = join.alias != undefined && join.alias.length > 0 ? join.alias : undefined
-      query.select((alias != undefined ? alias + '.' : '') + column + ' ' + (alias != undefined ? '"' + alias + '__' + column + '"' : ''))
+  if (query._join && query._join.pieces) {
+    for (let join of query._join.pieces) {
+      if (join instanceof Join) {
+        let joinTable = schema[join.table]
+  
+        if (joinTable == undefined) {
+          throw new Error('Table not contained in schema: ' + join.table)
+        }
+    
+        for (let column of Object.keys(joinTable.columns)) {
+          let alias = join.alias != undefined && join.alias.length > 0 ? join.alias : undefined
+          query.select((alias != undefined ? alias + '.' : '') + column + ' ' + (alias != undefined ? '"' + alias + '__' + column + '"' : ''))
+        }  
+      }
     }
   }
 }

@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { Query } from 'knight-sql'
+import { Join, Query } from 'knight-sql'
 import 'mocha'
 import { addCriteria, buildSelectQuery } from '../src/queryTools'
 import { schema } from './testSchema'
@@ -14,8 +14,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
   
-      expect(query._where.mysql()).to.equal('column1 = ?')
-      expect(query._where.values()).to.deep.equal(['a'])
+      expect(query._where!.mysql()).to.equal('column1 = ?')
+      expect(query._where!.values()).to.deep.equal(['a'])
     })
   
     it('should add two simple equals comparisons which are AND connected', function() {
@@ -27,8 +27,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
   
-      expect(query._where.mysql()).to.equal('column1 = ? AND column2 = ?')
-      expect(query._where.values()).to.deep.equal(['a',1])
+      expect(query._where!.mysql()).to.equal('column1 = ? AND column2 = ?')
+      expect(query._where!.values()).to.deep.equal(['a',1])
     })
   
     it('should add a comparison', function() {
@@ -42,8 +42,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where.mysql()).to.equal('column1 <> ?')
-      expect(query._where.values()).to.deep.equal(['a'])
+      expect(query._where!.mysql()).to.equal('column1 <> ?')
+      expect(query._where!.values()).to.deep.equal(['a'])
     })
   
     it('should add a simple comparison and a comparison object', function() {
@@ -58,8 +58,8 @@ describe('queryTools', function() {
       let query1 = new Query
       addCriteria(schema, 'table1', query1, criteria1)
       
-      expect(query1._where.mysql()).to.equal('column1 <> ? AND column2 = ?')
-      expect(query1._where.values()).to.deep.equal(['a',1])
+      expect(query1._where!.mysql()).to.equal('column1 <> ? AND column2 = ?')
+      expect(query1._where!.values()).to.deep.equal(['a',1])
 
       let criteria2 = {
         column1: 'a',
@@ -72,8 +72,8 @@ describe('queryTools', function() {
       let query2 = new Query
       addCriteria(schema, 'table1', query2, criteria2)
       
-      expect(query2._where.mysql()).to.equal('column1 = ? AND column2 <> ?')
-      expect(query2._where.values()).to.deep.equal(['a',1])
+      expect(query2._where!.mysql()).to.equal('column1 = ? AND column2 <> ?')
+      expect(query2._where!.values()).to.deep.equal(['a',1])
     })
   
     it('should not add a comparison if the operator is not supported', function() {
@@ -87,8 +87,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where.mysql()).to.equal('')
-      expect(query._where.values()).to.deep.equal([])
+      expect(query._where!.mysql()).to.equal('')
+      expect(query._where!.values()).to.deep.equal([])
     })
   
     it('should not add a property and value citerium if the value is undefined', function() {
@@ -102,7 +102,7 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where.mysql()).to.equal('')
+      expect(query._where!.mysql()).to.equal('')
     })
   
     it('should add a null criterium', function() {
@@ -113,8 +113,8 @@ describe('queryTools', function() {
       let query1 = new Query
       addCriteria(schema, 'table1', query1, criteria1)
   
-      expect(query1._where.mysql()).to.equal('column1 IS NULL')
-      expect(query1._where.values()).to.deep.equal([])
+      expect(query1._where!.mysql()).to.equal('column1 IS NULL')
+      expect(query1._where!.values()).to.deep.equal([])
   
       let criteria2 = {
         column1: {
@@ -126,8 +126,8 @@ describe('queryTools', function() {
       let query2 = new Query
       addCriteria(schema, 'table1', query2, criteria2)
       
-      expect(query2._where.mysql()).to.equal('column1 IS NULL')
-      expect(query2._where.values()).to.deep.equal([])
+      expect(query2._where!.mysql()).to.equal('column1 IS NULL')
+      expect(query2._where!.values()).to.deep.equal([])
 
       let criteria3 = {
         column1: {
@@ -139,8 +139,8 @@ describe('queryTools', function() {
       let query3 = new Query
       addCriteria(schema, 'table1', query3, criteria3)
       
-      expect(query3._where.mysql()).to.equal('column1 IS NOT NULL')
-      expect(query3._where.values()).to.deep.equal([])
+      expect(query3._where!.mysql()).to.equal('column1 IS NOT NULL')
+      expect(query3._where!.values()).to.deep.equal([])
 
       let criteria4 = {
         column1: {
@@ -152,8 +152,8 @@ describe('queryTools', function() {
       let query4 = new Query
       addCriteria(schema, 'table1', query4, criteria4)
       
-      expect(query4._where.mysql()).to.equal('column1 IS NOT NULL')
-      expect(query4._where.values()).to.deep.equal([])
+      expect(query4._where!.mysql()).to.equal('column1 IS NOT NULL')
+      expect(query4._where!.values()).to.deep.equal([])
     })
   
     it('should create an IN operator of an array of values', function() {
@@ -164,8 +164,8 @@ describe('queryTools', function() {
       let query1 = new Query
       addCriteria(schema, 'table1', query1, criteria1)
       
-      expect(query1._where.mysql()).to.equal('column1 IN (?, ?, ?, ?)')
-      expect(query1._where.values()).to.deep.equal([1,2,3,4])
+      expect(query1._where!.mysql()).to.equal('column1 IN (?, ?, ?, ?)')
+      expect(query1._where!.values()).to.deep.equal([1,2,3,4])
   
       let criteria2 = {
         column1: ['a', 'b', 'c', 'd']
@@ -174,8 +174,8 @@ describe('queryTools', function() {
       let query2 = new Query
       addCriteria(schema, 'table1', query2, criteria2)
       
-      expect(query2._where.mysql()).to.equal('column1 IN (?, ?, ?, ?)')
-      expect(query2._where.values()).to.deep.equal(['a', 'b', 'c', 'd'])
+      expect(query2._where!.mysql()).to.equal('column1 IN (?, ?, ?, ?)')
+      expect(query2._where!.values()).to.deep.equal(['a', 'b', 'c', 'd'])
   
       let date1 = new Date
       let date2 = new Date
@@ -187,8 +187,8 @@ describe('queryTools', function() {
       let query3 = new Query
       addCriteria(schema, 'table1', query3, criteria3)
       
-      expect(query3._where.mysql()).to.equal('column1 IN (?, ?)')
-      expect(query3._where.values()).to.deep.equal([date1, date2])
+      expect(query3._where!.mysql()).to.equal('column1 IN (?, ?)')
+      expect(query3._where!.values()).to.deep.equal([date1, date2])
     })
   
     it('should accept an array of comparisons', function() {
@@ -208,8 +208,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where.mysql()).to.equal('(column2 < ? OR column2 > ?)')
-      expect(query._where.values()).to.deep.equal([1, 10])
+      expect(query._where!.mysql()).to.equal('(column2 < ? OR column2 > ?)')
+      expect(query._where!.values()).to.deep.equal([1, 10])
     })
   
     it('should add an array of one comparison', function() {
@@ -225,8 +225,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where.mysql()).to.equal('(column2 < ?)')
-      expect(query._where.values()).to.deep.equal([1])
+      expect(query._where!.mysql()).to.equal('(column2 < ?)')
+      expect(query._where!.values()).to.deep.equal([1])
     })
   
     it('should not add an array of one comparison if the operator is not supported', function() {
@@ -242,8 +242,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where.mysql()).to.equal('')
-      expect(query._where.values()).to.deep.equal([])
+      expect(query._where!.mysql()).to.equal('')
+      expect(query._where!.values()).to.deep.equal([])
     })
   
     it('should accept an array of comparisons and ignore those which values are undefined', function() {
@@ -267,8 +267,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where.mysql()).to.equal('(column2 < ?)')
-      expect(query._where.values()).to.deep.equal([1])
+      expect(query._where!.mysql()).to.equal('(column2 < ?)')
+      expect(query._where!.values()).to.deep.equal([1])
     })
   
     it('should accept an array comparisons which values are undefined', function() {
@@ -288,8 +288,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where.mysql()).to.equal('')
-      expect(query._where.values()).to.deep.equal([])
+      expect(query._where!.mysql()).to.equal('')
+      expect(query._where!.values()).to.deep.equal([])
     })
 
     it('should set an empty array as always being false', function() {
@@ -300,8 +300,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
   
-      expect(query._where.mysql()).to.equal('1 = 2')
-      expect(query._where.values()).to.deep.equal([])
+      expect(query._where!.mysql()).to.equal('1 = 2')
+      expect(query._where!.values()).to.deep.equal([])
     })
   
     it('should accept an array of comparisons which value is an empty array', function() {
@@ -333,8 +333,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where.mysql()).to.equal('(1 = 2 OR 1 = 2 OR 1 = 1 OR 1 = 1 OR 1 = 1)')
-      expect(query._where.values()).to.deep.equal([])
+      expect(query._where!.mysql()).to.equal('(1 = 2 OR 1 = 2 OR 1 = 1 OR 1 = 1 OR 1 = 1)')
+      expect(query._where!.values()).to.deep.equal([])
     })
   
     it('should accept an array of comparisons which are AND connected', function() {
@@ -357,8 +357,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where.mysql()).to.equal('(column2 > ? AND column2 < ?)')
-      expect(query._where.values()).to.deep.equal([1, 10])
+      expect(query._where!.mysql()).to.equal('(column2 > ? AND column2 < ?)')
+      expect(query._where!.values()).to.deep.equal([1, 10])
     })
 
     it('should regard inherited properties', function() {
@@ -367,8 +367,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
   
-      expect(query._where.mysql()).to.equal('column1 = ? AND column2 = ?')
-      expect(query._where.values()).to.deep.equal(['a', 1])
+      expect(query._where!.mysql()).to.equal('column1 = ? AND column2 = ?')
+      expect(query._where!.values()).to.deep.equal(['a', 1])
     })
   
     it('should regard property methods', function() {
@@ -377,8 +377,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
   
-      expect(query._where.mysql()).to.equal('column1 = ? AND column2 = ?')
-      expect(query._where.values()).to.deep.equal(['a', 1])
+      expect(query._where!.mysql()).to.equal('column1 = ? AND column2 = ?')
+      expect(query._where!.values()).to.deep.equal(['a', 1])
     })
   
     it('should add Date comparisons', function() {
@@ -388,8 +388,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
   
-      expect(query._where.mysql()).to.equal('column1 = ?')
-      expect(query._where.values()).to.deep.equal([now])
+      expect(query._where!.mysql()).to.equal('column1 = ?')
+      expect(query._where!.values()).to.deep.equal([now])
     })
 
     it('should join criteria for a relationship', function() {
@@ -402,13 +402,13 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
 
-      expect(query._join.length).to.equal(1)
-      expect(query._join[0].type).to.equal('LEFT')
-      expect(query._join[0].table).to.equal('table_many')
-      expect(query._join[0].alias).to.equal('manyObjects')
-      expect(query._join[0].on).to.equal('id = manyObjects.table1_id')
-      expect(query._where.mysql()).to.equal('manyObjects.column1 = ?')
-      expect(query._where.values()).to.deep.equal(['a'])
+      expect(query._join!.pieces!.length).to.equal(1)
+      expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
+      expect((query._join!.pieces![0] as Join).table).to.equal('table_many')
+      expect((query._join!.pieces![0] as Join).alias).to.equal('manyObjects')
+      expect((query._join!.pieces![0] as Join).on).to.equal('id = manyObjects.table1_id')
+      expect(query._where!.mysql()).to.equal('manyObjects.column1 = ?')
+      expect(query._where!.values()).to.deep.equal(['a'])
     })
 
     it('should join criteria for a relationship if it is to load', function() {
@@ -422,13 +422,13 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
 
-      expect(query._join.length).to.equal(1)
-      expect(query._join[0].type).to.equal('LEFT')
-      expect(query._join[0].table).to.equal('table_many')
-      expect(query._join[0].alias).to.equal('manyObjects')
-      expect(query._join[0].on).to.equal('id = manyObjects.table1_id')
-      expect(query._where.mysql()).to.equal('manyObjects.column1 = ?')
-      expect(query._where.values()).to.deep.equal(['a'])
+      expect(query._join!.pieces!.length).to.equal(1)
+      expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
+      expect((query._join!.pieces![0] as Join).table).to.equal('table_many')
+      expect((query._join!.pieces![0] as Join).alias).to.equal('manyObjects')
+      expect((query._join!.pieces![0] as Join).on).to.equal('id = manyObjects.table1_id')
+      expect(query._where!.mysql()).to.equal('manyObjects.column1 = ?')
+      expect(query._where!.values()).to.deep.equal(['a'])
     })
 
     it('should not join criteria for a relationship if it is to load with new query', function() {
@@ -442,8 +442,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
 
-      expect(query._join.length).to.equal(0)
-      expect(query._where.pieces.length).to.equal(0)
+      expect(query._join).to.be.undefined
+      expect(query._where!.sql('mysql')).to.equal('')
     })
 
     it('should join criteria for a relationship of a relationship', function() {
@@ -459,17 +459,17 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
 
-      expect(query._join.length).to.equal(2)
-      expect(query._join[0].type).to.equal('LEFT')
-      expect(query._join[0].table).to.equal('table_many')
-      expect(query._join[0].alias).to.equal('manyObjects')
-      expect(query._join[0].on).to.equal('id = manyObjects.table1_id')
-      expect(query._join[1].type).to.equal('LEFT')
-      expect(query._join[1].table).to.equal('table1')
-      expect(query._join[1].alias).to.equal('manyObjects__object1')
-      expect(query._join[1].on).to.equal('manyObjects.table1_id = manyObjects__object1.id')
-      expect(query._where.mysql()).to.equal('manyObjects.column1 = ? AND manyObjects__object1.column1 = ?')
-      expect(query._where.values()).to.deep.equal(['a','b'])
+      expect(query._join!.pieces!.length).to.equal(2)
+      expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
+      expect((query._join!.pieces![0] as Join).table).to.equal('table_many')
+      expect((query._join!.pieces![0] as Join).alias).to.equal('manyObjects')
+      expect((query._join!.pieces![0] as Join).on).to.equal('id = manyObjects.table1_id')
+      expect((query._join!.pieces![1] as Join).type).to.equal('LEFT')
+      expect((query._join!.pieces![1] as Join).table).to.equal('table1')
+      expect((query._join!.pieces![1] as Join).alias).to.equal('manyObjects__object1')
+      expect((query._join!.pieces![1] as Join).on).to.equal('manyObjects.table1_id = manyObjects__object1.id')
+      expect(query._where!.mysql()).to.equal('manyObjects.column1 = ? AND manyObjects__object1.column1 = ?')
+      expect(query._where!.values()).to.deep.equal(['a','b'])
     })
 
     it('should not join criteria for a relationship of a relationship', function() {
@@ -486,13 +486,13 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
 
-      expect(query._join.length).to.equal(1)
-      expect(query._join[0].type).to.equal('LEFT')
-      expect(query._join[0].table).to.equal('table_many')
-      expect(query._join[0].alias).to.equal('manyObjects')
-      expect(query._join[0].on).to.equal('id = manyObjects.table1_id')
-      expect(query._where.mysql()).to.equal('manyObjects.column1 = ?')
-      expect(query._where.values()).to.deep.equal(['a'])
+      expect(query._join!.pieces!.length).to.equal(1)
+      expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
+      expect((query._join!.pieces![0] as Join).table).to.equal('table_many')
+      expect((query._join!.pieces![0] as Join).alias).to.equal('manyObjects')
+      expect((query._join!.pieces![0] as Join).on).to.equal('id = manyObjects.table1_id')
+      expect(query._where!.mysql()).to.equal('manyObjects.column1 = ?')
+      expect(query._where!.values()).to.deep.equal(['a'])
     })
 
     it('should accept a criteria array', function() {
@@ -513,8 +513,8 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
 
-      expect(query._where.mysql()).to.equal('(column1 = ? AND column2 = ?) XOR (column1 = ? AND column2 = ?)')
-      expect(query._where.values()).to.deep.equal(['a',1,'b',2])
+      expect(query._where!.mysql()).to.equal('(column1 = ? AND column2 = ?) XOR (column1 = ? AND column2 = ?)')
+      expect(query._where!.values()).to.deep.equal(['a',1,'b',2])
     })
 
     it('should accept an criteria array inside an criteria array', function() {
@@ -539,11 +539,11 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
 
-      expect(query._where.mysql()).to.equal('(column1 = ? AND column2 = ?) XOR ((column1 = ? AND column2 = ?) OR (column1 = ? AND column2 = ?))')
-      expect(query._where.values()).to.deep.equal(['a',1,'b',2,'c',3])
+      expect(query._where!.mysql()).to.equal('(column1 = ? AND column2 = ?) XOR ((column1 = ? AND column2 = ?) OR (column1 = ? AND column2 = ?))')
+      expect(query._where!.values()).to.deep.equal(['a',1,'b',2,'c',3])
     })
 
-    it('should join a table for a the same property only once', function() {
+    it('should join a table for the same property only once', function() {
       let criteria = [
         {
           object1: {
@@ -560,15 +560,15 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
 
-      expect(query._join.length).to.equal(1)
-      expect(query._join[0]).to.deep.equal({
+      expect(query._join!.pieces!.length).to.equal(1)
+      expect(query._join!.pieces![0]).to.deep.equal({
         type: 'LEFT',
         table: 'table1',
         alias: 'object1',
         on: 'table1_id = object1.id'
       })
-      expect(query._where.mysql()).to.equal('(object1.column1 = ?) OR (object1.column1 = ?)')
-      expect(query._where.values()).to.deep.equal(['a','b'])
+      expect(query._where!.mysql()).to.equal('(object1.column1 = ?) OR (object1.column1 = ?)')
+      expect(query._where!.values()).to.deep.equal(['a','b'])
     })
   })  
 
@@ -595,19 +595,19 @@ describe('queryTools', function() {
   
       let query = buildSelectQuery(schema, 'table1', criteria)
   
-      expect(query._select.length).to.equal(12)
-      expect(query._select[0]).to.equal('table1.id "table1__id"')
-      expect(query._select[1]).to.equal('table1.column1 "table1__column1"')
-      expect(query._select[2]).to.equal('table1.column2 "table1__column2"')
-      expect(query._select[3]).to.equal('table1.table1_id "table1__table1_id"')
-      expect(query._select[4]).to.equal('table1.table2_id "table1__table2_id"')
-      expect(query._select[5]).to.equal('table1__manyObjects.table1_id "table1__manyObjects__table1_id"')
-      expect(query._select[6]).to.equal('table1__manyObjects.table2_id "table1__manyObjects__table2_id"')
-      expect(query._select[7]).to.equal('table1__manyObjects.column1 "table1__manyObjects__column1"')
-      expect(query._select[8]).to.equal('table1__manyObjects.table1_id2 "table1__manyObjects__table1_id2"')
-      expect(query._select[9]).to.equal('table1__manyObjects__object2.id "table1__manyObjects__object2__id"')
-      expect(query._select[10]).to.equal('table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1"')
-      expect(query._select[11]).to.equal('table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id"')
+      expect(query._select!.pieces!.length).to.equal(12)
+      expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
+      expect(query._select!.pieces![1]).to.equal('table1.column1 "table1__column1"')
+      expect(query._select!.pieces![2]).to.equal('table1.column2 "table1__column2"')
+      expect(query._select!.pieces![3]).to.equal('table1.table1_id "table1__table1_id"')
+      expect(query._select!.pieces![4]).to.equal('table1.table2_id "table1__table2_id"')
+      expect(query._select!.pieces![5]).to.equal('table1__manyObjects.table1_id "table1__manyObjects__table1_id"')
+      expect(query._select!.pieces![6]).to.equal('table1__manyObjects.table2_id "table1__manyObjects__table2_id"')
+      expect(query._select!.pieces![7]).to.equal('table1__manyObjects.column1 "table1__manyObjects__column1"')
+      expect(query._select!.pieces![8]).to.equal('table1__manyObjects.table1_id2 "table1__manyObjects__table1_id2"')
+      expect(query._select!.pieces![9]).to.equal('table1__manyObjects__object2.id "table1__manyObjects__object2__id"')
+      expect(query._select!.pieces![10]).to.equal('table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1"')
+      expect(query._select!.pieces![11]).to.equal('table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id"')
   
       expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.table1_id "table1__table1_id", table1.table2_id "table1__table2_id", table1__manyObjects.table1_id "table1__manyObjects__table1_id", table1__manyObjects.table2_id "table1__manyObjects__table2_id", table1__manyObjects.column1 "table1__manyObjects__column1", table1__manyObjects.table1_id2 "table1__manyObjects__table1_id2", table1__manyObjects__object2.id "table1__manyObjects__object2__id", table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1", table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id" FROM table1 table1 LEFT JOIN table_many table1__manyObjects ON table1.id = table1__manyObjects.table1_id LEFT JOIN table2 table1__manyObjects__object2 ON table1__manyObjects.table2_id = table1__manyObjects__object2.id WHERE table1.id = ? AND table1.column1 = ? AND table1__manyObjects.column1 = ? AND table1__manyObjects__object2.column1 = ?')
     })
@@ -621,19 +621,19 @@ describe('queryTools', function() {
   
       let query = buildSelectQuery(schema, 'table1', criteria)
   
-      expect(query._select.length).to.equal(12)
-      expect(query._select[0]).to.equal('table1.id "table1__id"')
-      expect(query._select[1]).to.equal('table1.column1 "table1__column1"')
-      expect(query._select[2]).to.equal('table1.column2 "table1__column2"')
-      expect(query._select[3]).to.equal('table1.table1_id "table1__table1_id"')
-      expect(query._select[4]).to.equal('table1.table2_id "table1__table2_id"')
-      expect(query._select[5]).to.equal('table1__manyObjects.table1_id "table1__manyObjects__table1_id"')
-      expect(query._select[6]).to.equal('table1__manyObjects.table2_id "table1__manyObjects__table2_id"')
-      expect(query._select[7]).to.equal('table1__manyObjects.column1 "table1__manyObjects__column1"')
-      expect(query._select[8]).to.equal('table1__manyObjects.table1_id2 "table1__manyObjects__table1_id2"')
-      expect(query._select[9]).to.equal('table1__manyObjects__object2.id "table1__manyObjects__object2__id"')
-      expect(query._select[10]).to.equal('table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1"')
-      expect(query._select[11]).to.equal('table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id"')
+      expect(query._select!.pieces!.length).to.equal(12)
+      expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
+      expect(query._select!.pieces![1]).to.equal('table1.column1 "table1__column1"')
+      expect(query._select!.pieces![2]).to.equal('table1.column2 "table1__column2"')
+      expect(query._select!.pieces![3]).to.equal('table1.table1_id "table1__table1_id"')
+      expect(query._select!.pieces![4]).to.equal('table1.table2_id "table1__table2_id"')
+      expect(query._select!.pieces![5]).to.equal('table1__manyObjects.table1_id "table1__manyObjects__table1_id"')
+      expect(query._select!.pieces![6]).to.equal('table1__manyObjects.table2_id "table1__manyObjects__table2_id"')
+      expect(query._select!.pieces![7]).to.equal('table1__manyObjects.column1 "table1__manyObjects__column1"')
+      expect(query._select!.pieces![8]).to.equal('table1__manyObjects.table1_id2 "table1__manyObjects__table1_id2"')
+      expect(query._select!.pieces![9]).to.equal('table1__manyObjects__object2.id "table1__manyObjects__object2__id"')
+      expect(query._select!.pieces![10]).to.equal('table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1"')
+      expect(query._select!.pieces![11]).to.equal('table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id"')
 
       expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.table1_id "table1__table1_id", table1.table2_id "table1__table2_id", table1__manyObjects.table1_id "table1__manyObjects__table1_id", table1__manyObjects.table2_id "table1__manyObjects__table2_id", table1__manyObjects.column1 "table1__manyObjects__column1", table1__manyObjects.table1_id2 "table1__manyObjects__table1_id2", table1__manyObjects__object2.id "table1__manyObjects__object2__id", table1__manyObjects__object2.column1 "table1__manyObjects__object2__column1", table1__manyObjects__object2.table1_id "table1__manyObjects__object2__table1_id" FROM table1 table1 LEFT JOIN table_many table1__manyObjects ON table1.id = table1__manyObjects.table1_id LEFT JOIN table2 table1__manyObjects__object2 ON table1__manyObjects.table2_id = table1__manyObjects__object2.id')
     })
