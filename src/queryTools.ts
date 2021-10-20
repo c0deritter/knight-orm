@@ -159,8 +159,6 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
       else {
         l.libUser('Not adding order by because it was neither a string, an array nor an object', criteria['@orderBy'])
       }
-
-      query._limit = criteria['@limit']
     }
 
     if (query._limit == undefined && typeof criteria['@limit'] == 'number' && ! isNaN(criteria['@limit'])) {
@@ -202,8 +200,16 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
         }
 
         if (value['@value'] !== undefined) {
-          l.libUser('Adding comparison')
-          condition.push(comparison(aliasPrefix + column, operator, value['@value']))
+          let comp = comparison(aliasPrefix + column, operator, value['@value'])
+          
+          if (value['@not'] === true) {
+            l.libUser('Adding comparison with NOT', comp)
+            condition.push('NOT', comp)
+          }
+          else {
+            l.libUser('Adding comparison', comp)
+            condition.push(comp)
+          }
         }
         else {
           l.libUser('Not adding comparison because the value is undefined')
@@ -223,8 +229,9 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
         }
 
         if (!atLeastOneComparison) {
-          l.libUser('Array represents an SQL IN operation')
-          condition.push(comparison(aliasPrefix + column, value))
+          let comp = comparison(aliasPrefix + column, value)
+          l.libUser('Adding comparison', comp)
+          condition.push(comp)
         }
         else {
           l.libUser('Array represents connected comparisons')
@@ -266,8 +273,15 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
               subCondition.push(logical)
 
               let comp = comparison(aliasPrefix + column, operator, arrayValue['@value'])
-              l.libUser('Adding comparison', comp)
-              subCondition.push(comp)
+              
+              if (arrayValue['@not'] === true) {
+                l.libUser('Adding comparison with NOT', comp)
+                subCondition.push('NOT', comp)
+              }
+              else {
+                l.libUser('Adding comparison', comp)
+                subCondition.push(comp)
+              }
             }
 
             l.libUser('Setting logical operator back to the default OR')

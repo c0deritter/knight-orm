@@ -46,6 +46,22 @@ describe('queryTools', function() {
       expect(query._where!.values()).to.deep.equal(['a'])
     })
   
+    it('should add a comparison with not', function() {
+      let criteria = {
+        column1: {
+          '@not': true,
+          '@operator': '<>',
+          '@value': 'a'
+        }
+      }
+  
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+      
+      expect(query._where!.mysql()).to.equal('NOT column1 <> ?')
+      expect(query._where!.values()).to.deep.equal(['a'])
+    })
+  
     it('should add a simple comparison and a comparison object', function() {
       let criteria1 = {
         column1: {
@@ -166,7 +182,7 @@ describe('queryTools', function() {
       
       expect(query1._where!.mysql()).to.equal('column1 IN (?, ?, ?, ?)')
       expect(query1._where!.values()).to.deep.equal([1,2,3,4])
-  
+
       let criteria2 = {
         column1: ['a', 'b', 'c', 'd']
       }
@@ -190,7 +206,7 @@ describe('queryTools', function() {
       expect(query3._where!.mysql()).to.equal('column1 IN (?, ?)')
       expect(query3._where!.values()).to.deep.equal([date1, date2])
     })
-  
+
     it('should accept an array of comparisons', function() {
       let criteria = {
         column2: [
@@ -199,6 +215,7 @@ describe('queryTools', function() {
             '@value': 1
           },
           {
+            '@not': true,
             '@operator': '>',
             '@value': 10
           }
@@ -208,7 +225,7 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where!.mysql()).to.equal('(column2 < ? OR column2 > ?)')
+      expect(query._where!.mysql()).to.equal('(column2 < ? OR NOT column2 > ?)')
       expect(query._where!.values()).to.deep.equal([1, 10])
     })
   
@@ -327,13 +344,18 @@ describe('queryTools', function() {
             '@operator': 'NOT IN',
             '@value': []
           },
+          {
+            '@not': true,
+            '@operator': 'IN',
+            '@value': []
+          },
         ]
       }
   
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where!.mysql()).to.equal('(1 = 2 OR 1 = 2 OR 1 = 1 OR 1 = 1 OR 1 = 1)')
+      expect(query._where!.mysql()).to.equal('(1 = 2 OR 1 = 2 OR 1 = 1 OR 1 = 1 OR 1 = 1 OR NOT 1 = 2)')
       expect(query._where!.values()).to.deep.equal([])
     })
   
@@ -347,6 +369,7 @@ describe('queryTools', function() {
           },
           'AND',
           {
+            '@not': true,
             '@operator': '<',
             '@value': 10
           },
@@ -357,7 +380,7 @@ describe('queryTools', function() {
       let query = new Query
       addCriteria(schema, 'table1', query, criteria)
       
-      expect(query._where!.mysql()).to.equal('(column2 > ? AND column2 < ?)')
+      expect(query._where!.mysql()).to.equal('(column2 > ? AND NOT column2 < ?)')
       expect(query._where!.values()).to.deep.equal([1, 10])
     })
 
