@@ -171,6 +171,17 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
       query._offset = criteria['@offset']
     }
 
+    if (criteria['@not'] === true) {
+      condition.push('NOT')
+      
+      let negatedCondition = new Condition
+      negatedCondition.removeOuterLogicalOperators = true
+      negatedCondition.surroundWithBrackets = true
+
+      condition.push(negatedCondition)
+      condition = negatedCondition
+    }
+
     let columns = Object.keys(table.columns)
 
     l.libUser('Iterating over all columns', columns)

@@ -31,6 +31,20 @@ describe('queryTools', function() {
       expect(query._where!.values()).to.deep.equal(['a',1])
     })
   
+    it('should add a NOT', function() {
+      let criteria = {
+        '@not': true,
+        column1: 'a',
+        column2: 1
+      }
+  
+      let query = new Query
+      addCriteria(schema, 'table1', query, criteria)
+  
+      expect(query._where!.mysql()).to.equal('NOT (column1 = ? AND column2 = ?)')
+      expect(query._where!.values()).to.deep.equal(['a',1])
+    })
+  
     it('should add a comparison', function() {
       let criteria = {
         column1: {
