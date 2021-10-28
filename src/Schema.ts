@@ -43,7 +43,7 @@ export function isIdColumn(column: string | { property: string, id: boolean }):
   return column.id
 }
 
-export function isGeneratedIdColumn(table: Table, columnName: string): boolean {
+export function isForeignKey(table: Table, columnName: string): boolean {
   let column = table.columns[columnName]
 
   if (column == undefined) {
@@ -69,7 +69,21 @@ export function isGeneratedIdColumn(table: Table, columnName: string): boolean {
   return false
 }
 
-export function getRelationshipNameByColumn(table: Table, column: string): string|undefined {
+/**
+ * It returns the name of a relationship as defined in the schema, if the given column 
+ * is part of a many-to-one relationship.
+ * 
+ * @param table The schema of a table in which the given column resides
+ * @param columnName The column for which we want to find out if it is part of a many-to-one 
+ * relationship
+ * @returns The name of the relationship if the given column was part of any or undefined 
+ * if the given column is not part of any relationship.
+ */
+export function getRelationshipNameOfColumn(table: Table, columnName: string): string|undefined {
+  if (table.columns[columnName] == undefined) {
+    throw new Error(`Column '${columnName} not contained table`)
+  }
+
   if (table.relationships == undefined) {
     return undefined
   }
@@ -77,7 +91,7 @@ export function getRelationshipNameByColumn(table: Table, column: string): strin
   for (let relationshipName of Object.keys(table.relationships)) {
     let relationship = table.relationships[relationshipName]
 
-    if (relationship.thisId == column) {
+    if (relationship.thisId == columnName) {
       return relationshipName
     }
   }

@@ -1,6 +1,5 @@
-import { CriteriaObject } from 'knight-criteria'
+import { Criteria, CriteriaObject } from 'knight-criteria'
 import { Log } from 'knight-log'
-import { criteriaDoesNotContainColumns } from './criteriaTools'
 import { getIdColumns, getPropertyName, isIdColumn, Schema, Table } from './Schema'
 
 let log = new Log('knight-orm/rowTools.ts')
@@ -460,9 +459,17 @@ export interface RelationshipToLoad {
   rows: any[]
 }
 
-export function determineRelationshipsToLoad(schema: Schema, tableName: string, rows: any[], criteria: CriteriaObject, relationshipPath: string = '', relationshipsToLoad: RelationshipsToLoad = {}): RelationshipsToLoad {
+export function determineRelationshipsToLoad(schema: Schema, tableName: string, rows: any[], criteria: Criteria, relationshipPath: string = '', relationshipsToLoad: RelationshipsToLoad = {}): RelationshipsToLoad {
   let l = log.fn('determineRelationshipsToLoad')
-  l.location = [ tableName ]
+  
+  if (relationshipPath.length > 0) {
+    l.location = [ relationshipPath ]
+  }
+  else {
+    l.location = [ '.' ]
+  }
+
+  l.param('tableName', tableName)
   l.param('rows', rows)
   l.param('criteria', criteria)
   l.param('relationshipPath', relationshipPath)
@@ -478,73 +485,104 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
     return {}
   }
 
-  l.libUser('Iterating through all given rows determining relationships to load...')
+  if (criteria instanceof Array) {
+    l.libUser('Criteria is an array')
 
-  for (let row of rows) {
-    l.libUser('Determining relationships to load for row', row)
-    l.libUser('Iterating through all relationships...')
+    for (let criterium of criteria) {
+      if (criterium instanceof Array || typeof criterium == 'object') {
+        l.libUser('Determining relationships to load of', criterium)
+        determineRelationshipsToLoad(schema, tableName, rows, criterium, relationshipPath, relationshipsToLoad)
+        l.libUser('Determined relationships to load of', criterium)
+      }
+    }
+  }
+  else if (typeof criteria == 'object') {
+    l.libUser('Criteria is an object')
+    l.libUser('Iterating through all possible relationships', Object.keys(table.relationships))
+    
+    l.location.push('->')
 
     for (let relationshipName of Object.keys(table.relationships)) {
-      l.libUser('relationshipName', relationshipName)
-
+      l.location[2] = relationshipName
+  
       let relationshipCriteria = criteria[relationshipName]
-      l.libUser('relationshipCriteria', relationshipCriteria)
-
       if (relationshipCriteria == undefined) {
-        l.libUser('There are no criteria for this relationship. Continuing...')
+        l.libUser('There are no criteria. Processing next relationship...')
         continue
       }
-
-      let relationshipValue = row[relationshipName]
-      l.libUser('relationshipValue', relationshipValue)
-
-      let relationship = table.relationships ? table.relationships[relationshipName] : undefined
-      if (relationship == undefined) {
-        throw new Error(`Relationship '${relationshipName}' not contained table '${tableName}'`)
-      }
-
-      let otherTable = schema[relationship.otherTable]
-      if (otherTable == undefined) {
-        throw new Error('Table not contained in schema: ' + relationship.otherTable)
-      }
-
+  
+      l.libUser('Found criteria', relationshipCriteria)
+  
       let subRelationshipPath = relationshipPath + '.' + relationshipName
-      l.libUser('subRelationshipPath', subRelationshipPath)
-      
-      if (relationshipCriteria['@filterGlobally'] === true || criteriaDoesNotContainColumns(otherTable, relationshipCriteria)) {
-        if (relationship.manyToOne && relationshipValue != undefined || relationship.oneToMany && relationshipValue instanceof Array && relationshipValue.length > 0) {
-          l.libUser('Relationship was joined and loaded. Going into recursion...')
-
-          determineRelationshipsToLoad(schema, 
-            relationship.otherTable, 
-            relationship.manyToOne ? [ row[relationshipName] ] : row[relationshipName], 
-            relationshipCriteria, 
-            subRelationshipPath,
-            relationshipsToLoad)
-
-          l.libUser('Returning from recursion...')
-        }
-        else {
-          l.libUser('Relationship was joined but it did not find anything. Continuing...')
-        }
-      }
-      else {
-        l.libUser('Relationship was not joined. Adding it to relationshipsToLoad...')
-
+      l.libUser('Creating relationship path', subRelationshipPath)
+  
+      if (relationshipCriteria['@loadSeparately'] === true) {
+        l.libUser('Relationship should be loaded separately')
+  
         if (relationshipsToLoad[subRelationshipPath] == undefined) {
           relationshipsToLoad[subRelationshipPath] = {
             tableName: tableName,
             relationshipName: relationshipName,
             relationshipCriteria: relationshipCriteria,
-            rows: []
+            rows: rows
           }
         }
-
-        relationshipsToLoad[subRelationshipPath].rows.push(row)
       }
-    }
+      else if (relationshipCriteria['@load'] === true) {
+        let relationship = table.relationships ? table.relationships[relationshipName] : undefined
+        if (relationship == undefined) {
+          throw new Error(`Relationship '${relationshipName}' not contained table '${tableName}'`)
+        }
+  
+        let otherTable = schema[relationship.otherTable]
+        if (otherTable == undefined) {
+          throw new Error('Table not contained in schema: ' + relationship.otherTable)
+        }
+  
+        let relationshipRows = []
+        
+        for (let row of rows) {
+          if (relationship.manyToOne && row[relationshipName] != undefined || 
+              relationship.oneToMany && row[relationshipName] instanceof Array && row[relationshipName].length > 0) {
+            
+            if (relationship.manyToOne) {
+              relationshipRows.push(row[relationshipName])
+            }
+            else {
+              relationshipRows.push(...row[relationshipName])
+            }
+          }
+        }
+  
+        l.libUser('Relationship was already loaded through a JOIN. Determining relationships of the relationship. Going into recursion...')
+  
+        determineRelationshipsToLoad(
+          schema, 
+          relationship.otherTable, 
+          relationshipRows, 
+          relationshipCriteria, 
+          subRelationshipPath,
+          relationshipsToLoad
+        )
+  
+        l.libUser('Returning from recursion...')
+      }
+      else {
+        l.libUser('Relationship should not be loaded')
+      }
+    }  
+  }
+  else {
+    l.libUser('Criteria has an invalid type. Needs to be either an array or an object.', typeof criteria)
   }
 
-  l.returning('Returning relationshipsToLoad...', relationshipsToLoad)
+  if (relationshipPath.length > 0) {
+    l.location = [ relationshipPath ]
+  }
+  else {
+    l.location = undefined
+  }
+
+  l.returning('Returning relationships to load...', relationshipsToLoad)
   return relationshipsToLoad
 }

@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import 'mocha'
-import { instanceToRow, rowsRepresentSameEntity, rowToInstance, unjoinRows } from '../src/rowTools'
+import { determineRelationshipsToLoad, instanceToRow, rowsRepresentSameEntity, rowToInstance, unjoinRows } from '../src/rowTools'
 import { ManyObject, Object1, Object2, schema } from './testSchema'
 
 describe('rowTools', function() {
@@ -391,7 +391,7 @@ describe('rowTools', function() {
       })
     })
 
-    it('should not fill an empty one to many relationship with undefined', function() {
+    it('should not fill an empty one-to-many relationship with undefined', function() {
       let rows = [
         {
           table1__id: 1,
@@ -474,6 +474,177 @@ describe('rowTools', function() {
 
       expect(rowsRepresentSameEntity(schema['table_many'], row3, row4)).to.be.false
       expect(rowsRepresentSameEntity(schema['table_many'], row3, row4)).to.be.false
+    })
+  })
+
+  describe.only('determineRelationshipsToLoad', function() {
+    it('should not load a relationship which does not have any criteria', function() {
+      let criteria = {}
+      let rows = [
+        { column1: 'a', column2: 1 },
+        { column1: 'b', column2: 2 },
+        { column1: 'c', column2: 3 },
+      ]
+
+      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
+
+      expect(Object.keys(toLoad).length).to.equal(0)
+    })
+
+    it('should load a relationship which should be loaded separately', function() {
+      let criteria = { manyObjects: { '@loadSeparately': true }}
+      let rows = [
+        { column1: 'a', column2: 1 },
+        { column1: 'b', column2: 2 },
+        { column1: 'c', column2: 3 },
+      ]
+
+      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
+
+      expect(Object.keys(toLoad).length).to.equal(1)
+      expect(toLoad['.manyObjects']).to.deep.equal({
+        tableName: 'table1',
+        relationshipName: 'manyObjects',
+        relationshipCriteria: { '@loadSeparately': true },
+        rows: [
+          { column1: 'a', column2: 1 },
+          { column1: 'b', column2: 2 },
+          { column1: 'c', column2: 3 },
+        ]
+      })
+    })
+
+    it('should not load a relationship which should be not loaded separately', function() {
+      let criteria = { manyObjects: { '@loadSeparately': false }}
+      let rows = [
+        { column1: 'a', column2: 1 },
+        { column1: 'b', column2: 2 },
+        { column1: 'c', column2: 3 },
+      ]
+
+      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
+
+      expect(Object.keys(toLoad).length).to.equal(0)
+    })
+
+    it('should determine the relationships to load of an already JOIN loaded relationship', function() {
+      let criteria = { manyObjects: { '@load': true, object1: { '@load': true }, object2: { '@loadSeparately': true }}}
+      let rows = [
+        { column1: 'a', column2: 1, manyObjects: [ { column1: 'a1' }, { column1: 'a2' } ] },
+        { column1: 'b', column2: 2, manyObjects: [ { column1: 'b1' } ] },
+        { column1: 'c', column2: 3, manyObjects: [] },
+      ]
+
+      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
+
+      expect(Object.keys(toLoad).length).to.equal(1)
+      expect(toLoad['.manyObjects.object2']).to.deep.equal({
+        tableName: 'table_many',
+        relationshipName: 'object2',
+        relationshipCriteria: { '@loadSeparately': true },
+        rows: [
+          { column1: 'a1' },
+          { column1: 'a2' },
+          { column1: 'b1' },
+        ]
+      })
+    })
+
+    it('should not determine the relationships to load of relationship that is not to load', function() {
+      let criteria = { manyObjects: { object1: { '@load': true }, object2: { '@loadSeparately': true }}}
+      let rows = [
+        { column1: 'a', column2: 1, manyObjects: [ { column1: 'a1' }, { column1: 'a2' } ] },
+        { column1: 'b', column2: 2, manyObjects: [ { column1: 'b1' } ] },
+        { column1: 'c', column2: 3, manyObjects: [] },
+      ]
+
+      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
+
+      expect(Object.keys(toLoad).length).to.equal(0)
+    })
+
+    it('should determine the relationships to load if inside an array', function() {
+      let criteria = [
+        { manyObjects: { '@loadSeparately': true }},
+        'XOR',
+        {}
+      ]
+
+      let rows = [
+        { column1: 'a', column2: 1 },
+        { column1: 'b', column2: 2 },
+        { column1: 'c', column2: 3 },
+      ]
+
+      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
+
+      expect(Object.keys(toLoad).length).to.equal(1)
+      expect(toLoad['.manyObjects']).to.deep.equal({
+        tableName: 'table1',
+        relationshipName: 'manyObjects',
+        relationshipCriteria: { '@loadSeparately': true },
+        rows: [
+          { column1: 'a', column2: 1 },
+          { column1: 'b', column2: 2 },
+          { column1: 'c', column2: 3 },
+        ]
+      })
+    })
+
+    it('should determine the relationships to load if inside an array of an array', function() {
+      let criteria = [
+        [ { manyObjects: { '@loadSeparately': true }} ],
+        'XOR',
+        {}
+      ]
+
+      let rows = [
+        { column1: 'a', column2: 1 },
+        { column1: 'b', column2: 2 },
+        { column1: 'c', column2: 3 },
+      ]
+
+      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
+
+      expect(Object.keys(toLoad).length).to.equal(1)
+      expect(toLoad['.manyObjects']).to.deep.equal({
+        tableName: 'table1',
+        relationshipName: 'manyObjects',
+        relationshipCriteria: { '@loadSeparately': true },
+        rows: [
+          { column1: 'a', column2: 1 },
+          { column1: 'b', column2: 2 },
+          { column1: 'c', column2: 3 },
+        ]
+      })
+    })
+
+    it('should use the criteria of first occuring relationship if there is not just one criteria for that relationship', function() {
+      let criteria = [
+        { manyObjects: { '@loadSeparately': true, column1: 'a' }},
+        'XOR',
+        { manyObjects: { '@loadSeparately': true, column1: 'b' }}
+      ]
+
+      let rows = [
+        { column1: 'a', column2: 1 },
+        { column1: 'b', column2: 2 },
+        { column1: 'c', column2: 3 },
+      ]
+
+      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
+
+      expect(Object.keys(toLoad).length).to.equal(1)
+      expect(toLoad['.manyObjects']).to.deep.equal({
+        tableName: 'table1',
+        relationshipName: 'manyObjects',
+        relationshipCriteria: { '@loadSeparately': true, column1: 'a' },
+        rows: [
+          { column1: 'a', column2: 1 },
+          { column1: 'b', column2: 2 },
+          { column1: 'c', column2: 3 },
+        ]
+      })
     })
   })
 })

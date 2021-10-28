@@ -5,7 +5,7 @@ import { addCriteria, buildSelectQuery } from '../src/queryTools'
 import { schema } from './testSchema'
 
 describe('queryTools', function() {
-  describe.only('addCriteria', function() {
+  describe('addCriteria', function() {
     it('should add a simple equals comparison', function() {
       let criteria = {
         column1: 'a'
@@ -31,7 +31,7 @@ describe('queryTools', function() {
       expect(query._where!.values()).to.deep.equal(['a',1])
     })
   
-    it('should add a NOT', function() {
+    it('should add a NOT negating a criteria object', function() {
       let criteria = {
         '@not': true,
         column1: 'a',
@@ -134,7 +134,7 @@ describe('queryTools', function() {
       
       expect(query._where!.mysql()).to.equal('')
     })
-  
+
     it('should add a null criterium', function() {
       let criteria1 = {
         column1: null

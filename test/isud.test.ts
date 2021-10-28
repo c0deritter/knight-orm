@@ -34,7 +34,7 @@ describe('isud', function() {
     })
     
     describe('insert', function() {
-      it('should insert a simple row with PostgreSQL', async function() {
+      it('should insert a simple row', async function() {
         let row = {
           column1: 'a',
           column2: 1
@@ -57,11 +57,10 @@ describe('isud', function() {
       it('should insert a row with a one-to-many relationship', async function() {
         let row: any = {
           column1: 'a',
-          column2: 1,
-          manyObjects: []
+          column2: 1
         }
 
-        row.manyObjects.push(
+        row.manyObjects = [
           {
             column1: 'b',
             object1: row
@@ -70,7 +69,7 @@ describe('isud', function() {
             column1: 'c',
             object1: row
           }
-        )
+        ]
 
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 

@@ -1,12 +1,9 @@
-import { Criteria } from 'knight-criteria'
+import { Criteria, CriteriaObject } from 'knight-criteria'
 import { getPropertyName, isIdColumn, Schema, Table } from './Schema'
 
-export interface CreateCriteria {}
-export interface DeleteCriteria {}
-export interface ReadCriteria {}
-
 export interface UpdateCriteria {
-  '@set': any
+  [column: string]: any
+  '@criteria': Criteria
 }
 
 export function instanceCriteriaToRowCriteria<T extends Criteria>(schema: Schema, tableName: string, instanceCriteria: T): T {
@@ -59,16 +56,16 @@ export function rowToUpdateCriteria(schema: Schema, tableName: string, row: any)
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  let updateCriteria: any = {
-    '@set': {}
-  } as UpdateCriteria
+  let updateCriteria: UpdateCriteria = {
+    '@criteria': {} as CriteriaObject
+  }
 
   for (let column of Object.keys(table.columns)) {
     if (isIdColumn(table.columns[column])) {
-      updateCriteria[column] = row[column] === undefined ? null : row[column]
+      (updateCriteria['@criteria'] as CriteriaObject)[column] = row[column] === undefined ? null : row[column]
     }
     else if (column in row && row[column] !== undefined) {
-      updateCriteria['@set'][column] = row[column]
+      updateCriteria[column] = row[column]
     }
   }
 
@@ -86,14 +83,14 @@ export function instanceToUpdateCriteria(schema: Schema, tableName: string, inst
   return rowToUpdateCriteria(schema, tableName, row)
 }
 
-export function rowToDeleteCriteria(schema: Schema, tableName: string, row: any): DeleteCriteria {
+export function rowToDeleteCriteria(schema: Schema, tableName: string, row: any): CriteriaObject {
   let table = schema[tableName]
 
   if (table == undefined) {
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  let deleteCriteria: any = {} as DeleteCriteria
+  let deleteCriteria: CriteriaObject = {}
 
   for (let column of Object.keys(table.columns)) {
     if (isIdColumn(table.columns[column]) && row[column] !== undefined) {
@@ -104,7 +101,7 @@ export function rowToDeleteCriteria(schema: Schema, tableName: string, row: any)
   return deleteCriteria
 }
 
-export function instanceToDeleteCriteria(schema: Schema, tableName: string, instance: any): DeleteCriteria {
+export function instanceToDeleteCriteria(schema: Schema, tableName: string, instance: any): CriteriaObject {
   let table = schema[tableName]
 
   if (table == undefined) {
@@ -113,14 +110,4 @@ export function instanceToDeleteCriteria(schema: Schema, tableName: string, inst
 
   let row = table.instanceToRow(instance)
   return rowToDeleteCriteria(schema, tableName, row)
-}
-
-export function criteriaDoesNotContainColumns(table: Table, criteria: Criteria|CreateCriteria|ReadCriteria|UpdateCriteria|DeleteCriteria): boolean {
-  for (let prop of Object.keys(criteria)) {
-    if (prop in table.columns) {
-      return false
-    }
-  }
-
-  return true
 }

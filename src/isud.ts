@@ -1,10 +1,11 @@
+import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { Query } from 'knight-sql'
-import { addCriteria, DeleteCriteria, ReadCriteria, UpdateCriteria } from '.'
+import { addCriteria, UpdateCriteria } from '.'
 import { rowToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
 import { buildSelectQuery } from './queryTools'
 import { determineRelationshipsToLoad, filterValidColumns, idsOnly, unjoinRows } from './rowTools'
-import { getRelationshipNameByColumn, isGeneratedIdColumn, Relationship, Schema } from './Schema'
+import { getRelationshipNameOfColumn, isForeignKey, Relationship, Schema } from './Schema'
 import { FiddledRows } from './util'
 
 let log = new Log('knight-orm/isud.ts')
@@ -50,14 +51,14 @@ export async function insert(
   }
 
   // check if the row has all the id's it could have and try to do something about it if not
-  // 1. it will insert any many-to-one and any one-to-one relationship first if the id is missing and if there if the relationship has a row object
+  // 1. it will insert any many-to-one and any one-to-one relationship first if the id is missing and if the relationship has a row object
   // 2. if the relationship points to the same table as the object which is about to be inserted then it will insert that relationship later so that
   //    the id of the row to be inserted is lower than the id of the relationship row
   // 3. if the id the relationship refers to is not generated then it will insert the that relationship later so that we can set the id after we 
   //    inserted the row that is to be inserted which will then provide the missing id on the relationship
   l.libUser('Inserting missing many-to-one relationships first to be able to assign their id\'s before inserting the actual row...')
   for (let columnName of Object.keys(table.columns)) {
-    let relationshipName = getRelationshipNameByColumn(table, columnName)
+    let relationshipName = getRelationshipNameOfColumn(table, columnName)
 
     // the column is part of a relationship and its id is missing
     if (table.relationships != undefined && relationshipName != undefined && row[columnName] == undefined) {
@@ -90,8 +91,8 @@ export async function insert(
               row[columnName] = alreadyInsertedRow[relationship.otherId]
             }
             // if the relationship is an id for that row, attempt to insert the whole row after the missing relationship
-            // row which is about to be inserted up the recursion chain.
-            else if (isGeneratedIdColumn(table, relationship.thisId)) {
+            // row which is about to be inserted up the recursion chain
+            else if (isForeignKey(table, relationship.thisId)) {
               l.libUser('Row is about to be inserted somewhere up the recursion chain and the relationship is an id. Adding handler after result is known. Returning...')
               alreadyInsertedRows.addAfterSettingResultHandler(relationshipRow, async () => {
                 let l = log.fn('afterSettingResultHandler')
@@ -156,7 +157,7 @@ export async function insert(
             }
 
             // the id of the row the relationship is referencing is generated. attempt to insert it now
-            if (isGeneratedIdColumn(otherTable, relationship.otherId)) {
+            if (isForeignKey(otherTable, relationship.otherId)) {
               // if the relationship refers to the same table as the row that is to be inserted, insert the relationship row after
               // we inserted the row that is to be inserted.
               if (relationship.otherTable == tableName) {
@@ -407,7 +408,7 @@ export async function insert(
   return insertedRow
 }
 
-export async function select(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: ReadCriteria): Promise<any[]> {
+export async function select(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
   let l = log.fn('select')
   l.location = [ tableName ]
   l.param('criteria', criteria)
@@ -427,10 +428,10 @@ export async function select(schema: Schema, tableName: string, db: string, quer
 
   l.libUser('Querying database...')
   let joinedRows = await queryFn(sqlString, values)
-  l.libUser('joinedRows', joinedRows)
+  l.dev('joinedRows', joinedRows)
 
   let rows = unjoinRows(schema, tableName, joinedRows, criteria)
-  l.libUser('rows', rows)
+  l.dev('rows', rows)
 
   l.libUser('Determing relationships to load...')
   let relationshipsToLoad = determineRelationshipsToLoad(schema, tableName, rows, criteria)
@@ -550,7 +551,7 @@ export async function update(schema: Schema, tableName: string, db: string, quer
   return updatedRows
 }
 
-export async function delete_(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: DeleteCriteria, alreadyDeletedRows: FiddledRows = new FiddledRows(schema)): Promise<any[]> {
+export async function delete_(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria, alreadyDeletedRows: FiddledRows = new FiddledRows(schema)): Promise<any[]> {
   let l = log.fn('delete_')
   l.param('tableName', tableName)
   l.param('criteria', criteria)
@@ -614,7 +615,7 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
           continue
         }
     
-        let relationshipDeleteCriteria: DeleteCriteria = {
+        let relationshipDeleteCriteria: Criteria = {
           [relationship.otherId]: row[relationship.thisId]
         }
     
