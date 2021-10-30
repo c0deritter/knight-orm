@@ -54,7 +54,7 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
 
   let row = alreadyConverted.getRow(instance)
   if (row != undefined) {
-    l.libUser('Instance was already converted. Returning it...', row)
+    l.lib('Instance was already converted. Returning it...', row)
     return row
   }
 
@@ -65,30 +65,30 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
   }
 
   row = table.instanceToRow(instance)
-  l.libUser('row', row)
+  l.lib('row', row)
 
   alreadyConverted.add(instance, row)
 
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
-      l.libUser('relationshipName', relationshipName)
+      l.lib('relationshipName', relationshipName)
   
       if (typeof instance[relationshipName] == 'object' && instance[relationshipName] !== null) {
         let relationship = table.relationships[relationshipName]
   
         if (relationship.manyToOne) {
-          l.libUser('Relationship is many-to-one. Going into recursion...')
+          l.calling('Relationship is many-to-one. Going into recursion...')
           row[relationshipName] = instanceToRow(schema, relationship.otherTable, instance[relationshipName], alreadyConverted)
-          l.returning('Returning from recursion...')
+          l.called('Returning from recursion...')
         }
         else if (instance[relationshipName] instanceof Array) {
-          l.libUser('Relationship is one-to-many')
+          l.lib('Relationship is one-to-many')
   
           for (let relationshipInstance of instance[relationshipName]) {
-            l.libUser('relationshipInstance', relationshipInstance)
-            l.libUser('Going into recursion...')
+            l.lib('relationshipInstance', relationshipInstance)
+            l.calling('Going into recursion...')
             let relationshipRow = instanceToRow(schema, relationship.otherTable, relationshipInstance, alreadyConverted)
-            l.returning('Returning from recursion...')
+            l.called('Returning from recursion...')
   
             if (row[relationshipName] == undefined) {
               row[relationshipName] = []
@@ -102,11 +102,11 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
         }
       }
       else if (instance[relationshipName] !== undefined) {
-        l.libUser('Relationship is not an object and not undefined')
+        l.lib('Relationship is not an object and not undefined')
         row[relationshipName] = instance[relationshipName]
       }
       else {
-        l.libUser('Relationship does not exist on this instance. Continuing...')
+        l.lib('Relationship does not exist on this instance. Continuing...')
       }
     }  
   }
@@ -123,7 +123,7 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
 
   let instance = alreadyConverted.getInstance(row)
   if (instance != undefined) {
-    l.libUser('Row was already converted. Returning it...')
+    l.lib('Row was already converted. Returning it...')
     return instance
   }
 
@@ -133,57 +133,57 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
   }
 
   instance = table.rowToInstance(row)
-  l.libUser('instance', instance)
+  l.lib('instance', instance)
 
   alreadyConverted.add(instance, row)
 
-  l.libUser('Converting relationships...')
+  l.lib('Converting relationships...')
 
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
       l.location.push(' ' + relationshipName)
       l.dev('Converting next relationship...', relationshipName)
       l.location.push('.' + relationshipName)
-      l.libUser('row', row)
+      l.lib('row', row)
   
       if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
         let relationship = table.relationships[relationshipName]
   
         if (relationship.manyToOne) {
-          l.libUser('Converting many-to-one. Going into recursion...')
+          l.calling('Converting many-to-one. Going into recursion...')
           let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, row[relationshipName], alreadyConverted)
-          l.returning('Returning from recursion...')
+          l.called('Returning from recursion...')
           
-          l.libUser('Setting converted relationship instance...', relationshipInstance)
-          l.libUser('...on row', row)
+          l.lib('Setting converted relationship instance...', relationshipInstance)
+          l.lib('...on row', row)
           instance[relationshipName] = relationshipInstance
         }
         else if (row[relationshipName] instanceof Array) {
-          l.libUser('Relationship is one-to-many. Converting every relationship row...')
+          l.lib('Relationship is one-to-many. Converting every relationship row...')
   
           for (let relationshipRow of row[relationshipName]) {
-            l.libUser('Converting next relationship row...', relationshipRow)
-            l.libUser('row', row)
-            l.libUser('Going into recursion...')
+            l.lib('Converting next relationship row...', relationshipRow)
+            l.lib('row', row)
+            l.calling('Going into recursion...')
             let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, relationshipRow, alreadyConverted)
-            l.returning('Returning from recursion...')
+            l.called('Returning from recursion...')
   
             if (instance[relationshipName] == undefined) {
               instance[relationshipName] = []
             }
   
-            l.libUser('Adding converted relationship instance to relationship array...', relationshipInstance)
-            l.libUser('...on row', row)
+            l.lib('Adding converted relationship instance to relationship array...', relationshipInstance)
+            l.lib('...on row', row)
             instance[relationshipName].push(relationshipInstance)
           }        
         }
       }
       else if (row[relationshipName] !== undefined) {
-        l.libUser('Relationship is not an object but also not undefined. Setting given value without converting...')
+        l.lib('Relationship is not an object but also not undefined. Setting given value without converting...')
         row[relationshipName] = instance[relationshipName]
       }
       else {
-        l.libUser('Relationship is not set. Continuing...')
+        l.lib('Relationship is not set. Continuing...')
       }
 
       l.location.pop()
@@ -212,16 +212,16 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
   }
 
   let relationshipNames = table.relationships != undefined ? Object.keys(table.relationships) : []
-  l.libUser('relationshipNames', relationshipNames)
+  l.lib('relationshipNames', relationshipNames)
 
   let rowsOrInstances: any[] = []
 
-  l.libUser('Unjoining rows...')
+  l.lib('Unjoining rows...')
   for (let joinedRow of joinedRows) {
-    l.libUser('Unjoining next row', joinedRow)
+    l.lib('Unjoining next row', joinedRow)
 
     let unaliasedRow = getCellsBelongingToTableAndRemoveAlias(table, joinedRow, alias)
-    l.libUser('unaliasedRow', unaliasedRow)
+    l.lib('unaliasedRow', unaliasedRow)
 
     // if every column is null then there was no row in the first place
     let everyColumnIsNull = true
@@ -240,12 +240,12 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     }
 
     let rowOrInstance = toInstances ? table.rowToInstance(unaliasedRow) : unaliasedRow
-    l.libUser('rowOrInstance', rowOrInstance)
+    l.lib('rowOrInstance', rowOrInstance)
 
     let alreadyUnjoinedRowOrInstance: any = undefined
 
     if (! rootRows || rootRows && ! everyColumnIsNull) {
-      l.libUser('Determining already unjoined row or instance...')
+      l.lib('Determining already unjoined row or instance...')
       for (let tableAndRowOrInstance of alreadyUnjoined) {
         if (tableAndRowOrInstance.tableName != tableName) {
           continue
@@ -262,69 +262,69 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
       }  
     }
 
-    l.libUser('alreadyUnjoinedRowOrInstance', alreadyUnjoinedRowOrInstance)
+    l.lib('alreadyUnjoinedRowOrInstance', alreadyUnjoinedRowOrInstance)
 
     if (alreadyUnjoinedRowOrInstance != undefined) {
       if (rowsOrInstances.indexOf(alreadyUnjoinedRowOrInstance) == -1) {
-        l.libUser('Adding already converted row or instance to the result array...')
+        l.lib('Adding already converted row or instance to the result array...')
         rowsOrInstances.push(alreadyUnjoinedRowOrInstance)
       }
 
       rowOrInstance = alreadyUnjoinedRowOrInstance
     }
     else {
-      l.libUser('Adding just converted row or instance to the result array...')
+      l.lib('Adding just converted row or instance to the result array...')
       rowsOrInstances.push(rowOrInstance)
-      l.libUser('Adding just converted row or instance to list if already unjoined rows or instances...')
+      l.lib('Adding just converted row or instance to list if already unjoined rows or instances...')
       alreadyUnjoined.push({ tableName: tableName, rowOrInstance: rowOrInstance })
     }
 
-    l.libUser('Unjoining relationships...')
+    l.lib('Unjoining relationships...')
     for (let relationshipName of relationshipNames) {
       l.location[1] = ' > ' + relationshipName
-      l.libUser('Unjoining next relationship...', relationshipName)
+      l.lib('Unjoining next relationship...', relationshipName)
 
       if (! (relationshipName in criteria)) {
-        l.libUser('Relationship is not contained in criteria. Continuing...')
+        l.lib('Relationship is not contained in criteria. Continuing...')
         continue
       }
 
       let relationship = table.relationships![relationshipName]
-      l.libUser('relationship', relationship)
+      l.lib('relationship', relationship)
 
       let relationshipTableName = relationship.otherTable
       let relationshipAlias = alias != undefined ? alias + relationshipName + '__' : relationshipName + '__'
 
-      l.libUser('relationshipTableName', relationshipTableName)
-      l.libUser('relationshipAlias', relationshipAlias)
+      l.lib('relationshipTableName', relationshipTableName)
+      l.lib('relationshipAlias', relationshipAlias)
       
-      l.libUser('Determining relationship. Going into recursion...')
+      l.calling('Determining relationship. Going into recursion...')
       let relationshipRowOrInstances = unjoinRows(schema, relationshipTableName, [ joinedRow ], criteria[relationshipName], toInstances, relationshipAlias, alreadyUnjoined)
-      l.returning('Returning from recursion...', relationshipRowOrInstances)
+      l.called('Returning from recursion...', relationshipRowOrInstances)
 
       if (relationship.oneToMany) {
         if (rowOrInstance[relationshipName] == undefined) {
-          l.libUser('Setting one-to-many rows or instances array...', relationshipRowOrInstances)
+          l.lib('Setting one-to-many rows or instances array...', relationshipRowOrInstances)
           rowOrInstance[relationshipName] = relationshipRowOrInstances
         }
         else if (relationshipRowOrInstances[0] != undefined && rowOrInstance[relationshipName].indexOf(relationshipRowOrInstances[0]) == -1) {
-          l.libUser('Adding relationship row or instance to array...', relationshipRowOrInstances[0])
+          l.lib('Adding relationship row or instance to array...', relationshipRowOrInstances[0])
           rowOrInstance[relationshipName].push(relationshipRowOrInstances[0])
         }
         else if (relationshipRowOrInstances[0] == undefined) {
-          l.libUser('One-to-many relationship row or instance is empty in this row. Not adding anything...')
+          l.lib('One-to-many relationship row or instance is empty in this row. Not adding anything...')
         }
         else {
-          l.libUser('One-to-many relationship row or instance was already added to array. Not adding again...')
+          l.lib('One-to-many relationship row or instance was already added to array. Not adding again...')
         }
       }
       else if (relationship.manyToOne) {
         if (rowOrInstance[relationshipName] == undefined) {
-          l.libUser('Setting many-to-one row or instance...')
+          l.lib('Setting many-to-one row or instance...')
           rowOrInstance[relationshipName] = relationshipRowOrInstances.length == 1 ? relationshipRowOrInstances[0] : null  
         }
         else {
-          l.libUser('Many-to-one relationship row or instance was already set. Not setting again...')
+          l.lib('Many-to-one relationship row or instance was already set. Not setting again...')
         }
       }
     }
@@ -486,19 +486,19 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
   }
 
   if (criteria instanceof Array) {
-    l.libUser('Criteria is an array')
+    l.lib('Criteria is an array')
 
     for (let criterium of criteria) {
       if (criterium instanceof Array || typeof criterium == 'object') {
-        l.libUser('Determining relationships to load of', criterium)
+        l.lib('Determining relationships to load of', criterium)
         determineRelationshipsToLoad(schema, tableName, rows, criterium, relationshipPath, relationshipsToLoad)
-        l.libUser('Determined relationships to load of', criterium)
+        l.lib('Determined relationships to load of', criterium)
       }
     }
   }
   else if (typeof criteria == 'object') {
-    l.libUser('Criteria is an object')
-    l.libUser('Iterating through all possible relationships', Object.keys(table.relationships))
+    l.lib('Criteria is an object')
+    l.lib('Iterating through all possible relationships', Object.keys(table.relationships))
     
     l.location.push('->')
 
@@ -507,17 +507,17 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
   
       let relationshipCriteria = criteria[relationshipName]
       if (relationshipCriteria == undefined) {
-        l.libUser('There are no criteria. Processing next relationship...')
+        l.lib('There are no criteria. Processing next relationship...')
         continue
       }
   
-      l.libUser('Found criteria', relationshipCriteria)
+      l.lib('Found criteria', relationshipCriteria)
   
       let subRelationshipPath = relationshipPath + '.' + relationshipName
-      l.libUser('Creating relationship path', subRelationshipPath)
+      l.lib('Creating relationship path', subRelationshipPath)
   
       if (relationshipCriteria['@loadSeparately'] === true) {
-        l.libUser('Relationship should be loaded separately')
+        l.lib('Relationship should be loaded separately')
   
         if (relationshipsToLoad[subRelationshipPath] == undefined) {
           relationshipsToLoad[subRelationshipPath] = {
@@ -554,7 +554,7 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
           }
         }
   
-        l.libUser('Relationship was already loaded through a JOIN. Determining relationships of the relationship. Going into recursion...')
+        l.lib('Relationship was already loaded through a JOIN. Determining relationships of the relationship. Going into recursion...')
   
         determineRelationshipsToLoad(
           schema, 
@@ -565,15 +565,15 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
           relationshipsToLoad
         )
   
-        l.libUser('Returning from recursion...')
+        l.lib('Returning from recursion...')
       }
       else {
-        l.libUser('Relationship should not be loaded')
+        l.lib('Relationship should not be loaded')
       }
     }  
   }
   else {
-    l.libUser('Criteria has an invalid type. Needs to be either an array or an object.', typeof criteria)
+    l.lib('Criteria has an invalid type. Needs to be either an array or an object.', typeof criteria)
   }
 
   if (relationshipPath.length > 0) {

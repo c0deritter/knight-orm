@@ -16,9 +16,9 @@ export async function create<T>(schema: Schema, tableName: string, db: string, q
   l.param('instance', instance)
 
   let row = instanceToRow(schema, tableName, instance)
-  l.libUser('row', row)
+  l.lib('row', row)
   let insertedRow = await insert(schema, tableName, db, queryFn, row)
-  l.libUser('insertedRow', insertedRow)
+  l.lib('insertedRow', insertedRow)
   let insertedInstance = rowToInstance(schema, tableName, insertedRow)
   l.returning('Returning insertedInstance...', insertedInstance)
   return insertedInstance
@@ -30,10 +30,10 @@ export async function read<T>(schema: Schema, tableName: string, db: string, que
   l.param('criteria', criteria)
 
   let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
-  l.libUser('rowCriteria', rowCriteria)
+  l.lib('rowCriteria', rowCriteria)
 
   let rows = await select(schema, tableName, db, queryFn, rowCriteria)
-  l.libUser('rows', rows)
+  l.lib('rows', rows)
 
   let instances: T[] = []
 
@@ -57,15 +57,15 @@ export async function count(schema: Schema, tableName: string, db: string, query
   }
 
   let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
-  l.libUser('rowCriteria', rowCriteria)
+  l.lib('rowCriteria', rowCriteria)
 
   let query = buildCountQuery(schema, tableName, rowCriteria)
 
   let sqlString = query.sql(db)
   let values = query.values()
 
-  l.libUser('sqlString', sqlString)
-  l.libUser('values', values)
+  l.lib('sqlString', sqlString)
+  l.lib('values', values)
 
   let rows = await queryFn(sqlString, values)
   let rowCount = parseInt(rows[0].count)
@@ -86,7 +86,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   }
 
   let row = table.instanceToRow(instance)
-  l.libUser('row', row)
+  l.lib('row', row)
 
   if (row == undefined) {
     throw new Error('Could not convert the given instance into a row')
@@ -99,7 +99,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   }
 
   let criteria: any = rowToUpdateCriteria(schema, tableName, row) // TODO: Remove :any
-  l.libUser('criteria', criteria)
+  l.lib('criteria', criteria)
 
   let missingIdValues = idsNotSet(table, criteria)
   if (missingIdValues.length > 0) {
@@ -117,7 +117,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   let updatedRow = undefined
 
   if (hasValuesToSet) {
-    l.libUser('There is something to set. Updating...')
+    l.lib('There is something to set. Updating...')
     let query = sql.update(tableName)
     // fillUpdateCriteria(query, criteria, Object.keys(table.columns))
 
@@ -130,21 +130,21 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     let sqlString = query.sql(db)
     let values = query.values()
   
-    l.libUser('sqlString', sqlString)
-    l.libUser('values', values)
+    l.lib('sqlString', sqlString)
+    l.lib('values', values)
   
     let updatedRows = await queryFn(sqlString, values)
-    l.libUser('updatedRows', updatedRows)
+    l.lib('updatedRows', updatedRows)
   
     if (updatedRows.length != 1) {
       throw new Error('Expected row count does not equal 1')
     }
   
     updatedRow = updatedRows[0]
-    l.libUser('updatedRow', updatedRow)
+    l.lib('updatedRow', updatedRow)
   }
   else {
-    l.libUser('No column to set given. Loading entity...')
+    l.lib('No column to set given. Loading entity...')
     // remove the set property from the criteria to only have left the ids for selecting
     delete (criteria as any).set
 
@@ -166,39 +166,39 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   let updatedInstance = table.rowToInstance(updatedRow)
   alreadyUpdatedRows.add(tableName, row, updatedInstance)
 
-  l.libUser('Update relationships...')
+  l.lib('Update relationships...')
 
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {
-      l.libUser('relationshipName', relationshipName)
+      l.lib('relationshipName', relationshipName)
   
       if (typeof (instance as any)[relationshipName] == 'object' && (instance as any)[relationshipName] !== null) {
         let relationship = table.relationships[relationshipName]
   
         if (relationship.manyToOne) {
-          l.libUser('Many-to-one relationship')
-          l.libUser('Updating. Going into recursion...')
+          l.lib('Many-to-one relationship')
+          l.lib('Updating. Going into recursion...')
           let updatedRelationshipInstance = await update(schema, relationship.otherTable, db, queryFn, (instance as any)[relationshipName], alreadyUpdatedRows)
           l.returning('Returning from recursion...')
           updatedInstance[relationshipName] = updatedRelationshipInstance
         }
         else if ((instance as any)[relationshipName] instanceof Array) {
-          l.libUser('One-to-many relationship. Iterating through all relationhip rows...')
+          l.lib('One-to-many relationship. Iterating through all relationhip rows...')
           updatedInstance[relationshipName] = []
   
           for (let relationshipInstance of (instance as any)[relationshipName]) {
-            l.libUser('Updating. Going into recursion...')
+            l.lib('Updating. Going into recursion...')
             let updatedRelationshipInstance = await update(schema, relationship.otherTable, db, queryFn, relationshipInstance, alreadyUpdatedRows)
             l.returning('Returning from recursion...')            
             updatedInstance[relationshipName].push(updatedRelationshipInstance)
           }
         }
         else {
-          l.libUser('Was neither a many-to-one relationship nor was the correspinding object of type Array')
+          l.lib('Was neither a many-to-one relationship nor was the correspinding object of type Array')
         }
       }
       else {
-        l.libUser('Relationship is not of type object or null. Continuing...')
+        l.lib('Relationship is not of type object or null. Continuing...')
       }
     }  
   }
@@ -218,17 +218,17 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
   }
 
   let criteria = instanceToDeleteCriteria(schema, tableName, instance)
-  l.libUser('Converted instance to delete criteria', criteria)
+  l.lib('Converted instance to delete criteria', criteria)
 
   let missingIdValues = idsNotSet(table, criteria)
-  l.libUser('missingIdValues', missingIdValues)
+  l.lib('missingIdValues', missingIdValues)
 
   if (missingIdValues.length > 0) {
     throw new Error('Not all id\'s are set. ' + JSON.stringify(missingIdValues))
   }
 
   let deletedRows = await isudDelete(schema, tableName, db, queryFn, criteria)
-  l.libUser('deletedRows', deletedRows)
+  l.lib('deletedRows', deletedRows)
 
   if (deletedRows.length != 1) {
     throw new Error('Expected row count does not equal 1')

@@ -39,7 +39,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
   let aliasPrefix = alias != undefined && alias.length > 0 ? alias + '.' : ''
 
   if (criteria instanceof Array) {
-    l.libUser('Given criteria is an array')
+    l.lib('Given criteria is an array')
 
     let logical = 'OR'
 
@@ -49,52 +49,52 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
         if (upperCase == 'AND' || upperCase == 'OR' || upperCase == 'XOR') {
           logical = upperCase
-          l.libUser('Setting logical operator to', logical)
+          l.lib('Setting logical operator to', logical)
           continue
         }
       }
 
-      l.libUser('Adding logical operator', logical)
+      l.lib('Adding logical operator', logical)
       condition.push(logical)
 
       let subCondition = new Condition
       subCondition.surroundWithBrackets = true
       condition.push(subCondition)
 
-      l.libUser('Add sub criteria through recursion', arrayValue)
+      l.lib('Add sub criteria through recursion', arrayValue)
       addCriteria(schema, tableName, query, arrayValue as any, alias, subCondition)
     }
   }
   else if (typeof criteria == 'object') {
-    l.libUser('Given criteria is an object')
+    l.lib('Given criteria is an object')
 
     if (criteria['@orderBy'] != undefined) {
       if (typeof criteria['@orderBy'] == 'string') {
         if (table.columns[criteria['@orderBy']] != undefined) {
-          l.libUser('Adding order by', criteria['@orderBy'])
+          l.lib('Adding order by', criteria['@orderBy'])
           query.orderBy(aliasPrefix + criteria['@orderBy'])
         }
         else {
-          l.libUser('Not adding order by because the given column is not contained in the table', criteria['@orderBy'])
+          l.lib('Not adding order by because the given column is not contained in the table', criteria['@orderBy'])
         }
       }
       else if (criteria['@orderBy'] instanceof Array) {
-        l.libUser('Found an array of order by conditions', criteria['@orderBy'])
+        l.lib('Found an array of order by conditions', criteria['@orderBy'])
 
         for (let orderBy of criteria['@orderBy']) {
           if (typeof orderBy == 'string') {
             if (table.columns[orderBy] != undefined) {
-              l.libUser('Adding order by', orderBy)
+              l.lib('Adding order by', orderBy)
               query.orderBy(aliasPrefix + orderBy)
             }
             else {
-              l.libUser('Not adding order by because the given column is not contained in the table', orderBy)
+              l.lib('Not adding order by because the given column is not contained in the table', orderBy)
             }    
           }
           else if (typeof orderBy == 'object') {
             if (typeof orderBy.field == 'string') {
               if (table.columns[orderBy.field] == undefined) {
-                l.libUser('Not adding order by because the given column is not contained in the table', orderBy)
+                l.lib('Not adding order by because the given column is not contained in the table', orderBy)
                 continue
               }
   
@@ -109,20 +109,20 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
               }
   
               if (direction == undefined) {
-                l.libUser('Adding order by', orderBy)
+                l.lib('Adding order by', orderBy)
                 query.orderBy(aliasPrefix + orderBy.field)
               }
               else {
-                l.libUser('Adding order by', orderBy)
+                l.lib('Adding order by', orderBy)
                 query.orderBy(aliasPrefix + orderBy.field + ' ' + direction)
               }  
             }
             else {
-              l.libUser('Not adding order by because the given field property is not of type object', orderBy)
+              l.lib('Not adding order by because the given field property is not of type object', orderBy)
             }
           }
           else {
-            l.libUser('Not adding order by because the given element was not neither a string nor an object', orderBy)
+            l.lib('Not adding order by because the given element was not neither a string nor an object', orderBy)
           }
         }
       }
@@ -140,34 +140,34 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
             }
   
             if (direction == undefined) {
-              l.libUser('Adding order by', criteria['@orderBy'])
+              l.lib('Adding order by', criteria['@orderBy'])
               query.orderBy(aliasPrefix + criteria['@orderBy'].field)
             }
             else {
-              l.libUser('Adding order by', criteria['@orderBy'])
+              l.lib('Adding order by', criteria['@orderBy'])
               query.orderBy(aliasPrefix + criteria['@orderBy'].field + ' ' + direction)
             }
           }
           else {
-            l.libUser('Not adding order by because the given column is not contained in the table', criteria['@orderBy'])
+            l.lib('Not adding order by because the given column is not contained in the table', criteria['@orderBy'])
           }
         }
         else {
-          l.libUser('Not adding order by because the given field property is not a string', criteria['@orderBy'])
+          l.lib('Not adding order by because the given field property is not a string', criteria['@orderBy'])
         }
       }
       else {
-        l.libUser('Not adding order by because it was neither a string, an array nor an object', criteria['@orderBy'])
+        l.lib('Not adding order by because it was neither a string, an array nor an object', criteria['@orderBy'])
       }
     }
 
     if (query._limit == undefined && typeof criteria['@limit'] == 'number' && ! isNaN(criteria['@limit'])) {
-      l.libUser('Setting limit', criteria['@limit'])
+      l.lib('Setting limit', criteria['@limit'])
       query._limit = criteria['@limit']
     }
 
     if (query._offset == undefined && typeof criteria['@offset'] == 'number' && ! isNaN(criteria['@offset'])) {
-      l.libUser('Setting offset', criteria['@offset'])
+      l.lib('Setting offset', criteria['@offset'])
       query._offset = criteria['@offset']
     }
 
@@ -184,29 +184,29 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
     let columns = Object.keys(table.columns)
 
-    l.libUser('Iterating over all columns', columns)
+    l.lib('Iterating over all columns', columns)
 
     for (let column of columns) {
       l.location = [column]
 
       if (criteria[column] === undefined) {
-        l.libUser('Skipping column because it is not contained in the given criteria')
+        l.lib('Skipping column because it is not contained in the given criteria')
         continue
       }
 
       let value: any = criteria[column]
-      l.libUser('Processing column using criterium', value)
+      l.lib('Processing column using criterium', value)
 
-      l.libUser('Adding logical operator AND')
+      l.lib('Adding logical operator AND')
       condition.push('AND')
 
       if (isComparison(value)) {
-        l.libUser('Given object represents a comparison')
+        l.lib('Given object represents a comparison')
 
         let operator = value['@operator'].toUpperCase()
 
         if (!(operator in Operator)) {
-          l.libUser(`Operator '${operator}' is not supported. Continuing...`)
+          l.lib(`Operator '${operator}' is not supported. Continuing...`)
           continue
         }
 
@@ -214,21 +214,21 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
           let comp = comparison(aliasPrefix + column, operator, value['@value'])
           
           if (value['@not'] === true) {
-            l.libUser('Adding comparison with NOT', comp)
+            l.lib('Adding comparison with NOT', comp)
             condition.push('NOT', comp)
           }
           else {
-            l.libUser('Adding comparison', comp)
+            l.lib('Adding comparison', comp)
             condition.push(comp)
           }
         }
         else {
-          l.libUser('Not adding comparison because the value is undefined')
+          l.lib('Not adding comparison because the value is undefined')
         }
       }
 
       else if (value instanceof Array) {
-        l.libUser('The given criterium is an array')
+        l.lib('The given criterium is an array')
 
         let atLeastOneComparison = false
 
@@ -241,11 +241,11 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
         if (!atLeastOneComparison) {
           let comp = comparison(aliasPrefix + column, value)
-          l.libUser('Adding comparison', comp)
+          l.lib('Adding comparison', comp)
           condition.push(comp)
         }
         else {
-          l.libUser('Array represents connected comparisons')
+          l.lib('Array represents connected comparisons')
 
           let logical = 'OR'
           
@@ -260,51 +260,51 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
               if (upperCase == 'AND' || upperCase == 'OR' || upperCase == 'XOR') {
                 logical = upperCase
-                l.libUser('Setting logical operator to', logical)
+                l.lib('Setting logical operator to', logical)
                 continue
               }
             }
 
             if (isComparison(arrayValue)) {
               if (arrayValue['@value'] === undefined) {
-                l.libUser('Skipping comparison because its value is undefined', arrayValue)
+                l.lib('Skipping comparison because its value is undefined', arrayValue)
                 continue
               }
 
-              l.libUser('Processing comparison', arrayValue)
+              l.lib('Processing comparison', arrayValue)
 
               let operator = arrayValue['@operator'].toUpperCase()
 
               if (!(operator in Operator)) {
-                l.libUser(`Comparison operator '${operator}' is not supported. Continuing...`)
+                l.lib(`Comparison operator '${operator}' is not supported. Continuing...`)
                 continue
               }
 
-              l.libUser('Adding logical operator', logical)
+              l.lib('Adding logical operator', logical)
               subCondition.push(logical)
 
               let comp = comparison(aliasPrefix + column, operator, arrayValue['@value'])
               
               if (arrayValue['@not'] === true) {
-                l.libUser('Adding comparison with NOT', comp)
+                l.lib('Adding comparison with NOT', comp)
                 subCondition.push('NOT', comp)
               }
               else {
-                l.libUser('Adding comparison', comp)
+                l.lib('Adding comparison', comp)
                 subCondition.push(comp)
               }
             }
 
-            l.libUser('Setting logical operator back to the default OR')
+            l.lib('Setting logical operator back to the default OR')
             logical = 'OR'
           }
 
-          l.libUser('Created brackets', subCondition)
+          l.lib('Created brackets', subCondition)
         }
       }
       else {
         let comp = comparison(aliasPrefix + column, value)
-        l.libUser('Adding comparison with default operator =', comp)
+        l.lib('Adding comparison with default operator =', comp)
         condition.push(comp)
       }
     }
@@ -313,13 +313,13 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
     if (table.relationships != undefined) {
       let relationships = Object.keys(table.relationships)
-      l.libUser('Iterating over all relationships', relationships)
+      l.lib('Iterating over all relationships', relationships)
 
       for (let relationshipName of relationships) {
         l.location = [ relationshipName ]
 
         if (!(relationshipName in criteria)) {
-          l.libUser('Skipping relationship because it is not contained in the given criteria')
+          l.lib('Skipping relationship because it is not contained in the given criteria')
           continue
         }
 
@@ -331,7 +331,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
           throw new Error('Table not contained in schema: ' + relationship.otherTable)
         }
 
-        l.libUser('Processing given criterium', relationshipCriteria)
+        l.lib('Processing given criterium', relationshipCriteria)
 
         if (relationshipCriteria['@loadSeparately'] !== true) {
           let thisId = relationship.thisId
@@ -358,7 +358,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
           l.dev('joinAlias', joinAlias)
 
           query.join('LEFT', otherTableName, joinAlias, (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId + ' = ' + joinAlias + '.' + otherId)
-          l.libUser('Adding LEFT JOIN to query', query._join!.pieces![query._join!.pieces!.length - 1])
+          l.lib('Adding LEFT JOIN to query', query._join!.pieces![query._join!.pieces!.length - 1])
 
           let otherTable = schema[otherTableName]
 
@@ -366,8 +366,9 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
             throw new Error('Table not contained in schema: ' + otherTable)
           }
 
-          l.libUser('Filling query with the relationship criteria')
+          l.calling('Filling query with the relationship criteria', relationshipCriteria)
           addCriteria(schema, otherTableName, query, relationshipCriteria, joinAlias, condition)
+          l.called('Filled query with the relationship criteria', relationshipCriteria)
         }
       }
     }

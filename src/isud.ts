@@ -39,7 +39,7 @@ export async function insert(
 
   let alreadyInsertedRow = alreadyInsertedRows.getResultByRow(tableName, row)
   if (alreadyInsertedRow != undefined) {
-    l.libUser('Row already inserted. Returning already inserted row...', alreadyInsertedRow)
+    l.lib('Row already inserted. Returning already inserted row...', alreadyInsertedRow)
     return alreadyInsertedRow
   }
 
@@ -56,7 +56,7 @@ export async function insert(
   //    the id of the row to be inserted is lower than the id of the relationship row
   // 3. if the id the relationship refers to is not generated then it will insert the that relationship later so that we can set the id after we 
   //    inserted the row that is to be inserted which will then provide the missing id on the relationship
-  l.libUser('Inserting missing many-to-one relationships first to be able to assign their id\'s before inserting the actual row...')
+  l.lib('Inserting missing many-to-one relationships first to be able to assign their id\'s before inserting the actual row...')
   for (let columnName of Object.keys(table.columns)) {
     let relationshipName = getRelationshipNameOfColumn(table, columnName)
 
@@ -76,7 +76,7 @@ export async function insert(
       
       // if the relationship is a many-to-one this row thus needs its id
       if (relationship.manyToOne) {
-        l.libUser(`Trying to determine id for '${columnName}'`, relationship)
+        l.lib(`Trying to determine id for '${columnName}'`, relationship)
 
         // check if there is a row object set for the relationship. if so insert that one
         // first and then take the id from there
@@ -87,19 +87,19 @@ export async function insert(
 
             // relationship row was already inserted. use its id.
             if (alreadyInsertedRow != undefined) {
-              l.libUser('Using id from already inserted row', alreadyInsertedRow)
+              l.lib('Using id from already inserted row', alreadyInsertedRow)
               row[columnName] = alreadyInsertedRow[relationship.otherId]
             }
             // if the relationship is an id for that row, attempt to insert the whole row after the missing relationship
             // row which is about to be inserted up the recursion chain
             else if (isForeignKey(table, relationship.thisId)) {
-              l.libUser('Row is about to be inserted somewhere up the recursion chain and the relationship is an id. Adding handler after result is known. Returning...')
+              l.lib('Row is about to be inserted somewhere up the recursion chain and the relationship is an id. Adding handler after result is known. Returning...')
               alreadyInsertedRows.addAfterSettingResultHandler(relationshipRow, async () => {
                 let l = log.fn('afterSettingResultHandler')
-                l.libUser('Inserting row which was missing an id which came from a relationship which was just created...')
+                l.lib('Inserting row which was missing an id which came from a relationship which was just created...')
 
                 let insertedRow = await insert(schema, tableName, db, queryFn, row, alreadyInsertedRows)
-                l.libUser('insertedRow', insertedRow)
+                l.lib('insertedRow', insertedRow)
         
                 if (insertedRow == undefined) {
                   throw new Error('Expected result to be not undefined')
@@ -111,7 +111,7 @@ export async function insert(
             // the relationship is about to be inserted up the recursion chain. update the row that is to be inserted after
             // the row of the relationship was inserted up in the recursion chain.
             else {
-              l.libUser('Row is about to be inserted somewhere up the recursion chain. Adding handler after result is known...')
+              l.lib('Row is about to be inserted somewhere up the recursion chain. Adding handler after result is known...')
               alreadyInsertedRows.addAfterSettingResultHandler(row[relationshipName], async (insertedRelationshipRow: any) => {
                 let l = log.fn('afterSettingResultHandler')
                 l.param('insertedRelationshipRow', insertedRelationshipRow)
@@ -119,21 +119,21 @@ export async function insert(
                 l.param('relationship', relationship)
 
                 let insertedRow = alreadyInsertedRows.getResultByRow(tableName, row)
-                l.libUser('insertedRow', insertedRow)
+                l.lib('insertedRow', insertedRow)
 
                 if (insertedRow == undefined) {
                   throw new Error('Could not set many-to-one relationship id')
                 }
 
                 let updateRow = idsOnly(table, insertedRow)
-                l.libUser('updateRow', updateRow)
+                l.lib('updateRow', updateRow)
 
                 let updateCriteria: any = rowToUpdateCriteria(schema, tableName, updateRow) // TODO: remove :any
                 updateCriteria['@set'][columnName] = insertedRelationshipRow[relationship.otherId]
-                l.libUser('updateCriteria', updateCriteria)
+                l.lib('updateCriteria', updateCriteria)
         
                 let updatedRelationshipRows = await update(schema, tableName, db, queryFn, updateCriteria)
-                l.libUser('updatedRelationshipRows', updatedRelationshipRows)
+                l.lib('updatedRelationshipRows', updatedRelationshipRows)
         
                 if (updatedRelationshipRows.length != 1) {
                   throw new Error('Expected row count does not equal 1')
@@ -161,33 +161,33 @@ export async function insert(
               // if the relationship refers to the same table as the row that is to be inserted, insert the relationship row after
               // we inserted the row that is to be inserted.
               if (relationship.otherTable == tableName) {
-                l.libUser('Table of relationship is the same as the table of the relationship owning row. Inserting relationship after inserting the relationship owning row...')
+                l.lib('Table of relationship is the same as the table of the relationship owning row. Inserting relationship after inserting the relationship owning row...')
               }
               // the relationship row refers a different table and its id is generated. insert it now.
               else {
-                l.libUser('Inserting the row object of the relationship. Going into recursion...')
+                l.lib('Inserting the row object of the relationship. Going into recursion...')
                 let relationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows)
-                l.libUser('Returning from recursion...')
-                l.libUser('Setting relationship id from just inserted relationship... ' + columnName + ' = ' + relationshipRow[relationship.otherId])
+                l.lib('Returning from recursion...')
+                l.lib('Setting relationship id from just inserted relationship... ' + columnName + ' = ' + relationshipRow[relationship.otherId])
                 row[columnName] = relationshipRow[relationship.otherId]    
               }
             }
             // if the id the relationship is referencing is not generated we have to insert the row that is to be inserted first.
             // afterwards we can set the id on the row object.
             else {
-              l.libUser('Other id column is not generated. Inserting relationship row after inserting the relationhip owning row...')
+              l.lib('Other id column is not generated. Inserting relationship row after inserting the relationhip owning row...')
             }
           }
         }
         // there is no row object set for the relationship. thus this relationship will be null.
         else {
-          l.libUser('Relationship does not have a corresponding row object. Continuing...')
+          l.lib('Relationship does not have a corresponding row object. Continuing...')
         }
       }
     }
   }
 
-  l.libUser('Inserting the given row...')
+  l.lib('Inserting the given row...')
 
   let query = sql.insertInto(tableName)
 
@@ -205,11 +205,11 @@ export async function insert(
   let sqlString = query.sql(db)
   let values = query.values()
   
-  l.libUser('sqlString', sqlString)
-  l.libUser('values', values)
+  l.lib('sqlString', sqlString)
+  l.lib('values', values)
 
   let insertedRows = await queryFn(sqlString, values)
-  l.libUser('insertedRows', insertedRows)
+  l.lib('insertedRows', insertedRows)
 
   if (insertedRows.length != 1) {
     throw new Error('Expected row count does not equal 1')
@@ -217,7 +217,7 @@ export async function insert(
 
   let insertedRow = insertedRows[0]
   
-  l.libUser('Setting result on alreadyInsertedRows...')
+  l.lib('Setting result on alreadyInsertedRows...')
 
   try {
     await alreadyInsertedRows.setResult(row, insertedRow)
@@ -226,7 +226,7 @@ export async function insert(
     throw e
   }
 
-  l.libUser('Insert remaining relationships...')
+  l.lib('Insert remaining relationships...')
 
   if (table.relationships != undefined) {
     for (let relationshipName of Object.keys(table.relationships)) {      
@@ -257,7 +257,7 @@ export async function insert(
         otherRelationship = otherTable.relationships[relationship.otherRelationship]
       }
 
-      l.libUser('Trying to insert relationship', relationshipName, relationship)
+      l.lib('Trying to insert relationship', relationshipName, relationship)
 
       // if the relationship is many-to-one and the id is not set by now and there is a set relationship row object
       // attempt to set the id
@@ -271,7 +271,7 @@ export async function insert(
 
           // at first check if we already inserted the relationship row
           if (insertedRelationshipRow) {
-            l.libUser('Relationship was already inserted. Using id from it...', insertedRelationshipRow)
+            l.lib('Relationship was already inserted. Using id from it...', insertedRelationshipRow)
   
             if (insertedRelationshipRow[relationship.otherId] == undefined) {
               throw new Error('Already inserted relationship row does not contain id which the relationship owning row wants to refer to')
@@ -280,7 +280,7 @@ export async function insert(
             relationshipId = insertedRelationshipRow[relationship.otherId]
           }
           else if (alreadyInsertedRows.containsRow(relationship.otherTable, row[relationshipName])) {
-            l.libUser('Row of relationship is about to be inserted up the recursion chain. Continuing...')
+            l.lib('Row of relationship is about to be inserted up the recursion chain. Continuing...')
             continue
           }
           else {
@@ -288,10 +288,10 @@ export async function insert(
               row[relationshipName][otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
             }
   
-            l.libUser('Inserting the row object of the relationship. Going into recursion...', row[relationshipName])
+            l.lib('Inserting the row object of the relationship. Going into recursion...', row[relationshipName])
             insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, row[relationshipName], alreadyInsertedRows)
-            l.libUser('Returning from recursion...')
-            l.libUser('Setting relationship id from just inserted relationship... ' + relationship.thisId + ' = ' + insertedRelationshipRow[relationship.otherId])
+            l.lib('Returning from recursion...')
+            l.lib('Setting relationship id from just inserted relationship... ' + relationship.thisId + ' = ' + insertedRelationshipRow[relationship.otherId])
   
             if (insertedRelationshipRow[relationship.otherId] == undefined) {
               throw new Error('Already inserted relationship row does not contain id which the relationship owning row wants to refer to')
@@ -316,32 +316,32 @@ export async function insert(
         }
         else {
           if (row[relationship.thisId] !== undefined) {
-            l.libUser('Relationship id is not empty. Work is already done...')
+            l.lib('Relationship id is not empty. Work is already done...')
           }
           else {
-            l.libUser('Relationship does not have a corresponding row object...')
+            l.lib('Relationship does not have a corresponding row object...')
           }
         }
 
         // if we got a relationship row until now, set it on the inserted row
         if (insertedRelationshipRow != undefined && insertedRow[relationshipName] == undefined) {
-          l.libUser('Setting relationship row on relationship owning row...', insertedRelationshipRow)
+          l.lib('Setting relationship row on relationship owning row...', insertedRelationshipRow)
           insertedRow[relationshipName] = insertedRelationshipRow
         }
 
         // if the relationship is one-to-one then we also need to update the id on the relationship row
         if (otherRelationship != undefined && insertedRelationshipRow != undefined && insertedRelationshipRow[otherRelationship.thisId] == undefined) {
-          l.libUser('Relationship is one-to-one. Setting id on already inserted relationship row...', insertedRelationshipRow)
+          l.lib('Relationship is one-to-one. Setting id on already inserted relationship row...', insertedRelationshipRow)
           
           let updateRow = idsOnly(relationshipTable, insertedRelationshipRow)
           updateRow[otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
-          l.libUser('updateRow', updateRow)
+          l.lib('updateRow', updateRow)
   
           let updateCriteria = rowToUpdateCriteria(schema, relationship.otherTable, updateRow)
-          l.libUser('updateCriteria', updateCriteria)
+          l.lib('updateCriteria', updateCriteria)
   
           let updatedOtherRelationshipRows = await update(schema, relationship.otherTable, db, queryFn, updateCriteria)
-          l.libUser('updatedOtherRelationshipRows', updatedOtherRelationshipRows)
+          l.lib('updatedOtherRelationshipRows', updatedOtherRelationshipRows)
   
           if (updatedOtherRelationshipRows.length != 1) {
             throw new Error('Expected row count does not equal 1')
@@ -353,10 +353,10 @@ export async function insert(
   
       // otherwise we just insert the relationship
       else if (relationship.oneToMany == true && row[relationshipName] instanceof Array) {
-        l.libUser('One-to-many relationship. Inserting all rows...')
+        l.lib('One-to-many relationship. Inserting all rows...')
         
         for (let relationshipRow of row[relationshipName]) {
-          l.libUser('Inserting relationship row...', relationshipRow)
+          l.lib('Inserting relationship row...', relationshipRow)
 
           if (! alreadyInsertedRows.containsRow(relationship.otherTable, relationshipRow)) {
             let otherTable = schema[relationship.otherTable]
@@ -364,20 +364,20 @@ export async function insert(
               throw new Error('Table not contained in schema: ' + relationship.otherTable)
             }
 
-            l.libUser('Setting id on relationship row... ' + relationship.otherId + ' = ' + insertedRow[relationship.thisId])
+            l.lib('Setting id on relationship row... ' + relationship.otherId + ' = ' + insertedRow[relationship.thisId])
             relationshipRow[relationship.otherId] = insertedRow[relationship.thisId]
 
-            l.libUser('Going into Recursion...')
+            l.lib('Going into Recursion...')
 
             let insertedRelationshipRow = await insert(schema, relationship.otherTable, db, queryFn, relationshipRow, alreadyInsertedRows)
-            l.libUser('Returning from recursion...', insertedRelationshipRow)
+            l.lib('Returning from recursion...', insertedRelationshipRow)
 
             if (insertedRow[relationshipName] == undefined) {
               insertedRow[relationshipName] = []
             }
             
             if (insertedRelationshipRow != undefined) {  
-              l.libUser('Pushing inserted relationship row into array on relationship owning row...')
+              l.lib('Pushing inserted relationship row into array on relationship owning row...')
               insertedRow[relationshipName].push(insertedRelationshipRow)
             }
             // if the result is undefined that means we could not insert that row now because it depends on rows
@@ -385,21 +385,21 @@ export async function insert(
             // the row was inserted. We do this to be able to add this particular one-to-many relationhip row to the
             // result row.
             else {
-              l.libUser('Row could not be inserted because it is missing an id which is given through a relationship. Adding handler to push it into the inserted row after it has been inserted...')
+              l.lib('Row could not be inserted because it is missing an id which is given through a relationship. Adding handler to push it into the inserted row after it has been inserted...')
               alreadyInsertedRows.addAfterSettingResultHandler(relationshipRow, async (insertedRelationshipRow: any) => {
                 let l = log.fn('afterSettingResultHandler')
-                l.libUser('Pushing inserted relationship row into array on inserted row...')
+                l.lib('Pushing inserted relationship row into array on inserted row...')
                 insertedRow[relationshipName].push(insertedRelationshipRow)
               })
             }
           }
           else {
-            l.libUser('That particular row object is already being inserted up the recursion chain. Continuing...')
+            l.lib('That particular row object is already being inserted up the recursion chain. Continuing...')
           }
         }
       }
       else {
-        l.libUser('Relationship is not contained in the given row object. Continuing...')
+        l.lib('Relationship is not contained in the given row object. Continuing...')
       }
     }
   }
@@ -423,26 +423,26 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   let sqlString = query.sql(db)
   let values = query.values()
 
-  l.libUser('sqlString', sqlString)
-  l.libUser('values', values)
+  l.lib('sqlString', sqlString)
+  l.lib('values', values)
 
-  l.libUser('Querying database...')
+  l.lib('Querying database...')
   let joinedRows = await queryFn(sqlString, values)
   l.dev('joinedRows', joinedRows)
 
   let rows = unjoinRows(schema, tableName, joinedRows, criteria)
   l.dev('rows', rows)
 
-  l.libUser('Determing relationships to load...')
+  l.lib('Determing relationships to load...')
   let relationshipsToLoad = determineRelationshipsToLoad(schema, tableName, rows, criteria)
 
-  l.libUser('Loading all relationships that need to be loaded in a seperate query...', Object.keys(relationshipsToLoad))
+  l.lib('Loading all relationships that need to be loaded in a seperate query...', Object.keys(relationshipsToLoad))
 
   for (let relationshipPath of Object.keys(relationshipsToLoad)) {
-    l.libUser('Loading relationships for path', relationshipPath)
+    l.lib('Loading relationships for path', relationshipPath)
 
     let relationshipToLoad = relationshipsToLoad[relationshipPath]
-    l.libUser('relationshipToLoad', relationshipToLoad)
+    l.lib('relationshipToLoad', relationshipToLoad)
     
     let relationshipTable = schema[relationshipToLoad.tableName]
     if (relationshipTable == undefined) {
@@ -469,15 +469,15 @@ export async function select(schema: Schema, tableName: string, db: string, quer
 
     criteria[relationship.otherId] = idsToLoad
 
-    l.libUser('Loading relationships with the following criteria', criteria)
+    l.lib('Loading relationships with the following criteria', criteria)
 
     let loadedRelationships = await select(schema, relationship.otherTable, db, queryFn, relationshipToLoad.relationshipCriteria)
-    l.libUser('loadedRelationships', loadedRelationships)
+    l.lib('loadedRelationships', loadedRelationships)
 
-    l.libUser('Attaching relationship to given rows...')
+    l.lib('Attaching relationship to given rows...')
 
     for (let row of relationshipToLoad.rows) {
-      l.libUser('Attaching relationship to row', row)
+      l.lib('Attaching relationship to row', row)
 
       if (relationship.oneToMany === true) {
         row[relationshipToLoad.relationshipName] = []
@@ -489,11 +489,11 @@ export async function select(schema: Schema, tableName: string, db: string, quer
       for (let loadedRelationship of loadedRelationships) {
         if (row[relationship.thisId] == loadedRelationship[relationship.otherId]) {
           if (relationship.oneToMany === true) {
-            l.libUser('Pushing into array of one-to-many...', loadedRelationship)
+            l.lib('Pushing into array of one-to-many...', loadedRelationship)
             row[relationshipToLoad.relationshipName].push(loadedRelationship)
           }
           else {
-            l.libUser('Setting property of many-to-one..', loadedRelationship)
+            l.lib('Setting property of many-to-one..', loadedRelationship)
             row[relationshipToLoad.relationshipName] = loadedRelationship
           }
         }
@@ -508,8 +508,8 @@ export async function select(schema: Schema, tableName: string, db: string, quer
 // https://stackoverflow.com/questions/1293330/how-can-i-do-an-update-statement-with-join-in-sql-server
 export async function update(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria): Promise<any[]> {
   let l = log.fn('update')
-  l.libUser('tableName', tableName)
-  l.libUser('criteria', criteria)
+  l.lib('tableName', tableName)
+  l.lib('criteria', criteria)
 
   let table = schema[tableName]
 
@@ -542,8 +542,8 @@ export async function update(schema: Schema, tableName: string, db: string, quer
   let sqlString = query.sql(db)
   let values = query.values()
 
-  l.libUser('sqlString', sqlString)
-  l.libUser('values', values)
+  l.lib('sqlString', sqlString)
+  l.lib('values', values)
 
   let updatedRows = await queryFn(sqlString, values)
   
@@ -567,7 +567,7 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
   // query and thus not be taken into consideration which will have the effect of unwanted deletions
   // which we want to prevent by checking if the given criteria only contains valid column names
   let filteredCriteria = filterValidColumns(schema, tableName, criteria)
-  l.libUser('filteredCriteria', filteredCriteria)
+  l.lib('filteredCriteria', filteredCriteria)
 
   if (Object.keys(criteria).length != Object.keys(filteredCriteria).length) {
     throw new Error('Given criteria contained invalid columns ' + JSON.stringify(criteria))
@@ -576,42 +576,42 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
   // we need to find out what we are going to delete because it may be the case that
   // one or two or all id's are missing
   let rowsToDelete = await select(schema, tableName, db, queryFn, criteria)
-  l.libUser('rowsToDelete', rowsToDelete)
+  l.lib('rowsToDelete', rowsToDelete)
 
   let deletedRows: any[] = []
 
   // next we go through all the row that are to be deleted and start with deleting
   // their relationships, those who want to be deleted
 
-  l.libUser('Deleting relationships...')
+  l.lib('Deleting relationships...')
 
   for (let row of rowsToDelete) {
-    l.libUser('row', row)
+    l.lib('row', row)
 
     if (alreadyDeletedRows.containsRow(tableName, row)) {
-      l.libUser('Row is already deleted or about to be deleted. Continuing...')
+      l.lib('Row is already deleted or about to be deleted. Continuing...')
       continue
     }
 
-    l.libUser('Adding row to alreadyDeletedRows...')
+    l.lib('Adding row to alreadyDeletedRows...')
     alreadyDeletedRows.add(tableName, row)
 
     let relationshipToDeletedRows: {[relationship: string]: any|any[]} = {}
 
     if (table.relationships != undefined) {
       for (let relationshipName of Object.keys(table.relationships)) {
-        l.libUser('relationshipName', relationshipName)
+        l.lib('relationshipName', relationshipName)
     
         let relationship = table.relationships[relationshipName]
-        l.libUser('relationship', relationship)
+        l.lib('relationship', relationship)
     
         if (! relationship.delete) {
-          l.libUser('Relationship should not be deleted. Continuing...')
+          l.lib('Relationship should not be deleted. Continuing...')
           continue
         }
     
         if (row[relationship.thisId] == undefined) {
-          l.libUser('Row does not contain an id for this relationship thus there is nothing to delete. Continuing...')
+          l.lib('Row does not contain an id for this relationship thus there is nothing to delete. Continuing...')
           continue
         }
     
@@ -619,12 +619,12 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
           [relationship.otherId]: row[relationship.thisId]
         }
     
-        l.libUser('relationshipDeleteCriteria', relationshipDeleteCriteria)
+        l.lib('relationshipDeleteCriteria', relationshipDeleteCriteria)
     
-        l.libUser('Deleting relationship. Going into recursion...')
+        l.lib('Deleting relationship. Going into recursion...')
         let deletedRows = await delete_(schema, relationship.otherTable, db, queryFn, relationshipDeleteCriteria, alreadyDeletedRows)
-        l.libUser('Coming back from recursion...')
-        l.libUser('deletedRows', deletedRows)
+        l.lib('Coming back from recursion...')
+        l.lib('deletedRows', deletedRows)
   
         if (relationship.manyToOne) {
           if (deletedRows.length == 1) {
@@ -649,8 +649,8 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
     let sqlString = query.sql(db)
     let values = query.values()
   
-    l.libUser('sqlString', sqlString)
-    l.libUser('values', values)
+    l.lib('sqlString', sqlString)
+    l.lib('values', values)
   
     let deletedRowsOfSingleRow = await queryFn(sqlString, values)
 
