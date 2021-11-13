@@ -15,7 +15,7 @@ let pool: Pool = new Pool({
   password: 'sqlorm_test'
 } as PoolConfig)
 
-describe('isud', function() {
+describe.only('isud', function() {
   describe('PostgreSQL', function () {
     after(async function() {
       await pool.end()
@@ -340,7 +340,7 @@ describe('isud', function() {
         }
 
         row.object1.object1 = row
-        
+
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
         let expectedRow = {

@@ -128,11 +128,18 @@ export async function insert(
                 let updateRow = idsOnly(table, insertedRow)
                 l.lib('updateRow', updateRow)
 
-                let updateCriteria: any = rowToUpdateCriteria(schema, tableName, updateRow) // TODO: remove :any
-                updateCriteria['@set'][columnName] = insertedRelationshipRow[relationship.otherId]
+                let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
+                updateCriteria[columnName] = insertedRelationshipRow[relationship.otherId]
                 l.lib('updateCriteria', updateCriteria)
         
-                let updatedRelationshipRows = await update(schema, tableName, db, queryFn, updateCriteria)
+                let updatedRelationshipRows
+                try {
+                  updatedRelationshipRows = await update(schema, tableName, db, queryFn, updateCriteria)
+                }
+                catch (e) {
+                  throw new Error(e as any)
+                }
+                
                 l.lib('updatedRelationshipRows', updatedRelationshipRows)
         
                 if (updatedRelationshipRows.length != 1) {
@@ -208,7 +215,14 @@ export async function insert(
   l.lib('sqlString', sqlString)
   l.lib('values', values)
 
-  let insertedRows = await queryFn(sqlString, values)
+  let insertedRows
+  try {
+    insertedRows = await queryFn(sqlString, values)
+  }
+  catch (e) {
+    throw new Error(e as any)
+  }
+
   l.lib('insertedRows', insertedRows)
 
   if (insertedRows.length != 1) {
@@ -223,7 +237,7 @@ export async function insert(
     await alreadyInsertedRows.setResult(row, insertedRow)
   }
   catch (e) {
-    throw e
+    throw new Error(e as any)
   }
 
   l.lib('Insert remaining relationships...')
@@ -302,11 +316,16 @@ export async function insert(
   
           // update the relationship owning row setting new newly obtained id
           let updateRow: any = idsOnly(table, insertedRow)
-          let updateCriteria: any = rowToUpdateCriteria(schema, tableName, updateRow) // TODO: Remove :any
-          updateCriteria['@set'] = {}
-          updateCriteria['@set'][relationship.thisId] = relationshipId
+          let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
+          updateCriteria[relationship.thisId] = relationshipId
   
-          let updatedRows = await update(schema, tableName, db, queryFn, updateCriteria)
+          let updatedRows
+          try {
+            updatedRows = await update(schema, tableName, db, queryFn, updateCriteria)
+          }
+          catch (e) {
+            throw new Error(e as any)
+          }
   
           if (updatedRows.length != 1) {
             throw new Error('Expected row count does not equal 1')
