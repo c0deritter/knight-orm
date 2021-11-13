@@ -419,22 +419,26 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   }
 
   let query = buildSelectQuery(schema, tableName, criteria)
+  l.dev('Built SELECT query', query)
 
   let sqlString = query.sql(db)
   let values = query.values()
 
-  l.lib('sqlString', sqlString)
-  l.lib('values', values)
+  l.lib('SQL string', sqlString)
+  l.lib('Values', values)
 
-  l.lib('Querying database...')
+  l.lib('Querying database with given SQL string and values...')
   let joinedRows = await queryFn(sqlString, values)
-  l.dev('joinedRows', joinedRows)
+  l.dev('Received rows', joinedRows)
 
-  let rows = unjoinRows(schema, tableName, joinedRows, criteria)
-  l.dev('rows', rows)
+  l.calling('Unjoining rows for criteria...')
+  let rows = unjoinRows(schema, tableName, joinedRows, criteria, tableName + '__')
+  l.called('Unjoined rows for criteria...', criteria)
+  l.dev('Unjoined rows', rows)
 
-  l.lib('Determing relationships to load...')
+  l.calling('Determing relationships to load...')
   let relationshipsToLoad = determineRelationshipsToLoad(schema, tableName, rows, criteria)
+  l.called('Determined relationships to load for criteria...', criteria)
 
   l.lib('Loading all relationships that need to be loaded in a seperate query...', Object.keys(relationshipsToLoad))
 
@@ -442,9 +446,11 @@ export async function select(schema: Schema, tableName: string, db: string, quer
     l.lib('Loading relationships for path', relationshipPath)
 
     let relationshipToLoad = relationshipsToLoad[relationshipPath]
-    l.lib('relationshipToLoad', relationshipToLoad)
     
     let relationshipTable = schema[relationshipToLoad.tableName]
+    l.lib('Relationship table', relationshipTable)
+    l.lib('Relationship name', relationshipToLoad.relationshipName)
+
     if (relationshipTable == undefined) {
       throw new Error('Table not contained in schema: ' + relationshipToLoad.tableName)
     }
@@ -469,15 +475,15 @@ export async function select(schema: Schema, tableName: string, db: string, quer
 
     criteria[relationship.otherId] = idsToLoad
 
-    l.lib('Loading relationships with the following criteria', criteria)
+    l.calling('Loading relationship rows with the following criteria', criteria)
+    let loadedRelationships = await select(schema, relationship.otherTable, db, queryFn, criteria)
+    l.called('Loaded relationship rows for criteria', criteria)
+    l.dev('Loaded relationship rows', loadedRelationships)
 
-    let loadedRelationships = await select(schema, relationship.otherTable, db, queryFn, relationshipToLoad.relationshipCriteria)
-    l.lib('loadedRelationships', loadedRelationships)
-
-    l.lib('Attaching relationship to given rows...')
+    l.lib('Attaching relationship rows...')
 
     for (let row of relationshipToLoad.rows) {
-      l.lib('Attaching relationship to row', row)
+      l.dev('Attaching relationship row', row)
 
       if (relationship.oneToMany === true) {
         row[relationshipToLoad.relationshipName] = []
@@ -489,11 +495,11 @@ export async function select(schema: Schema, tableName: string, db: string, quer
       for (let loadedRelationship of loadedRelationships) {
         if (row[relationship.thisId] == loadedRelationship[relationship.otherId]) {
           if (relationship.oneToMany === true) {
-            l.lib('Pushing into array of one-to-many...', loadedRelationship)
+            l.dev('Pushing into array of one-to-many...', loadedRelationship)
             row[relationshipToLoad.relationshipName].push(loadedRelationship)
           }
           else {
-            l.lib('Setting property of many-to-one..', loadedRelationship)
+            l.dev('Setting property of many-to-one..', loadedRelationship)
             row[relationshipToLoad.relationshipName] = loadedRelationship
           }
         }

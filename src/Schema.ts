@@ -24,6 +24,7 @@ export class SchemaClass {
 }
 
 export function getIdColumns(table: Table): string[] {
+  // TODO: add caching
   let idColumns: string[] = []
 
   for (let column of Object.keys(table.columns)) {
@@ -36,6 +37,7 @@ export function getIdColumns(table: Table): string[] {
 }
 
 export function isIdColumn(column: string | { property: string, id: boolean }): boolean {
+  // TODO: add caching
   if (typeof column == 'string') {
     return false
   }

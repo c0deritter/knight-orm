@@ -176,7 +176,7 @@ describe('rowTools', function() {
     })
   })
 
-  describe('unjoinRows', function() {
+  describe.only('unjoinRows', function() {
     it('should create an instance out of rows without relationships', function() {
       let rows = [
         {
@@ -194,13 +194,19 @@ describe('rowTools', function() {
       ]
 
       let criteria = { a: 'a', b: 1 }
-      let instances = unjoinRows(schema, 'table1', rows, criteria, true)
+      let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
       expect(instances.length).to.equal(2)
-      expect(instances[0]).to.be.instanceOf(Object1)
-      expect(instances[0]).to.deep.equal({ id: 1, property1: 'a', property2: 1, object1Id: undefined, object2Id: undefined })
-      expect(instances[1]).to.be.instanceOf(Object1)
-      expect(instances[1]).to.deep.equal({ id: 2, property1: 'b', property2: 2, object1Id: undefined, object2Id: undefined })
+      expect(instances[0]).to.deep.equal({
+        id: 1,
+        column1: 'a',
+        column2: 1
+      })
+      expect(instances[1]).to.deep.equal({
+        id: 2,
+        column1: 'b',
+        column2: 2
+      })
     })
 
     it('should create an instance out of rows with relationships', function() {
@@ -251,59 +257,49 @@ describe('rowTools', function() {
 
       let criteria = { manyObjects: { object2: {} }}
 
-      let instances = unjoinRows(schema, 'table1', rows, criteria, true)
+      let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
       expect(instances.length).to.equal(3)
-      expect(instances[0]).to.be.instanceOf(Object1)
-      expect(instances[0].manyObjects).to.be.instanceOf(Array)
-      expect(instances[0].manyObjects[0]).to.be.instanceOf(ManyObject)
-      expect(instances[0].manyObjects[0].object2).to.be.instanceOf(Object2)
       expect(instances[0]).to.deep.equal({
         id: 1,
-        property1: 'a',
-        property2: 1,
-        object1Id: null,
-        object2Id: null,
+        column1: 'a',
+        column2: 1,
+        table1_id: null,
+        table2_id: null,
         manyObjects: [{
-          object1Id: 1,
-          object2Id: 1,
-          property1: 'b',
-          object1Id2: null,
+          table1_id: 1,
+          table2_id: 1,
+          column1: 'b',
+          table1_id2: null,
           object2: {
             id: 1,
-            property1: 'c',
-            object1Id: null
+            column1: 'c',
+            table1_id: null
           }
         }]
       })
 
-      expect(instances[1]).to.be.instanceOf(Object1)
-      expect(instances[1].manyObjects).to.be.instanceOf(Array)
-      expect(instances[1].manyObjects[0]).to.be.instanceOf(ManyObject)
-      expect(instances[1].manyObjects[0].object2).to.be.null
       expect(instances[1]).to.deep.equal({
         id: 2,
-        property1: 'd',
-        property2: 2,
-        object1Id: null,
-        object2Id: null,
+        column1: 'd',
+        column2: 2,
+        table1_id: null,
+        table2_id: null,
         manyObjects: [{
-          object1Id: 2,
-          object2Id: null,
-          property1: 'e',
-          object1Id2: null,
+          table1_id: 2,
+          table2_id: null,
+          column1: 'e',
+          table1_id2: null,
           object2: null
         }]
       })
 
-      expect(instances[2]).to.be.instanceOf(Object1)
-      expect(instances[2].manyObjects).to.be.not.undefined
       expect(instances[2]).to.deep.equal({
         id: 3,
-        property1: 'f',
-        property2: 3,
-        object1Id: null,
-        object2Id: null,
+        column1: 'f',
+        column2: 3,
+        table1_id: null,
+        table2_id: null,
         manyObjects: []
       })
     })
@@ -350,40 +346,36 @@ describe('rowTools', function() {
 
       let criteria = { manyObjects: { object2: { manyObjects: {} }}}
 
-      let instances = unjoinRows(schema, 'table1', rows, criteria, true)
+      let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
       expect(instances.length).to.equal(1)
-      expect(instances[0]).to.be.instanceOf(Object1)
-      expect(instances[0].manyObjects).to.be.instanceOf(Array)
-      expect(instances[0].manyObjects[0]).to.be.instanceOf(ManyObject)
-      expect(instances[0].manyObjects[0].object2).to.be.instanceOf(Object2)
       expect(instances[0]).to.deep.equal({
         id: 1,
-        property1: 'a',
-        property2: 1,
-        object1Id: null,
-        object2Id: null,
+        column1: 'a',
+        column2: 1,
+        table1_id: null,
+        table2_id: null,
         manyObjects: [{
-          object1Id: 1,
-          object2Id: 'x',
-          property1: 'b',
-          object1Id2: null,
+          table1_id: 1,
+          table2_id: 'x',
+          column1: 'b',
+          table1_id2: null,
           object2: {
             id: 'x',
-            property1: 'c',
-            object1Id: null,
+            column1: 'c',
+            table1_id: null,
             manyObjects: [
               {
-                object1Id: 2,
-                object2Id: 'x',
-                property1: 'd',
-                object1Id2: null
+                table1_id: 2,
+                table2_id: 'x',
+                column1: 'd',
+                table1_id2: null
               },
               {
-                object1Id: 3,
-                object2Id: 'x',
-                property1: 'e',
-                object1Id2: null
+                table1_id: 3,
+                table2_id: 'x',
+                column1: 'e',
+                table1_id2: null
               }
             ]
           }
@@ -425,20 +417,20 @@ describe('rowTools', function() {
 
       let criteria = { object2: {}, manyObjects: { object2: {} }}
 
-      let instances = unjoinRows(schema, 'table1', rows, criteria, true)
+      let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
       expect(instances.length).to.equal(1)
 
       let expectedInstance = {
         id: 1,
-        property1: 'a',
-        property2: 1,
-        object1Id: null,
-        object2Id: 'x',
+        column1: 'a',
+        column2: 1,
+        table1_id: null,
+        table2_id: 'x',
         object2: {
           id: 'x',
-          property1: 'c',
-          object1Id: null
+          column1: 'c',
+          table1_id: null
         },
         manyObjects: []
       } as any
@@ -477,7 +469,7 @@ describe('rowTools', function() {
     })
   })
 
-  describe.only('determineRelationshipsToLoad', function() {
+  describe('determineRelationshipsToLoad', function() {
     it('should not load a relationship which does not have any criteria', function() {
       let criteria = {}
       let rows = [
