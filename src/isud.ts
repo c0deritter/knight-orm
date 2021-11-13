@@ -409,7 +409,7 @@ export async function insert(
 }
 
 export async function select(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
-  let l = log.fn('select')
+  let l = log.fn('select', 'dev')
   l.location = [ tableName ]
   l.param('criteria', criteria)
 
@@ -527,19 +527,13 @@ export async function update(schema: Schema, tableName: string, db: string, quer
   query.update(tableName)
 
   for (let column of Object.keys(table.columns)) {
-    if (criteria['@set'][column] !== undefined) {
-      let value = criteria['@set'][column]
+    if (criteria[column] !== undefined) {
+      let value = criteria[column]
       query.set(column, value)
     }
   }
 
-  let criteriaWithoutSet = {
-    ...criteria
-  } as any
-
-  delete criteriaWithoutSet['@set']
-
-  addCriteria(schema, tableName, query, criteriaWithoutSet)
+  addCriteria(schema, tableName, query, criteria['@criteria'])
 
   if (db == 'postgres') {
     query.returning('*')
@@ -553,7 +547,7 @@ export async function update(schema: Schema, tableName: string, db: string, quer
 
   let updatedRows = await queryFn(sqlString, values)
   
-  l.returning('Returning updatedRows...', updatedRows)
+  l.returning('Returning updated rows...', updatedRows)
   return updatedRows
 }
 

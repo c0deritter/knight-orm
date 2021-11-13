@@ -176,7 +176,7 @@ describe('rowTools', function() {
     })
   })
 
-  describe.only('unjoinRows', function() {
+  describe('unjoinRows', function() {
     it('should create an instance out of rows without relationships', function() {
       let rows = [
         {
