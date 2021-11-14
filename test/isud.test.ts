@@ -1082,7 +1082,7 @@ describe('isud', function() {
       })
     })
 
-    describe('delete_', function() {
+    describe.only('delete_', function() {
       it('should delete a simple row by id', async function() {
         await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
         await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
@@ -1160,132 +1160,6 @@ describe('isud', function() {
             table2_id: null  
           }
         ])
-      })
-
-      it('should delete its one-to-many relationships', async function() {
-        let row1 = {
-          column1: 'a',
-          column2: 1,
-          manyObjects: [
-            {
-              column1: 'b',
-              object2: {
-                id: 'x',
-                column1: 'c'
-              }
-            }
-          ]
-        }
-
-        let row2 = {
-          column1: 'b',
-          column2: 2,
-          manyObjects: [
-            {
-              column1: 'c',
-              object2: {
-                id: 'y',
-                column1: 'd'
-              }
-            }
-          ]
-        }
-
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row1)
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row2)
-
-        let deletedRows = await delete_(schema, 'table1', 'postgres', pgQueryFn, { id: 1 })
-
-        expect(deletedRows.length).to.equal(1)
-        expect(deletedRows).to.deep.equal([{
-          id: 1,
-          column1: 'a',
-          column2: 1,
-          table1_id: null,
-          table2_id: null,
-          manyObjects: [
-            {
-              table1_id: 1,
-              table2_id: 'x',
-              column1: 'b',
-              table1_id2: null
-            }
-          ]
-        }])
-
-        let table1Rows = await pgQueryFn('SELECT * FROM table1')
-
-        expect(table1Rows.length).to.equal(1)
-        expect(table1Rows[0].id).to.equal(2)
-        expect(table1Rows[0].column1).to.equal('b')
-        expect(table1Rows[0].column2).to.equal(2)
-
-        let tableManyRows = await pgQueryFn('SELECT * FROM table_many')
-
-        expect(tableManyRows.length).to.equal(1)
-        expect(tableManyRows[0].table1_id).to.equal(2)
-        expect(tableManyRows[0].table2_id).to.equal('y')
-        expect(tableManyRows[0].column1).to.equal('c')
-        expect(tableManyRows[0].table1_id2).to.be.null
-
-        let table2Rows = await pgQueryFn('SELECT * FROM table2')
-
-        expect(table2Rows.length).to.equal(2)
-        expect(table2Rows[0].id).to.equal('x')
-        expect(table2Rows[0].column1).to.equal('c')
-        expect(table2Rows[1].id).to.equal('y')
-        expect(table2Rows[1].column1).to.equal('d')
-      })
-
-      it('should delete its one-to-one relationship', async function() {
-        let row1 = {
-          column1: 'a',
-          object1: {
-            column1: 'b'
-          }
-        }
-
-        let row2 = {
-          column1: 'c',
-          object1: {
-            column1: 'd',
-          }
-        }
-
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row1)
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row2)
-
-        let deletedRows = await delete_(schema, 'table1', 'postgres', pgQueryFn, { id: 1 })
-
-        expect(deletedRows.length).to.equal(1)
-        expect(deletedRows).to.deep.equal([{
-          id: 1,
-          column1: 'a',
-          column2: null,
-          table1_id: 2,
-          table2_id: null,
-          object1: {
-            id: 2,
-            column1: 'b',
-            column2: null,
-            table1_id: 1,
-            table2_id: null
-          }
-        }])
-
-        let table3Rows = await pgQueryFn('SELECT * FROM table1')
-
-        expect(table3Rows.length).to.equal(2)
-        expect(table3Rows[0].id).to.equal(4)
-        expect(table3Rows[0].column1).to.equal('d')
-        expect(table3Rows[0].column2).to.be.null
-        expect(table3Rows[0].table1_id).to.equal(3)
-        expect(table3Rows[0].table2_id).to.be.null
-        expect(table3Rows[1].id).to.equal(3)
-        expect(table3Rows[1].column1).to.equal('c')
-        expect(table3Rows[1].column2).to.be.null
-        expect(table3Rows[1].table1_id).to.equal(4)
-        expect(table3Rows[1].table2_id).to.be.null
       })
     })
   })

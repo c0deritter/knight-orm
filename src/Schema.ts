@@ -16,7 +16,6 @@ export interface Relationship {
   otherTable: string
   otherId: any
   otherRelationship?: string
-  delete?: boolean
 }
 
 export class SchemaClass {

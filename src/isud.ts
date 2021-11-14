@@ -532,8 +532,8 @@ export async function select(schema: Schema, tableName: string, db: string, quer
 
 export async function update(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria): Promise<any[]> {
   let l = log.fn('update')
-  l.lib('tableName', tableName)
-  l.lib('criteria', criteria)
+  l.param('tableName', tableName)
+  l.param('criteria', criteria)
 
   let table = schema[tableName]
 
@@ -560,8 +560,8 @@ export async function update(schema: Schema, tableName: string, db: string, quer
   let sqlString = query.sql(db)
   let values = query.values()
 
-  l.lib('sqlString', sqlString)
-  l.lib('values', values)
+  l.lib('SQL string', sqlString)
+  l.lib('Values', values)
 
   let updatedRows = await queryFn(sqlString, values)
   
@@ -569,11 +569,10 @@ export async function update(schema: Schema, tableName: string, db: string, quer
   return updatedRows
 }
 
-export async function delete_(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria, alreadyDeletedRows: FiddledRows = new FiddledRows(schema)): Promise<any[]> {
+export async function delete_(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
   let l = log.fn('delete_')
   l.param('tableName', tableName)
   l.param('criteria', criteria)
-  l.param('alreadyDeletedRows', alreadyDeletedRows.fiddledRows)
 
   let table = schema[tableName]
 
@@ -581,111 +580,22 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  // at first look if there is a typo in a column name because if so it would be left out in the
-  // query and thus not be taken into consideration which will have the effect of unwanted deletions
-  // which we want to prevent by checking if the given criteria only contains valid column names
-  let filteredCriteria = filterValidColumns(schema, tableName, criteria)
-  l.lib('filteredCriteria', filteredCriteria)
+  let query = new Query
+  query.deleteFrom(tableName)
+  addCriteria(schema, tableName, query, criteria)
 
-  if (Object.keys(criteria).length != Object.keys(filteredCriteria).length) {
-    throw new Error('Given criteria contained invalid columns ' + JSON.stringify(criteria))
+  if (db == 'postgres') {
+    query.returning('*')
   }
 
-  // we need to find out what we are going to delete because it may be the case that
-  // one or two or all id's are missing
-  let rowsToDelete = await select(schema, tableName, db, queryFn, criteria)
-  l.lib('rowsToDelete', rowsToDelete)
+  let sqlString = query.sql(db)
+  let values = query.values()
 
-  let deletedRows: any[] = []
+  l.lib('SQL string', sqlString)
+  l.lib('Values', values)
 
-  // next we go through all the row that are to be deleted and start with deleting
-  // their relationships, those who want to be deleted
-
-  l.lib('Deleting relationships...')
-
-  for (let row of rowsToDelete) {
-    l.lib('row', row)
-
-    if (alreadyDeletedRows.containsRow(tableName, row)) {
-      l.lib('Row is already deleted or about to be deleted. Continuing...')
-      continue
-    }
-
-    l.lib('Adding row to alreadyDeletedRows...')
-    alreadyDeletedRows.add(tableName, row)
-
-    let relationshipToDeletedRows: {[relationship: string]: any|any[]} = {}
-
-    if (table.relationships != undefined) {
-      for (let relationshipName of Object.keys(table.relationships)) {
-        l.lib('relationshipName', relationshipName)
-    
-        let relationship = table.relationships[relationshipName]
-        l.lib('relationship', relationship)
-    
-        if (! relationship.delete) {
-          l.lib('Relationship should not be deleted. Continuing...')
-          continue
-        }
-    
-        if (row[relationship.thisId] == undefined) {
-          l.lib('Row does not contain an id for this relationship thus there is nothing to delete. Continuing...')
-          continue
-        }
-    
-        let relationshipDeleteCriteria: Criteria = {
-          [relationship.otherId]: row[relationship.thisId]
-        }
-    
-        l.lib('relationshipDeleteCriteria', relationshipDeleteCriteria)
-    
-        l.lib('Deleting relationship. Going into recursion...')
-        let deletedRows = await delete_(schema, relationship.otherTable, db, queryFn, relationshipDeleteCriteria, alreadyDeletedRows)
-        l.lib('Coming back from recursion...')
-        l.lib('deletedRows', deletedRows)
+  let deletedRows = await queryFn(sqlString, values)
   
-        if (relationship.manyToOne) {
-          if (deletedRows.length == 1) {
-            relationshipToDeletedRows[relationshipName] = deletedRows[0]
-          }
-        }
-        else if (deletedRows.length > 0) {
-          relationshipToDeletedRows[relationshipName] = deletedRows
-        }
-      }  
-    }
-
-    let rowDeleteCriteria = rowToDeleteCriteria(schema, tableName, row)
-
-    let query = sql.deleteFrom(tableName)
-    addCriteria(schema, tableName, query, rowDeleteCriteria)
-
-    if (db == 'postgres') {
-      query.returning('*')
-    }
-  
-    let sqlString = query.sql(db)
-    let values = query.values()
-  
-    l.lib('sqlString', sqlString)
-    l.lib('values', values)
-  
-    let deletedRowsOfSingleRow = await queryFn(sqlString, values)
-
-    if (deletedRowsOfSingleRow.length != 1) {
-      throw new Error('Expected row count does not equal 1')
-    }
-
-    let deletedRow = deletedRowsOfSingleRow[0]
-
-    // attach the deleted rows of all relationships
-    for (let relationshipName of Object.keys(relationshipToDeletedRows)) {
-      deletedRow[relationshipName] = relationshipToDeletedRows[relationshipName]
-    }
-
-    deletedRows.push(deletedRow)
-  }
-    
-  l.returning('Returning deletedRows...', deletedRows)
+  l.returning('Returning deleted rows...', deletedRows)
   return deletedRows
 }
