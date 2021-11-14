@@ -209,6 +209,36 @@ describe('rowTools', function() {
       })
     })
 
+    it('should regard the columns of the table of the FROM clause even if every column is NULL', function() {
+      let rows = [
+        {
+          table1__id: null,
+          table1__column1: null,
+          table1__column2: null
+        },
+        {
+          table1__id: null,
+          table1__column1: null,
+          table1__column2: null
+        }
+      ]
+
+      let criteria = { a: 'a', b: 1 }
+      let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
+
+      expect(instances.length).to.equal(2)
+      expect(instances[0]).to.deep.equal({
+        id: null,
+        column1: null,
+        column2: null
+      })
+      expect(instances[1]).to.deep.equal({
+        id: null,
+        column1: null,
+        column2: null
+      })
+    })
+
     it('should create an instance out of rows with relationships', function() {
       let rows = [
         {

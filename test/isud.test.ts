@@ -15,7 +15,7 @@ let pool: Pool = new Pool({
   password: 'sqlorm_test'
 } as PoolConfig)
 
-describe.only('isud', function() {
+describe('isud', function() {
   describe('PostgreSQL', function () {
     after(async function() {
       await pool.end()

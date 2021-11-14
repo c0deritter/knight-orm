@@ -428,7 +428,7 @@ export async function insert(
 }
 
 export async function select(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
-  let l = log.fn('select', 'dev')
+  let l = log.fn('select')
   l.location = [ tableName ]
   l.param('criteria', criteria)
 
@@ -530,7 +530,6 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   return rows
 }
 
-// https://stackoverflow.com/questions/1293330/how-can-i-do-an-update-statement-with-join-in-sql-server
 export async function update(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria): Promise<any[]> {
   let l = log.fn('update')
   l.lib('tableName', tableName)

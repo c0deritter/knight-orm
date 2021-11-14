@@ -284,12 +284,20 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     else {
       l.lib('Adding unjoined row to the result array')
       unjoinedRows.push(unjoinedRow)
-      l.dev('Adding unjoined row to cache using id', unjoinedRowId)
-      idToRow[unjoinedRowId] = unjoinedRow
+
+      if (idToRow[unjoinedRowId] != null) {
+        l.dev('Adding unjoined row to cache using id', unjoinedRowId)
+        idToRow[unjoinedRowId] = unjoinedRow
+      }
+      else {
+        l.dev('Not adding unjoined row to cache because the id was null oder undefined', unjoinedRowId)
+      }
     }
 
     let relationshipNames = Object.keys(relationshipToRows)
-    l.lib('Adding relationships', relationshipNames)
+    if (relationshipNames.length > 0) {
+      l.lib('Adding relationships', relationshipNames)
+    }
 
     for (let relationshipName of relationshipNames) {
       l.location[1] = '> ' + relationshipName
