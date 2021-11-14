@@ -8,7 +8,7 @@
     "lib/**/*"
   ],
   "dependencies": {
-    "knight-criteria": "^2.0.2",
+    "knight-criteria": "^2.0.5",
     "knight-log": "^1.0.6",
     "knight-sql": "^2.1.7"
   },

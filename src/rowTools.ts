@@ -1,4 +1,4 @@
-import { Criteria, CriteriaObject } from 'knight-criteria'
+import { Criteria, CriteriaObject, summarize } from 'knight-criteria'
 import { Log } from 'knight-log'
 import { getIdColumns, getPropertyName, isIdColumn, Schema, Table } from './Schema'
 
@@ -207,7 +207,7 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
  * @param tableWasJoined If the columns of the given table were joined
  * @returns An array of row objects which relationships are unjoined
  */
-export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: CriteriaObject, alias: string): any[]  {
+export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: Criteria, alias: string): any[]  {
   let l = log.fn('unjoinRows')
 
   l.param('tableName', tableName)
@@ -233,7 +233,10 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
 
     l.lib('Unjoining relationship', relationshipName)
 
-    if (! (relationshipName in criteria)) {
+    let summarizedCriteria = summarize(criteria)
+    l.lib('Summarized criteria', summarizedCriteria)
+
+    if (! (relationshipName in summarizedCriteria)) {
       l.lib('Relationship is not contained in criteria. Continuing...')
       continue
     }
@@ -243,7 +246,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     let relationshipAlias = alias + relationshipName + '__'
 
     l.calling('Fetching all relationship rows. Calling unjoinRows again...')
-    let relationshipRows = unjoinRows(schema, relationshipTableName, joinedRows, criteria[relationshipName], relationshipAlias)
+    let relationshipRows = unjoinRows(schema, relationshipTableName, joinedRows, summarizedCriteria[relationshipName], relationshipAlias)
     l.called('Returning from fetching all relationship rows...')
     
     l.dev('Found relationship rows', relationshipRows)
