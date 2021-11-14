@@ -34,7 +34,7 @@ describe('criteriaTools', function() {
     it('should preserve criteria specific properties that start with @', function() {
       let instanceCriteria = {
         manyObjects: {
-          '@filterGlobally': true
+          '@load': true
         }
       }
 
@@ -42,7 +42,7 @@ describe('criteriaTools', function() {
 
       expect(rowCriteria).to.deep.equal({
         manyObjects: {
-          '@filterGlobally': true
+          '@load': true
         }
       })
     })
@@ -60,10 +60,10 @@ describe('criteriaTools', function() {
       let criteria = instanceToUpdateCriteria(schema, 'table1', table1)
 
       expect(criteria).to.deep.equal({
-        id: 1,
-        '@set': {
-          column1: 'a',
-          column2: 1
+        column1: 'a',
+        column2: 1,
+        '@criteria': {
+          id: 1
         }
       })
     })
