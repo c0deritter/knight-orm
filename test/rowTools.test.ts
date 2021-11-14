@@ -209,7 +209,7 @@ describe('rowTools', function() {
       })
     })
 
-    it('should regard the columns of the table of the FROM clause even if every column is NULL', function() {
+    it('should not regard rows if every of column is NULL', function() {
       let rows = [
         {
           table1__id: null,
@@ -223,23 +223,118 @@ describe('rowTools', function() {
         }
       ]
 
-      let criteria = { a: 'a', b: 1 }
+      let criteria = { }
       let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
-      expect(instances.length).to.equal(2)
-      expect(instances[0]).to.deep.equal({
-        id: null,
-        column1: null,
-        column2: null
+      expect(instances.length).to.equal(0)
+    })
+
+    it('should unjoin many-to-one relationships', function() {
+      let rows = [
+        {
+          table1__id: 1,
+          table1__column1: 'a',
+          table1__column2: 1,
+          table1__table1_id: 2,
+          table1__table2_id: 'x',
+          table1__object1__id: 2,
+          table1__object1__column1: 'b',
+          table1__object1__column2: 2,
+          table1__object1__table1_id: null,
+          table1__object1__table2_id: null,
+          table1__object2__id: 'x',
+          table1__object2__column1: 'c',
+          table1__object2__table1_id: null,
+        },
+        {
+          table1__id: 3,
+          table1__column1: 'd',
+          table1__column2: 3,
+          table1__table1_id: 4,
+          table1__table2_id: 'y',
+          table1__object1__id: 4,
+          table1__object1__column1: 'e',
+          table1__object1__column2: 4,
+          table1__object1__table1_id: null,
+          table1__object1__table2_id: null,
+          table1__object2__id: 'y',
+          table1__object2__column1: 'f',
+          table1__object2__table1_id: null,
+        },
+        {
+          table1__id: 5,
+          table1__column1: 'g',
+          table1__column2: 5,
+          table1__table1_id: null,
+          table1__table2_id: null,
+          table1__object1__id: null,
+          table1__object1__column1: null,
+          table1__object1__column2: null,
+          table1__object1__table1_id: null,
+          table1__object1__table2_id: null,
+          table1__object2__id: null,
+          table1__object2__column1: null,
+          table1__object2__table1_id: null,
+        }
+      ]
+
+      let criteria = { object1: {}, object2: {} }
+
+      let unjoinedRows = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
+
+      expect(unjoinedRows.length).to.equal(3)
+      expect(unjoinedRows[0]).to.deep.equal({
+        id: 1,
+        column1: 'a',
+        column2: 1,
+        table1_id: 2,
+        table2_id: 'x',
+        object1: {
+          id: 2,
+          column1: 'b',
+          column2: 2,
+          table1_id: null,
+          table2_id: null
+        },
+        object2: {
+          id: 'x',
+          column1: 'c',
+          table1_id: null
+        }
       })
-      expect(instances[1]).to.deep.equal({
-        id: null,
-        column1: null,
-        column2: null
+
+      expect(unjoinedRows[1]).to.deep.equal({
+        id: 3,
+        column1: 'd',
+        column2: 3,
+        table1_id: 4,
+        table2_id: 'y',
+        object1: {
+          id: 4,
+          column1: 'e',
+          column2: 4,
+          table1_id: null,
+          table2_id: null
+        },
+        object2: {
+          id: 'y',
+          column1: 'f',
+          table1_id: null
+        }
+      })
+
+      expect(unjoinedRows[2]).to.deep.equal({
+        id: 5,
+        column1: 'g',
+        column2: 5,
+        table1_id: null,
+        table2_id: null,
+        object1: null,
+        object2: null
       })
     })
 
-    it('should create an instance out of rows with relationships', function() {
+    it('should unjoin one-to-many relationships', function() {
       let rows = [
         {
           table1__id: 1,
@@ -256,23 +351,23 @@ describe('rowTools', function() {
           table1__manyObjects__object2__table1_id: null
         },
         {
-          table1__id: 2,
-          table1__column1: 'd',
-          table1__column2: 2,
+          table1__id: 1,
+          table1__column1: 'a',
+          table1__column2: 1,
           table1__table1_id: null,
           table1__table2_id: null,
-          table1__manyObjects__table1_id: 2,
+          table1__manyObjects__table1_id: 1,
           table1__manyObjects__table2_id: null,
-          table1__manyObjects__column1: 'e',
+          table1__manyObjects__column1: 'd',
           table1__manyObjects__table1_id2: null,
           table1__manyObjects__object2__id: null,
           table1__manyObjects__object2__column1: null,
           table1__manyObjects__object2__table1_id: null
         },
         {
-          table1__id: 3,
-          table1__column1: 'f',
-          table1__column2: 3,
+          table1__id: 2,
+          table1__column1: 'e',
+          table1__column2: 2,
           table1__table1_id: null,
           table1__table2_id: null,
           table1__manyObjects__table1_id: null,
@@ -289,52 +384,46 @@ describe('rowTools', function() {
 
       let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
-      expect(instances.length).to.equal(3)
+      expect(instances.length).to.equal(2)
       expect(instances[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: 1,
         table1_id: null,
         table2_id: null,
-        manyObjects: [{
-          table1_id: 1,
-          table2_id: 1,
-          column1: 'b',
-          table1_id2: null,
-          object2: {
-            id: 1,
-            column1: 'c',
-            table1_id: null
+        manyObjects: [
+          {
+            table1_id: 1,
+            table2_id: 1,
+            column1: 'b',
+            table1_id2: null,
+            object2: {
+              id: 1,
+              column1: 'c',
+              table1_id: null
+            }
+          },
+          {
+            table1_id: 1,
+            table2_id: null,
+            column1: 'd',
+            table1_id2: null,
+            object2: null
           }
-        }]
+        ]
       })
 
       expect(instances[1]).to.deep.equal({
         id: 2,
-        column1: 'd',
+        column1: 'e',
         column2: 2,
-        table1_id: null,
-        table2_id: null,
-        manyObjects: [{
-          table1_id: 2,
-          table2_id: null,
-          column1: 'e',
-          table1_id2: null,
-          object2: null
-        }]
-      })
-
-      expect(instances[2]).to.deep.equal({
-        id: 3,
-        column1: 'f',
-        column2: 3,
         table1_id: null,
         table2_id: null,
         manyObjects: []
       })
     })
 
-    it('should not add a relationship row more than once', function() {
+    it('should not unjoin a more complex example', function() {
       let rows = [
         {
           table1__id: 1,

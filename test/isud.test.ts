@@ -913,7 +913,7 @@ describe('isud', function() {
 
         await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let criteria = { manyObjects: { object2: {} }}
+        let criteria = { manyObjects: { object2: { '@load': true } }}
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
 
@@ -1071,14 +1071,14 @@ describe('isud', function() {
         expect(rows.length).to.equal(0)
       })
 
-      it('should select a row which columns are null', async function() {
+      it('should npt select rows which columns are null', async function() {
         await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
         await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
         await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
 
         let rows = await select(schema, 'table_many', 'postgres', pgQueryFn, {})
 
-        expect(rows.length).to.equal(3)
+        expect(rows.length).to.equal(0)
       })
     })
 

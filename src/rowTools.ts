@@ -207,7 +207,7 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
  * @param tableWasJoined If the columns of the given table were joined
  * @returns An array of row objects which relationships are unjoined
  */
-export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: CriteriaObject, alias: string, tableWasJoined = false): any[]  {
+export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: CriteriaObject, alias: string): any[]  {
   let l = log.fn('unjoinRows')
 
   l.param('tableName', tableName)
@@ -224,10 +224,14 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
   let relationshipNames = table.relationships != undefined ? Object.keys(table.relationships) : []
   let relationshipToRows: { [relationshipName: string]: any[] } = {}
 
-  l.lib('Unjoining relationships...', relationshipNames)
+  if (relationshipNames.length > 0) {
+    l.lib('Unjoining relationships...', relationshipNames)
+  }
+
   for (let relationshipName of relationshipNames) {
     l.location[1] = '> ' + relationshipName
-    l.lib('Unjoining next relationship...', relationshipName)
+
+    l.lib('Unjoining relationship', relationshipName)
 
     if (! (relationshipName in criteria)) {
       l.lib('Relationship is not contained in criteria. Continuing...')
@@ -235,63 +239,56 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     }
 
     let relationship = table.relationships![relationshipName]
-    l.lib('Relationship', relationship)
-
     let relationshipTableName = relationship.otherTable
     let relationshipAlias = alias + relationshipName + '__'
 
-    l.lib('Relationship table name', relationshipTableName)
-    l.lib('Relationship alias', relationshipAlias)
-    
     l.calling('Fetching all relationship rows. Calling unjoinRows again...')
-    let relationshipRows = unjoinRows(schema, relationshipTableName, joinedRows, criteria[relationshipName], relationshipAlias, true)
-    l.called('Returning from fetching all relationship rows')
+    let relationshipRows = unjoinRows(schema, relationshipTableName, joinedRows, criteria[relationshipName], relationshipAlias)
+    l.called('Returning from fetching all relationship rows...')
+    
     l.dev('Found relationship rows', relationshipRows)
-
     relationshipToRows[relationshipName] = relationshipRows
+
+    l.lib('Continuing unjoining relationships...')
   }
 
   l.location[1] = ''
 
-  let unjoinedRows: any[] = []
-  let idToRow: { [ id: string ]: any } = {}
+  if (relationshipNames.length > 0) {
+    l.lib('Finished unjoining relationships. Continuing with unjoining every row...')
+  }
+  else {
+    l.lib('Unjoining rows...')
+  }
 
-  l.lib('Unjoining rows...')
+  let unjoinedRows: any[] = []
+
   for (let joinedRow of joinedRows) {
     l.lib('Unjoining next row', joinedRow)
 
-    let unjoinedRow = unjoinRow(table, joinedRow, alias, tableWasJoined)
+    let unjoinedRow = unjoinRow(table, joinedRow, alias, true)
 
     if (unjoinedRow == undefined) {
-      l.lib('Given joined row did not contain any columns of the given given table. Skipping...')
+      l.lib('Given joined row did not contain any columns of the given table or every value was null. Skipping...')
       continue
     }
 
     l.lib('Unjoined row', unjoinedRow)
 
-    let idColumns = getIdColumns(table)
-    let unjoinedRowId = ''
-    
-    if (idColumns.length > 0) {
-      unjoinedRowId += unjoinedRow[idColumns[0]]
+    let rowAlreadyUnjoined = false
+    for (let alreadyUnjoinedRow of unjoinedRows) {
+      if (rowsRepresentSameEntity(table, alreadyUnjoinedRow, unjoinedRow)) {
+        rowAlreadyUnjoined = true
+        break
+      }
     }
 
-    let existingUnjoinedRow = idToRow[unjoinedRowId]
-
-    if (existingUnjoinedRow) {
-      l.lib('Not adding unjoined row to result array because we found an already unjoined row representing the same entity in the result array')
+    if (rowAlreadyUnjoined) {
+      l.lib('Not adding unjoined row to result array because it was already added')
     }
     else {
       l.lib('Adding unjoined row to the result array')
       unjoinedRows.push(unjoinedRow)
-
-      if (idToRow[unjoinedRowId] != null) {
-        l.dev('Adding unjoined row to cache using id', unjoinedRowId)
-        idToRow[unjoinedRowId] = unjoinedRow
-      }
-      else {
-        l.dev('Not adding unjoined row to cache because the id was null oder undefined', unjoinedRowId)
-      }
     }
 
     let relationshipNames = Object.keys(relationshipToRows)
@@ -302,18 +299,20 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     for (let relationshipName of relationshipNames) {
       l.location[1] = '> ' + relationshipName
 
+      l.lib('Adding relationship rows for relationship', relationshipName)
+
       let relationship = table.relationships![relationshipName]
       
       if (relationship.manyToOne) {
-        l.lib('Relationship is many-to-one. Initializing property with null.')
+        l.dev('Relationship is many-to-one. Initializing property with null.')
         unjoinedRow[relationshipName] = null
       }
       else if (relationship.oneToMany) {
-        l.lib('Relationship is one-to-many. Initializing property with empty array.')
+        l.dev('Relationship is one-to-many. Initializing property with empty array.')
         unjoinedRow[relationshipName] = []
       }
 
-      l.lib('Iterating through every relationshop row...')
+      l.dev('Iterating through every relationshop row...')
 
       for (let relationshipRow of relationshipToRows[relationshipName]) {
         if (unjoinedRow[relationship.thisId] === relationshipRow[relationship.otherId]) {
@@ -332,6 +331,13 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
         else {
           l.dev('Relationship row was not related', relationshipRow)
         }
+      }
+
+      if (relationship.manyToOne && unjoinedRow[relationshipName] === null) {
+        l.lib('No relationship row was found (many-to-one)')
+      }
+      else if (relationship.oneToMany && unjoinedRow[relationshipName].length == 0) {
+        l.lib('No relationship rows were found (one-to-many)')
       }
     }
 
@@ -432,7 +438,7 @@ export function getColumnsOfTable(row: any, table: Table, alias?: string): any {
  * @returns An object which has only those properties who represent the columns of the given table.
  * If the row did not contain any column of the given table, undefined is returned.
  */
-export function unjoinRow(table: Table, row: any, alias?: string, tableWasJoined = false): any {
+export function unjoinRow(table: Table, row: any, alias?: string, returnUndefinedIfEveryColumnIsNull = false): any {
   let filteredRow: any = undefined
   let everyColumnIsNull = true
 
@@ -452,7 +458,7 @@ export function unjoinRow(table: Table, row: any, alias?: string, tableWasJoined
     }
   }
 
-  if (tableWasJoined && everyColumnIsNull) {
+  if (returnUndefinedIfEveryColumnIsNull && everyColumnIsNull) {
     return
   }
 
