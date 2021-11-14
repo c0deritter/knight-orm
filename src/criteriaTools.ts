@@ -1,5 +1,5 @@
 import { Criteria, CriteriaObject } from 'knight-criteria'
-import { getPropertyName, isIdColumn, Schema, Table } from './Schema'
+import { getPropertyName, isIdColumn, Schema } from './Schema'
 
 export interface UpdateCriteria {
   [column: string]: any
@@ -83,7 +83,7 @@ export function instanceToUpdateCriteria(schema: Schema, tableName: string, inst
   return rowToUpdateCriteria(schema, tableName, row)
 }
 
-export function rowToDeleteCriteria(schema: Schema, tableName: string, row: any): CriteriaObject {
+export function rowToDeleteCriteria(schema: Schema, tableName: string, row: any): Criteria {
   let table = schema[tableName]
 
   if (table == undefined) {
@@ -101,7 +101,7 @@ export function rowToDeleteCriteria(schema: Schema, tableName: string, row: any)
   return deleteCriteria
 }
 
-export function instanceToDeleteCriteria(schema: Schema, tableName: string, instance: any): CriteriaObject {
+export function instanceToDeleteCriteria(schema: Schema, tableName: string, instance: any): Criteria {
   let table = schema[tableName]
 
   if (table == undefined) {
