@@ -6,6 +6,80 @@ export interface UpdateCriteria {
   '@criteria': Criteria
 }
 
+export interface CriteriaIssue {
+  location: string
+  message: string
+}
+
+export function validateCriteria(schema: Schema, tableName: string, criteria: Criteria, path: string = ''): CriteriaIssue[] {
+  let table = schema[tableName]
+
+  if (table == undefined) {
+    throw new Error('Table not contained in schema: ' + tableName)
+  }
+
+  if (table.columns == undefined) {
+    throw new Error('Table does not defined any columns: ' + tableName)
+  }
+
+  let issues: CriteriaIssue[] = []
+
+  if (criteria == undefined) {
+    return issues
+  }
+
+  if (criteria instanceof Array) {
+    for (let criterium of criteria) {
+      if (typeof criterium == 'object') {
+        let criteriumIssues = validateCriteria(schema, tableName, criterium)
+        issues.push(...criteriumIssues)
+      }
+    }
+  }
+
+  else if (typeof criteria == 'object' && criteria !== null) {
+    let columnNames = Object.keys(table.columns)
+    
+    let relationshipNames: string[]
+    if (table.relationships != undefined) {
+      relationshipNames = Object.keys(table.relationships)
+    }
+    else {
+      relationshipNames = []
+    }
+
+    for (let key of Object.keys(criteria)) {
+      if (columnNames.indexOf(key) > -1) {
+        continue
+      }
+
+      if (relationshipNames.indexOf(key) > -1) {
+        continue
+      }
+
+      if (key == '@not' || key == '@load' || key == '@loadSeparately' || key == '@count' ||
+          key == '@min' || key == '@max' || key == '@orderBy' || key == '@limit' || key == '@offset') {
+        continue
+      }
+
+      issues.push({
+        location: path + key,
+        message: 'Given column, relationship or @-property does not exist'
+      })
+    }
+
+    for (let relationshipName of relationshipNames) {
+      if (criteria[relationshipName] != undefined) {
+        let relationship = table.relationships![relationshipName]
+        let relationshipIssues = validateCriteria(schema, relationship.otherTable, criteria[relationshipName], path + relationshipName + '.')
+        issues.push(...relationshipIssues)
+      }
+    }
+  }
+
+  return issues
+}
+
 export function instanceCriteriaToRowCriteria<T extends Criteria>(schema: Schema, tableName: string, instanceCriteria: T): T {
   let table = schema[tableName]
 

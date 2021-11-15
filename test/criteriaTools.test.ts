@@ -1,9 +1,174 @@
 import { expect } from 'chai'
 import 'mocha'
-import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, instanceToUpdateCriteria } from '../src/criteriaTools'
+import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, instanceToUpdateCriteria, validateCriteria } from '../src/criteriaTools'
 import { ManyObject, Object1, Object2, schema } from './testSchema'
 
 describe('criteriaTools', function() {
+  describe('validateCriteria', function() {
+    it('should not find issues if the given criteria empty', function() {
+      expect(validateCriteria(schema, 'table1', {})).to.deep.equal([])
+    })
+
+    it('should not find issues if the given criteria are valid', function() {
+      expect(validateCriteria(schema, 'table1', {
+        id: 1,
+        column1: 'a',
+        object1: {
+          column2: 1,
+          '@orderBy': 'id',
+          '@limit': 5,
+          '@offset': 10
+        },
+        '@orderBy': 'id',
+        '@limit': 5,
+        '@offset': 10
+      })).to.deep.equal([])
+    })
+
+    it('should not find issues if the given comparison is valid', function() {
+      expect(validateCriteria(schema, 'table1', {
+        column1: {
+          '@operator': '=',
+          '@value': 'a'
+        },
+        column2: {
+          '@operator': '>'
+        }
+      })).to.deep.equal([])
+    })
+
+    it('should not find issues if the given criteria which are given as an array are valid', function() {
+      expect(validateCriteria(schema, 'table1', [{
+        id: 1,
+        column1: 'a',
+        object1: {
+          column2: 1,
+          '@orderBy': 'id',
+          '@limit': 5,
+          '@offset': 10  
+        },
+        '@orderBy': 'id',
+        '@limit': 5,
+        '@offset': 10
+      }])).to.deep.equal([])
+    })
+
+    it('should not find issues if the given relationship has an @load', function() {
+      expect(validateCriteria(schema, 'table1', {
+        object1: {
+          '@load': true
+        }
+      })).to.deep.equal([])
+    })
+
+    it('should not find issues if the given relationship has an @loadSeparately', function() {
+      expect(validateCriteria(schema, 'table1', {
+        object1: {
+          '@loadSeparately': true
+        }
+      })).to.deep.equal([])
+    })
+
+    it('should not find issues if the given relationship has an @not', function() {
+      expect(validateCriteria(schema, 'table1', {
+        object1: {
+          '@not': true
+        }
+      })).to.deep.equal([])
+    })
+
+    it('should not find issues if the given relationship has an @count', function() {
+      expect(validateCriteria(schema, 'table1', {
+        object1: {
+          '@count': true
+        }
+      })).to.deep.equal([])
+    })
+
+    it('should not find issues if the given relationship has an @max', function() {
+      expect(validateCriteria(schema, 'table1', {
+        object1: {
+          '@max': true
+        }
+      })).to.deep.equal([])
+    })
+
+    it('should not find issues if the given relationship has an @min', function() {
+      expect(validateCriteria(schema, 'table1', {
+        object1: {
+          '@min': true
+        }
+      })).to.deep.equal([])
+    })
+
+    it('should find an issue if a column, relationship or @property does not exist', function() {
+      expect(validateCriteria(schema, 'table1', {
+        column: 'a',
+        object: {},
+        '@invalid': true
+      })).to.deep.equal([
+        {
+          location: 'column',
+          message: 'Given column, relationship or @-property does not exist'
+        },
+        {
+          location: 'object',
+          message: 'Given column, relationship or @-property does not exist'
+        },
+        {
+          location: '@invalid',
+          message: 'Given column, relationship or @-property does not exist'
+        }
+      ])
+    })
+
+    it('should find an issue if a column, relationship or @property does not exist in a relationship', function() {
+      expect(validateCriteria(schema, 'table1', {
+        object1: {
+          column: 'a',
+          object: {},
+          '@invalid': true
+        }
+      })).to.deep.equal([
+        {
+          location: 'object1.column',
+          message: 'Given column, relationship or @-property does not exist'
+        },
+        {
+          location: 'object1.object',
+          message: 'Given column, relationship or @-property does not exist'
+        },
+        {
+          location: 'object1.@invalid',
+          message: 'Given column, relationship or @-property does not exist'
+        }
+      ])
+    })
+
+    it('should find an issue if a column, relationship or @property does not exist in a relationship with criteria given as an array', function() {
+      expect(validateCriteria(schema, 'table1', [{
+        object1: {
+          column: 'a',
+          object: {},
+          '@invalid': true
+        }
+      }])).to.deep.equal([
+        {
+          location: 'object1.column',
+          message: 'Given column, relationship or @-property does not exist'
+        },
+        {
+          location: 'object1.object',
+          message: 'Given column, relationship or @-property does not exist'
+        },
+        {
+          location: 'object1.@invalid',
+          message: 'Given column, relationship or @-property does not exist'
+        }
+      ])
+    })
+  })
+
   describe('instanceCriteriaToRowCriteria', function() {
     it('should convert instance criteria to row criteria', function() {
       let instanceCriteria = {
