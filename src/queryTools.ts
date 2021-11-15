@@ -1,4 +1,4 @@
-import { Criteria, isComparison, Operator } from 'knight-criteria'
+import { Criteria, isCriteriaComparison, Operator } from 'knight-criteria'
 import { Log } from 'knight-log'
 import { comparison, Condition, Query, Join, From } from 'knight-sql'
 import { Schema } from './Schema'
@@ -200,7 +200,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
       l.lib('Adding logical operator AND')
       condition.push('AND')
 
-      if (isComparison(value)) {
+      if (isCriteriaComparison(value)) {
         l.lib('Given object represents a comparison')
 
         let operator = value['@operator'].toUpperCase()
@@ -233,7 +233,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
         let atLeastOneComparison = false
 
         for (let arrayValue of value) {
-          if (isComparison(arrayValue)) {
+          if (isCriteriaComparison(arrayValue)) {
             atLeastOneComparison = true
             break
           }
@@ -265,7 +265,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
               }
             }
 
-            if (isComparison(arrayValue)) {
+            if (isCriteriaComparison(arrayValue)) {
               if (arrayValue['@value'] === undefined) {
                 l.lib('Skipping comparison because its value is undefined', arrayValue)
                 continue

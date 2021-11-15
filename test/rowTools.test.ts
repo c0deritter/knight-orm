@@ -278,7 +278,7 @@ describe('rowTools', function() {
         }
       ]
 
-      let criteria = { object1: {}, object2: {} }
+      let criteria = { object1: { '@load': true }, object2: { '@load': true } }
 
       let unjoinedRows = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
@@ -380,7 +380,7 @@ describe('rowTools', function() {
         }
       ]
 
-      let criteria = { manyObjects: { object2: {} }}
+      let criteria = { manyObjects: { '@load': true, object2: { '@load': true } }}
 
       let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
@@ -463,7 +463,7 @@ describe('rowTools', function() {
         }
       ]
 
-      let criteria = { manyObjects: { object2: { manyObjects: {} }}}
+      let criteria = { manyObjects: { '@load': true, object2: { '@load': true, manyObjects: { '@load': true } }}}
 
       let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
@@ -534,7 +534,7 @@ describe('rowTools', function() {
         }
       ]
 
-      let criteria = { object2: {}, manyObjects: { object2: {} }}
+      let criteria = { object2: { '@load': true }, manyObjects: { '@load': true, object2: { '@load': true } }}
 
       let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 

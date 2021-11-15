@@ -1,4 +1,4 @@
-import { Criteria, CriteriaObject, summarize } from 'knight-criteria'
+import { Criteria, CriteriaObject, summarizeCriteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import { getIdColumns, getPropertyName, isIdColumn, Schema, Table } from './Schema'
 
@@ -204,7 +204,6 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
  * @param joinedRows A array of row objects containing root columns and joined columns
  * @param criteria The criteria which were used to create the given rows
  * @param alias The alias which was prepended to the column names in regard to the given table
- * @param tableWasJoined If the columns of the given table were joined
  * @returns An array of row objects which relationships are unjoined
  */
 export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: Criteria, alias: string): any[]  {
@@ -224,6 +223,9 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
   let relationshipNames = table.relationships != undefined ? Object.keys(table.relationships) : []
   let relationshipToRows: { [relationshipName: string]: any[] } = {}
 
+  let summarizedCriteria = summarizeCriteria(criteria)
+  l.lib('Summarized criteria', summarizedCriteria)
+
   if (relationshipNames.length > 0) {
     l.lib('Unjoining relationships...', relationshipNames)
   }
@@ -233,11 +235,13 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
 
     l.lib('Unjoining relationship', relationshipName)
 
-    let summarizedCriteria = summarize(criteria)
-    l.lib('Summarized criteria', summarizedCriteria)
-
     if (! (relationshipName in summarizedCriteria)) {
       l.lib('Relationship is not contained in criteria. Continuing...')
+      continue
+    }
+
+    if (summarizedCriteria[relationshipName]['@load'] !== true) {
+      l.lib('Relationship is not to be loaded. Skipping...')
       continue
     }
 

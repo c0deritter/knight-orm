@@ -661,417 +661,273 @@ describe('isud', function() {
     })
 
     describe('select', function() {
-      it('should select the one row where the many-to-one relationship is present', async function() {
-        let row = {
-          column1: 'a',
-          column2: 1,
-          manyObjects: [
-            {
-              column1: 'b',
-              object2: {
-                id: 'x',
-                column1: 'c'
-              }
-            },
-            {
-              column1: 'd'
-            }
-          ]
-        }
+      it('should select all rows', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3 })
 
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {})
 
-        let criteria = {
-          id: 1,
-          column1: 'a',
-          manyObjects: {
-            column1: 'b',
-            object2: {
-              column1: 'c'
-            }
-          }
-        }  
-
-        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
-
-        expect(rows.length).to.equal(1)
-        expect(rows[0]).to.deep.equal({
-          id: 1,
-          column1: 'a',
-          column2: 1,
-          table1_id: null,
-          table2_id: null,
-          manyObjects: [
-            {
-              table1_id: 1,
-              table2_id: 'x',
-              column1: 'b',
-              table1_id2: null,
-              object2: {
-                id: 'x',
-                column1: 'c',
-                table1_id: null
-              }
-            }
-          ]
-        })
+        expect(rows.length).to.equal(3)
+        expect(rows[0]).to.deep.equal({ id: 1, column1: 'a', column2: 1, table1_id: null, table2_id: null })
+        expect(rows[1]).to.deep.equal({ id: 2, column1: 'b', column2: 2, table1_id: null, table2_id: null })
+        expect(rows[2]).to.deep.equal({ id: 3, column1: 'c', column2: 3, table1_id: null, table2_id: null })
       })
 
-      it('should select the one row where the many-to-one relationship is not present', async function() {
-        let row = {
-          column1: 'a',
-          column2: 1,
-          manyObjects: [
-            {
-              column1: 'b',
-              object2: {
-                id: 'x',
-                column1: 'c'
-              }
-            },
-            {
-              column1: 'd'
-            }
-          ]
-        }
+      it('should order by a column', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3 })
 
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let criteria = {
-          id: 1,
-          column1: 'a',
-          manyObjects: {
-            column1: 'd',
-            object2: {}
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
+          '@orderBy': {
+            field: 'column2',
+            direction: 'DESC'
           }
-        }  
-
-        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
-
-        expect(rows.length).to.equal(1)
-        expect(rows[0]).to.deep.equal({
-          id: 1,
-          column1: 'a',
-          column2: 1,
-          table1_id: null,
-          table2_id: null,
-          manyObjects: [
-            {
-              table1_id: 1,
-              table2_id: null,
-              column1: 'd',
-              table1_id2: null,
-              object2: null
-            }
-          ]
         })
+
+        expect(rows.length).to.equal(3)
+        expect(rows[0]).to.deep.equal({ id: 3, column1: 'c', column2: 3, table1_id: null, table2_id: null })
+        expect(rows[1]).to.deep.equal({ id: 2, column1: 'b', column2: 2, table1_id: null, table2_id: null })
+        expect(rows[2]).to.deep.equal({ id: 1, column1: 'a', column2: 1, table1_id: null, table2_id: null })
       })
 
-      it('should select if the many-to-one relationship criteria do not match', async function() {
-        let row = {
-          object2: {
-            id: 'x',
-            column1: 'a'
+      it('should limit the results', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3 })
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
+          '@limit': 2
+        })
+
+        expect(rows.length).to.equal(2)
+        expect(rows[0]).to.deep.equal({ id: 1, column1: 'a', column2: 1, table1_id: null, table2_id: null })
+        expect(rows[1]).to.deep.equal({ id: 2, column1: 'b', column2: 2, table1_id: null, table2_id: null })
+      })
+
+      it('should offset the results', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3 })
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
+          '@offset': 2
+        })
+
+        expect(rows.length).to.equal(1)
+        expect(rows[0]).to.deep.equal({ id: 3, column1: 'c', column2: 3, table1_id: null, table2_id: null })
+      })
+
+      it('should regard criteria in a many-to-one relationship', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 2 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 3 }})
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
+          column1: 'a',
+          object1: {
+            column2: 1
           }
-        }
+        })
 
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        expect(rows.length).to.equal(1)
+        expect(rows[0]).to.deep.equal({ id: 1, column1: 'a', column2: null, table1_id: 2, table2_id: null })
+      })
 
-        let criteria = {
-          object2: {
-            '@loadSeparately': true,
-            column1: 'b'
+      it('should regard criteria in a many-to-one relationship and load it', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 2 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 3 }})
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
+          column1: 'a',
+          object1: {
+            '@load': true,
+            column2: 1
           }
-        }
-
-        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+        })
 
         expect(rows.length).to.equal(1)
         expect(rows[0]).to.deep.equal({
           id: 1,
-          column1: null,
+          column1: 'a',
           column2: null,
-          table1_id: null,
-          table2_id: 'x',
-          object2: null
-        })
-      })
-
-      it('should select if the many-to-one relationship criteria do not match in the second level', async function() {
-        let row = {
-          object2: {
-            id: 'x',
-            column1: 'a',
-            object1: {
-              column1: 'b'
-            }
-          }
-        }
-
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let criteria = {
-          column1: null,
-          object2: {
-            column1: 'a',
-            object1: {
-              '@loadSeparately': true,
-              column1: 'c'
-            }
-          }
-        }
-
-        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
-
-        expect(rows.length).to.equal(1)
-        expect(rows[0]).to.deep.equal({
-          id: 2,
-          column1: null,
-          column2: null,
-          table1_id: null,
-          table2_id: 'x',
-          object2: {
-            id: 'x',
-            column1: 'a',
+          table1_id: 2,
+          table2_id: null,
+          object1: {
+            id: 2,
+            column1: null,
+            column2: 1,
             table1_id: 1,
-            object1: null
+            table2_id: null
           }
         })
       })
 
-      it('should filter globally by a many-to-one relationship and find something', async function() {
-        let row = {
-          object2: {
-            id: 'x',
-            column1: 'a'
+      it('should load a many-to-one relationship separately', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 2 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 3 }})
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
+          column1: 'a',
+          object1: {
+            '@loadSeparately': true,
+            column2: 1
           }
-        }
+        })
 
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let criteria = {
-          object2: {
-            column1: 'a'
+        expect(rows.length).to.equal(3)
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          table1_id: 2,
+          table2_id: null,
+          object1: {
+            id: 2,
+            column1: null,
+            column2: 1,
+            table1_id: 1,
+            table2_id: null
           }
-        }
+        })
+        expect(rows[1]).to.deep.equal({
+          id: 3,
+          column1: 'a',
+          column2: null,
+          table1_id: 4,
+          table2_id: null,
+          object1: null
+        })
+        expect(rows[2]).to.deep.equal({
+          id: 5,
+          column1: 'a',
+          column2: null,
+          table1_id: 6,
+          table2_id: null,
+          object1: null
+        })
+      })
 
-        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
+      it('should regard criteria in a one-to-many relationship', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'd' }, { column1: 'e' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'f' }, { column1: 'g' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'h' }, { column1: 'i' } ]})
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
+          column1: 'a',
+          manyObjects: {
+            column1: 'd'
+          }
+        })
+
+        expect(rows.length).to.equal(1)
+        expect(rows[0]).to.deep.equal({ id: 1, column1: 'a', column2: null, table1_id: null, table2_id: null })
+      })
+
+      it('should regard criteria in a one-to-many relationship and load it', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'd' }, { column1: 'e' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'f' }, { column1: 'g' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'h' }, { column1: 'i' } ]})
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
+          column1: 'a',
+          manyObjects: {
+            '@load': true,
+            column1: 'd'
+          }
+        })
 
         expect(rows.length).to.equal(1)
         expect(rows[0]).to.deep.equal({
           id: 1,
-          column1: null,
+          column1: 'a',
           column2: null,
           table1_id: null,
-          table2_id: 'x',
-          object2: {
-            id: 'x',
-            column1: 'a',
-            table1_id: 1
-          }
+          table2_id: null,
+          manyObjects: [
+            { table1_id: 1, table2_id: null, column1: 'd', table1_id2: null }
+          ]
         })
       })
 
-      it('should filter globally by a many-to-one relationship and do not find something', async function() {
-        let row = {
-          object2: {
-            column1: 'a'
-          }
-        }
+      it('should load a one-to-many relationship separately', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'd' }, { column1: 'e' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'f' }, { column1: 'g' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'h' }, { column1: 'i' } ]})
 
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let criteria = {
-          object2: {
-            column1: 'b'
-          }
-        }
-
-        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
-
-        expect(rows.length).to.equal(0)
-      })
-
-      it('should all rows of a one-to-many relationship', async function() {
-        let row = {
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          column2: 1,
-          manyObjects: [
-            {
-              column1: 'b',
-              object2: {
-                id: 'x',
-                column1: 'c',
-                table1_id: null
-              }
-            },
-            {
-              column1: 'd'
-            }
-          ]
-        }
+          manyObjects: {
+            '@loadSeparately': true,
+            column1: 'd'
+          }
+        })
 
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let criteria = { manyObjects: { object2: { '@load': true } }}
-
-        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
-
-        expect(rows.length).to.equal(1)
+        expect(rows.length).to.equal(3)
         expect(rows[0]).to.deep.equal({
           id: 1,
           column1: 'a',
-          column2: 1,
+          column2: null,
           table1_id: null,
           table2_id: null,
           manyObjects: [
-            {
-              table1_id: 1,
-              table2_id: 'x',
-              column1: 'b',
-              table1_id2: null,
-              object2: {
-                id: 'x',
-                column1: 'c',
-                table1_id: null
-              }
-            },
-            {
-              table1_id: 1,
-              table2_id: null,
-              column1: 'd',
-              table1_id2: null,
-              object2: null
-            }
+            { table1_id: 1, table2_id: null, column1: 'd', table1_id2: null }
           ]
         })
       })
 
-      it('it should return only those rows of a one-to-many relationship that match the given criteria', async function() {
-        let row = {
-          column1: 'a',
-          column2: 1,
-          manyObjects: [
-            {
-              column1: 'b',
-              object2: {
-                id: 'x',
-                column1: 'c',
-                table1_id: null
-              }
-            },
-            {
-              column1: 'd'
+      it('should process criteria given as array', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }, manyObjects: [ { column1: 'd' }, { column1: 'e' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }, manyObjects: [ { column1: 'f' }, { column1: 'g' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 2 }, manyObjects: [ { column1: 'h' }, { column1: 'i' } ]})
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, [
+          {
+            column: 'a',
+            object1: {
+              '@load': true,
+              column2: 1
             }
-          ]
-        }
+          },
+          'OR',
+          {
+            column: 'a',
+            manyObjects: {
+              '@loadSeparately': true,
+              column1: [ 'd', 'f' ]
+            }
+          }
+        ])
 
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let criteria = { manyObjects: { column1: 'b', object2: {} }}
-
-        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
-
-        expect(rows.length).to.equal(1)
+        expect(rows.length).to.equal(2)
         expect(rows[0]).to.deep.equal({
           id: 1,
           column1: 'a',
-          column2: 1,
+          column2: null,
           table1_id: null,
           table2_id: null,
+          object1: { id: 2, column1: null, column2: 1, table1_id: 1, table2_id: null },
           manyObjects: [
-            {
-              table1_id: 1,
-              table2_id: 'x',
-              column1: 'b',
-              table1_id2: null,
-              object2: {
-                id: 'x',
-                column1: 'c',
-                table1_id: null
-              }
-            }
+            { table1_id: 1, table2_id: null, column1: 'd', table1_id2: null }
+          ]
+        })
+        expect(rows[1]).to.deep.equal({
+          id: 3,
+          column1: 'a',
+          column2: null,
+          table1_id: null,
+          table2_id: null,
+          object1: { id: 4, column1: null, column2: 1, table1_id: 3, table2_id: null },
+          manyObjects: [
+            { table1_id: 3, table2_id: null, column1: 'f', table1_id2: null }
           ]
         })
       })
 
-      it('it should filter globally by a one-to-many relationship and find something', async function() {
-        let row = {
-          column1: 'a',
-          column2: 1,
-          manyObjects: [
-            {
-              column1: 'b',
-              object2: {
-                id: 'x',
-                column1: 'c',
-                table1_id: null
-              }
-            },
-            {
-              column1: 'd'
-            }
-          ]
-        }
-
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let criteria = { manyObjects: { column1: 'b', object2: {} }}
-
-        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
-
-        expect(rows.length).to.equal(1)
-        expect(rows[0]).to.deep.equal({
-          id: 1,
-          column1: 'a',
-          column2: 1,
-          table1_id: null,
-          table2_id: null,
-          manyObjects: [
-            {
-              table1_id: 1,
-              table2_id: 'x',
-              column1: 'b',
-              table1_id2: null,
-              object2: {
-                id: 'x',
-                column1: 'c',
-                table1_id: null
-              }
-            }
-          ]
-        })
-      })
-
-      it('it should filter globally by a one-to-many relationship and do not find something', async function() {
-        let row = {
-          column1: 'a',
-          column2: 1,
-          manyObjects: [
-            {
-              column1: 'b',
-              object2: {
-                id: 'x',
-                column1: 'c',
-                table1_id: null
-              }
-            },
-            {
-              column1: 'd'
-            }
-          ]
-        }
-
-        await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let criteria = { manyObjects: { column1: 'c', object2: {} }}
-
-        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, criteria)
-
-        expect(rows.length).to.equal(0)
-      })
-
-      it('should npt select rows which columns are null', async function() {
+      it('should not select rows which columns are null', async function() {
         await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
         await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
         await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
@@ -1082,7 +938,7 @@ describe('isud', function() {
       })
     })
 
-    describe.only('delete_', function() {
+    describe('delete_', function() {
       it('should delete a simple row by id', async function() {
         await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
         await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
