@@ -370,6 +370,9 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
           addCriteria(schema, otherTableName, query, relationshipCriteria, joinAlias, condition)
           l.called('Filled query with the relationship criteria', relationshipCriteria)
         }
+        else {
+          l.lib('Not adding because it is to load in a separate query')
+        }
       }
     }
   }

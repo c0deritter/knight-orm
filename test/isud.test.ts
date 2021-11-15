@@ -881,12 +881,12 @@ describe('isud', function() {
 
       it('should process criteria given as array', async function() {
         await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }, manyObjects: [ { column1: 'd' }, { column1: 'e' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }, manyObjects: [ { column1: 'f' }, { column1: 'g' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 2 }, manyObjects: [ { column1: 'h' }, { column1: 'i' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 2 }, manyObjects: [ { column1: 'f' }, { column1: 'g' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 3 }, manyObjects: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, [
           {
-            column: 'a',
+            column1: 'a',
             object1: {
               '@load': true,
               column2: 1
@@ -894,20 +894,20 @@ describe('isud', function() {
           },
           'OR',
           {
-            column: 'a',
+            column1: 'a',
             manyObjects: {
               '@loadSeparately': true,
-              column1: [ 'd', 'f' ]
+              column1: [ 'd' ]
             }
           }
         ])
 
-        expect(rows.length).to.equal(2)
+        expect(rows.length).to.equal(3)
         expect(rows[0]).to.deep.equal({
           id: 1,
           column1: 'a',
           column2: null,
-          table1_id: null,
+          table1_id: 2,
           table2_id: null,
           object1: { id: 2, column1: null, column2: 1, table1_id: 1, table2_id: null },
           manyObjects: [
@@ -918,12 +918,19 @@ describe('isud', function() {
           id: 3,
           column1: 'a',
           column2: null,
-          table1_id: null,
+          table1_id: 4,
           table2_id: null,
-          object1: { id: 4, column1: null, column2: 1, table1_id: 3, table2_id: null },
-          manyObjects: [
-            { table1_id: 3, table2_id: null, column1: 'f', table1_id2: null }
-          ]
+          object1: { id: 4, column1: null, column2: 2, table1_id: 3, table2_id: null },
+          manyObjects: []
+        })
+        expect(rows[2]).to.deep.equal({
+          id: 5,
+          column1: 'a',
+          column2: null,
+          table1_id: 6,
+          table2_id: null,
+          object1: { id: 6, column1: null, column2: 3, table1_id: 5, table2_id: null },
+          manyObjects: []
         })
       })
 
