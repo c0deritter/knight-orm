@@ -153,7 +153,7 @@ export function instanceToUpdateCriteria(schema: Schema, tableName: string, inst
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  let row = table.instanceToRow(instance)
+  let row = {}// table.instanceToRow(instance) TODO: !!!
   return rowToUpdateCriteria(schema, tableName, row)
 }
 
@@ -182,6 +182,6 @@ export function instanceToDeleteCriteria(schema: Schema, tableName: string, inst
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  let row = table.instanceToRow(instance)
+  let row = {} //table.instanceToRow(instance) TODO: !!!
   return rowToDeleteCriteria(schema, tableName, row)
 }

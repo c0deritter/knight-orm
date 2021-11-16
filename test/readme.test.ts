@@ -154,23 +154,7 @@ let schema = {
       }
     },
 
-    rowToInstance: (row: any) => {
-      let knight = new Knight
-
-      knight.id = row['id']
-      knight.name = row['name']
-      knight.bestFriendId = row['best_friend_id']
-
-      return knight
-    },
-
-    instanceToRow: (knight: Knight) => {
-      return {
-        id: knight.id,
-        name: knight.name,
-        best_friend_id: knight.bestFriendId
-      }
-    }
+    newInstance: () => new Knight
   },
 
   // this is the many-to-many association table
@@ -194,20 +178,7 @@ let schema = {
       }
     },
 
-    rowToInstance: (row: any) => {
-      let friends = new Friends
-
-      friends.befrienderId = row['befriender_id']
-      friends.friendId = row['friend_id']
-
-      return friends
-    },
-    instanceToRow: (friends: Friends) => {
-      return {
-        befriender_id: friends.befrienderId,
-        friend_id: friends.friendId
-      }
-    }
+    newInstance: () => new Friends
   },
 
   'address': {
@@ -225,20 +196,7 @@ let schema = {
       }
     },
 
-    rowToInstance: (row: any) => {
-      let address = new Address
-
-      address.knightId = row['knight_id']
-      address.street = row['street']
-
-      return address
-    },
-    instanceToRow: (address: Address) => {
-      return {
-        knight_id: address.knightId,
-        street: address.street
-      }
-    }
+    newInstance: () => new Address
   }
 }
 

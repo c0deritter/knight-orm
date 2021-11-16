@@ -4,24 +4,6 @@ import { getIdColumns, getPropertyName, isIdColumn, Schema, Table } from './Sche
 
 let log = new Log('knight-orm/rowTools.ts')
 
-export function filterValidColumns(schema: Schema, tableName: string, row: any): any {
-  let table = schema[tableName]
-
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
-  let filtered: any = {}
-  
-  for (let columnName of Object.keys(table.columns)) {
-    if (columnName in row) {
-      filtered[columnName] = row[columnName]
-    }
-  }
-
-  return filtered
-}
-
 class AlreadyConverted {
   instancesAndRows: { instance: any, row: any }[] = []
 
@@ -54,76 +36,103 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
 
   let row = alreadyConverted.getRow(instance)
   if (row != undefined) {
-    l.lib('Instance was already converted. Returning it...', row)
+    l.lib('Row was already converted. Returning it...', row)
     return row
   }
 
   let table = schema[tableName]
-
   if (table == undefined) {
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  row = table.instanceToRow(instance)
-  l.lib('row', row)
+  if (typeof table.columns != 'object' || table.columns === null) {
+    throw new Error('Table does not contain any column definitions: ' + tableName)
+  }
+
+  row = {}
+  for (let columnName of Object.keys(table.columns)) {
+    let propertyName = getPropertyName(table.columns[columnName])
+    
+    if (propertyName in instance) {
+      row[columnName] = instance[propertyName]
+    }
+  }
+
+  l.lib('Created row through simple copying of the values from the instance', row)
+
+  if (typeof table.instanceToRow == 'function') {
+    l.calling('Additionally applying custom instanceToRow function')
+    row = table.instanceToRow(instance, row)
+    l.called('Custom instanceToRow function applied', row)
+  }
 
   alreadyConverted.add(instance, row)
 
   if (table.relationships != undefined) {
-    for (let relationshipName of Object.keys(table.relationships)) {
-      l.lib('relationshipName', relationshipName)
-  
-      if (typeof instance[relationshipName] == 'object' && instance[relationshipName] !== null) {
-        let relationship = table.relationships[relationshipName]
-  
-        if (relationship.manyToOne) {
-          l.calling('Relationship is many-to-one. Going into recursion...')
-          row[relationshipName] = instanceToRow(schema, relationship.otherTable, instance[relationshipName], alreadyConverted)
-          l.called('Returning from recursion...')
-        }
-        else if (instance[relationshipName] instanceof Array) {
-          l.lib('Relationship is one-to-many')
-  
-          for (let relationshipInstance of instance[relationshipName]) {
-            l.lib('relationshipInstance', relationshipInstance)
-            l.calling('Going into recursion...')
-            let relationshipRow = instanceToRow(schema, relationship.otherTable, relationshipInstance, alreadyConverted)
-            l.called('Returning from recursion...')
-  
+    let relationshipNames = Object.keys(table.relationships)
+
+    if (relationshipNames.length > 0) {
+      l.lib('Iterating through relationships', relationshipNames)
+      l.location = []
+
+      for (let relationshipName of relationshipNames) {
+        l.location[0] = relationshipName
+        l.lib('Processing next relationship', relationshipName)
+    
+        if (typeof instance[relationshipName] == 'object' && instance[relationshipName] !== null) {
+          let relationship = table.relationships[relationshipName]
+    
+          if (relationship.manyToOne) {
+            l.calling('Relationship is many-to-one. Converting relationship instance by using recursion.')
+            let relationshipRow = instanceToRow(schema, relationship.otherTable, instance[relationshipName], alreadyConverted)
+            l.called('Converted relationship instance', relationshipRow)
+            row[relationshipName] = relationshipRow
+          }
+          else if (instance[relationshipName] instanceof Array) {
+            l.lib('Relationship is one-to-many. Converting every relationship instance...')
+    
             if (row[relationshipName] == undefined) {
               row[relationshipName] = []
             }
-  
-            row[relationshipName].push(relationshipRow)
-          }        
+
+            for (let relationshipInstance of instance[relationshipName]) {
+              l.calling('Converting next relationship instance by using recursion')
+              let relationshipRow = instanceToRow(schema, relationship.otherTable, relationshipInstance, alreadyConverted)
+              l.called('Converted relationship instance')
+        
+              row[relationshipName].push(relationshipRow)
+            }        
+          }
+          else {
+            l.warn('Relationship is one-to-many but given relationship row object is not of type array', instance[relationshipName])
+          }
+        }
+        else if (instance[relationshipName] !== undefined) {
+          l.lib('Relationship is not an object and not undefined which is invalid. Assigning it to row as it is.')
+          row[relationshipName] = instance[relationshipName]
         }
         else {
-          l.warn('Relationship is one-to-many but given relationship row object is not of type array', instance[relationshipName])
+          l.lib('Relationship does not exist on this instance. Continuing...')
         }
       }
-      else if (instance[relationshipName] !== undefined) {
-        l.lib('Relationship is not an object and not undefined')
-        row[relationshipName] = instance[relationshipName]
-      }
-      else {
-        l.lib('Relationship does not exist on this instance. Continuing...')
-      }
-    }  
+
+      l.location = undefined
+    }
   }
 
-  l.returning('Returning row...', row)
+  l.returning('Returning row', row)
   return row
 }
 
 export function rowToInstance(schema: Schema, tableName: string, row: any, alreadyConverted: AlreadyConverted = new AlreadyConverted): any {
   let l = log.fn('rowToInstance')
-  l.location = [ tableName ]
+  l.param('tableName', tableName)
   l.param('row', row)
   l.param('alreadyConverted', alreadyConverted.instancesAndRows)
 
   let instance = alreadyConverted.getInstance(row)
   if (instance != undefined) {
-    l.lib('Row was already converted. Returning it...')
+    l.lib('Instance was already converted. Returning it...', instance)
     return instance
   }
 
@@ -132,61 +141,78 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  instance = table.rowToInstance(row)
-  l.lib('instance', instance)
+  if (typeof table.columns != 'object' || table.columns === null) {
+    throw new Error('Table does not contain any column definitions: ' + tableName)
+  }
+
+  instance = table.newInstance()
+
+  for (let columnName of Object.keys(table.columns)) {
+    if (columnName in row) {
+      let propertyName = getPropertyName(table.columns[columnName])
+      instance[propertyName] = row[columnName]
+    }
+  }
+
+  l.lib('Created instance through simple copying of the values from the row', instance)
+
+  if (typeof table.rowToInstance == 'function') {
+    l.calling('Additionally applying custom rowToInstance function')
+    instance = table.rowToInstance(row, instance)
+    l.called('Custom rowToInstance function applied', instance)
+  }
 
   alreadyConverted.add(instance, row)
 
   l.lib('Converting relationships...')
 
   if (table.relationships != undefined) {
-    for (let relationshipName of Object.keys(table.relationships)) {
-      l.location.push(' ' + relationshipName)
-      l.dev('Converting next relationship...', relationshipName)
-      l.location.push('.' + relationshipName)
-      l.lib('row', row)
+    let relationshipNames = Object.keys(table.relationships)
+
+    if (relationshipNames.length > 0) {
+      l.lib('Iterating through relationships', relationshipNames)
+      l.location = []
+
+      for (let relationshipName of relationshipNames) {
+        l.location[0] = relationshipName
+        l.lib('Processing next relationship', relationshipName)
   
-      if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
-        let relationship = table.relationships[relationshipName]
-  
-        if (relationship.manyToOne) {
-          l.calling('Converting many-to-one. Going into recursion...')
-          let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, row[relationshipName], alreadyConverted)
-          l.called('Returning from recursion...')
-          
-          l.lib('Setting converted relationship instance...', relationshipInstance)
-          l.lib('...on row', row)
-          instance[relationshipName] = relationshipInstance
-        }
-        else if (row[relationshipName] instanceof Array) {
-          l.lib('Relationship is one-to-many. Converting every relationship row...')
-  
-          for (let relationshipRow of row[relationshipName]) {
-            l.lib('Converting next relationship row...', relationshipRow)
-            l.lib('row', row)
-            l.calling('Going into recursion...')
-            let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, relationshipRow, alreadyConverted)
-            l.called('Returning from recursion...')
-  
+        if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
+          let relationship = table.relationships[relationshipName]
+    
+          if (relationship.manyToOne) {
+            l.calling('Relationship is many-to-one. Converting relationship row by using recursion.')
+            let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, row[relationshipName], alreadyConverted)
+            l.called('Converted relationship instance')
+            l.lib('Setting converted relationship instance')
+            instance[relationshipName] = relationshipInstance
+          }
+          else if (row[relationshipName] instanceof Array) {
+            l.lib('Relationship is one-to-many. Converting every relationship instance...')
+    
             if (instance[relationshipName] == undefined) {
               instance[relationshipName] = []
             }
-  
-            l.lib('Adding converted relationship instance to relationship array...', relationshipInstance)
-            l.lib('...on row', row)
-            instance[relationshipName].push(relationshipInstance)
-          }        
+
+            for (let relationshipRow of row[relationshipName]) {
+              l.calling('Converting next relationship row by using recursion')
+              let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, relationshipRow, alreadyConverted)
+              l.called('Converted relationship instance')
+              l.lib('Adding converted relationship instance')
+              instance[relationshipName].push(relationshipInstance)
+            }        
+          }
+        }
+        else if (row[relationshipName] !== undefined) {
+          l.lib('Relationship is not an object and not undefined which is invalid. Assigning it to instance as it is.')
+          row[relationshipName] = instance[relationshipName]
+        }
+        else {
+          l.lib('Relationship is not set. Continuing...')
         }
       }
-      else if (row[relationshipName] !== undefined) {
-        l.lib('Relationship is not an object but also not undefined. Setting given value without converting...')
-        row[relationshipName] = instance[relationshipName]
-      }
-      else {
-        l.lib('Relationship is not set. Continuing...')
-      }
 
-      l.location.pop()
+      l.location = undefined
     }
   }
 

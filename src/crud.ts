@@ -85,7 +85,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  let row = table.instanceToRow(instance)
+  let row = {} //table.instanceToRow(instance) TODO: !!!
   l.lib('row', row)
 
   if (row == undefined) {
@@ -163,7 +163,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     updatedRow = selectedRows[0]
   }
 
-  let updatedInstance = table.rowToInstance(updatedRow)
+  let updatedInstance: any = {} //table.rowToInstance(updatedRow) TODO: !!!
   alreadyUpdatedRows.add(tableName, row, updatedInstance)
 
   l.lib('Update relationships...')

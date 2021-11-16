@@ -10,13 +10,15 @@ describe('rowTools', function() {
       object1.id = 1
       object1.property1 = 'a'
       object1.property2 = 1
+      object1.object1Id = 2
+      object1.object2Id = 3
 
       expect(instanceToRow(schema, 'table1', object1)).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: 1 ,
-        table1_id: undefined,
-        table2_id: undefined
+        table1_id: 2,
+        table2_id: 3
       })
     })
 
@@ -51,8 +53,6 @@ describe('rowTools', function() {
         id: 1,
         column1: 'a',
         column2: 1,
-        table1_id: undefined,
-        table2_id: undefined,
         manyObjects: [
           {
             table1_id: 1,
@@ -84,6 +84,33 @@ describe('rowTools', function() {
 
       expect(row).to.deep.equal(expectedRow)
     })
+
+    it('should use a custom rowToInstance function', function() {
+      let object1 = new Object1
+      object1.id = 1
+      object1.property1 = 'a'
+      object1.property2 = 1
+      object1.object1Id = 2
+      object1.object2Id = 3
+
+      schema.table1.instanceToRow = function(instance: Object1, row: any) {
+        row.id++
+        row.column1 = 'b'
+        row.column2 = instance.property2! + 1
+        return row
+      }
+      
+      let row = instanceToRow(schema, 'table1', object1)
+      delete schema.table1.instanceToRow
+
+      expect(row).to.deep.equal({
+        id: 2,
+        column1: 'b',
+        column2: 2 ,
+        table1_id: 2,
+        table2_id: 3
+      })
+    })
   })
 
   describe('rowToInstance', function() {
@@ -91,15 +118,17 @@ describe('rowTools', function() {
       let row = {
         id: 1,
         column1: 'a',
-        column2: 1
+        column2: 1,
+        table1_id: 2,
+        table2_id: 3
       }
 
       expect(rowToInstance(schema, 'table1', row)).to.deep.equal({
         id: 1,
         property1: 'a',
         property2: 1,
-        object1Id: undefined,
-        object2Id: undefined
+        object1Id: 2,
+        object2Id: 3
       })
     })
 
@@ -141,8 +170,6 @@ describe('rowTools', function() {
         id: 1,
         property1: 'a',
         property2: 1,
-        object1Id: undefined,
-        object2Id: undefined,
         manyObjects: [
           {
             object1Id: 1,
@@ -151,8 +178,7 @@ describe('rowTools', function() {
             object1Id2: null,
             object2: {
               id: 'x',
-              property1: 'c',
-              object1Id: undefined
+              property1: 'c'
             }
           } as ManyObject,
           {
@@ -162,8 +188,7 @@ describe('rowTools', function() {
             object1Id2: null,
             object2: {
               id: 'y',
-              property1: 'e',
-              object1Id: undefined
+              property1: 'e'
             }
           } as ManyObject
         ]
@@ -173,6 +198,34 @@ describe('rowTools', function() {
       expectedInstance.manyObjects[1].object1 = expectedInstance
 
       expect(instance).to.deep.equal(expectedInstance)
+    })
+
+    it('should use a custom rowToInstance function', function() {
+      let row = {
+        id: 1,
+        column1: 'a',
+        column2: 1,
+        table1_id: 2,
+        table2_id: 3
+      }
+
+      schema.table1.rowToInstance = function(instance: Object1, row: any) {
+        instance.id!++
+        instance.property1 = 'b'
+        instance.property2 = row.column2 + 1
+        return row
+      }
+      
+      let instance = rowToInstance(schema, 'table1', row)
+      delete schema.table1.rowToInstance
+
+      expect(instance).to.deep.equal({
+        id: 1,
+        property1: 'a',
+        property2: 1,
+        object1Id: 2,
+        object2Id: 3
+      })
     })
   })
 

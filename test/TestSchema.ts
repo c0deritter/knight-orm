@@ -65,24 +65,7 @@ export const schema = {
         otherRelationship: 'object1'
       }
     },
-    rowToInstance: (row: any) => {
-      let obj1 = new Object1
-      obj1.id = row.id
-      obj1.property1 = row.column1
-      obj1.property2 = row.column2
-      obj1.object1Id = row.table1_id
-      obj1.object2Id = row.table2_id
-      return obj1
-    },
-    instanceToRow: (obj1: Object1) => {
-      return {
-        id: obj1.id,
-        column1: obj1.property1,
-        column2: obj1.property2,
-        table1_id: obj1.object1Id,
-        table2_id: obj1.object2Id,
-      }
-    }
+    newInstance: () => new Object1
   },
   
   'table2': {
@@ -107,20 +90,7 @@ export const schema = {
         delete: true
       }
     },
-    rowToInstance: (row: any) => {
-      let obj2 = new Object2
-      obj2.id = row.id
-      obj2.property1 = row.column1
-      obj2.object1Id = row.table1_id
-      return obj2      
-    },
-    instanceToRow: (obj2: Object2) => {
-      return {
-        id: obj2.id,
-        column1: obj2.property1,
-        table1_id: obj2.object1Id
-      }
-    }
+    newInstance: () => new Object2
   },
 
   'table_many': {
@@ -150,21 +120,6 @@ export const schema = {
         otherId: 'id'
       }
     },
-    rowToInstance: (row: any) => {
-      let many = new ManyObject
-      many.object1Id = row.table1_id
-      many.object2Id = row.table2_id
-      many.property1 = row.column1
-      many.object1Id2 = row.table1_id2
-      return many
-    },
-    instanceToRow: (many: ManyObject) => {
-      return {
-        table1_id: many.object1Id,
-        table2_id: many.object2Id,
-        column1: many.property1,
-        table1_id2: many.object1Id2
-      }
-    }
+    newInstance: () => new ManyObject
   }
 } as Schema

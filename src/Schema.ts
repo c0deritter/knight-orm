@@ -5,8 +5,9 @@ export interface Schema {
 export interface Table {
   columns: { [name: string]: string | { property: string, id: boolean } }
   relationships?: { [relationship: string]: Relationship }
-  rowToInstance: (row: any) => any
-  instanceToRow: (instance: any) => any
+  newInstance: () => any
+  rowToInstance?: (row: any, instance: any) => any
+  instanceToRow?: (instance: any, row: any) => any
 }
 
 export interface Relationship {
@@ -16,10 +17,6 @@ export interface Relationship {
   otherTable: string
   otherId: any
   otherRelationship?: string
-}
-
-export class SchemaClass {
-  
 }
 
 export function getIdColumns(table: Table): string[] {
