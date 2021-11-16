@@ -221,6 +221,43 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
 }
 
 /**
+ * Gets a row consisting of multiple joined tables and unjoins a given table. It basically
+ * means that it will extract the columns of the given table while removing their aliases.
+ * 
+ * @param table The table which is to be extracted from the given row
+ * @param joinedRow A row which contains columns of multiple joined tables
+ * @param alias The alias which was used to prefix every column of the given table
+ * @returns An object which has only those properties who represent the columns of the given table.
+ * If the row did not contain any column of the given table, undefined is returned.
+ */
+ export function unjoinTable(table: Table, joinedRow: any, alias?: string, returnUndefinedIfEveryColumnIsNull = false): any {
+  let filteredRow: any = undefined
+  let everyColumnIsNull = true
+
+  for (let column of Object.keys(table.columns)) {
+    let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column : column
+
+    if (aliasedColumn in joinedRow) {
+      if (filteredRow == undefined) {
+        filteredRow = {}
+      }
+
+      filteredRow[column] = joinedRow[aliasedColumn]
+
+      if (filteredRow[column] !== null) {
+        everyColumnIsNull = false
+      }
+    }
+  }
+
+  if (returnUndefinedIfEveryColumnIsNull && everyColumnIsNull) {
+    return
+  }
+
+  return filteredRow
+}
+
+/**
  * Gets an array of rows which contain the columns of the base table and optionally additional
  * joined columns which refer to the base table through a many-to-one or one-to-many
  * relationship. It will create the corresponding object tree out of it.
@@ -299,7 +336,7 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
   for (let joinedRow of joinedRows) {
     l.lib('Unjoining next row', joinedRow)
 
-    let unjoinedRow = unjoinRow(table, joinedRow, alias, true)
+    let unjoinedRow = unjoinTable(table, joinedRow, alias, true)
 
     if (unjoinedRow == undefined) {
       l.lib('Given joined row did not contain any columns of the given table or every value was null. Skipping...')
@@ -455,44 +492,6 @@ export function getColumnsOfTable(row: any, table: Table, alias?: string): any {
   for (let column of Object.keys(table.columns)) {
     let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column : column
     filteredRow[aliasedColumn] = row[aliasedColumn]
-  }
-
-  return filteredRow
-}
-
-/**
- * Gets a row consisting of columns of the base table and optionally additional columns which
- * were joined because they refer to the base table through a many-to-one or a one-to-many
- * relationship.
- * 
- * @param table 
- * @param row 
- * @param alias 
- * @returns An object which has only those properties who represent the columns of the given table.
- * If the row did not contain any column of the given table, undefined is returned.
- */
-export function unjoinRow(table: Table, row: any, alias?: string, returnUndefinedIfEveryColumnIsNull = false): any {
-  let filteredRow: any = undefined
-  let everyColumnIsNull = true
-
-  for (let column of Object.keys(table.columns)) {
-    let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column : column
-
-    if (aliasedColumn in row) {
-      if (filteredRow == undefined) {
-        filteredRow = {}
-      }
-
-      filteredRow[column] = row[aliasedColumn]
-
-      if (filteredRow[column] !== null) {
-        everyColumnIsNull = false
-      }
-    }
-  }
-
-  if (returnUndefinedIfEveryColumnIsNull && everyColumnIsNull) {
-    return
   }
 
   return filteredRow
