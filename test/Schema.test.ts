@@ -1,13 +1,13 @@
 import { expect } from 'chai'
 import 'mocha'
-import { getIdColumns, getPropertyName, isPrimaryKey } from '../src/Schema'
+import { getPrimaryKey, getPropertyName, isPrimaryKey } from '../src/Schema'
 import { schema } from './testSchema'
 
 describe('Schema', function() {
-  describe('getIdColumns', function() {
+  describe('getPrimaryKey', function() {
     it('should return all id columns', function() {
-      expect(getIdColumns(schema['table1'])).to.deep.equal(['id'])
-      expect(getIdColumns(schema['table_many'])).to.deep.equal(['table1_id', 'table2_id'])
+      expect(getPrimaryKey(schema['table1'])).to.deep.equal(['id'])
+      expect(getPrimaryKey(schema['table_many'])).to.deep.equal(['table1_id', 'table2_id'])
     })
   })
 

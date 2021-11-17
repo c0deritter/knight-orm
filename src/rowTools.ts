@@ -1,6 +1,6 @@
 import { Criteria, CriteriaObject, summarizeCriteria } from 'knight-criteria'
 import { Log } from 'knight-log'
-import { getIdColumns, getPropertyName, isPrimaryKey, Schema, Table } from './Schema'
+import { getPrimaryKey, getPropertyName, isPrimaryKey, Schema, Table } from './Schema'
 
 let log = new Log('knight-orm/rowTools.ts')
 
@@ -426,14 +426,14 @@ export function rowsRepresentSameEntity(table: Table, row1: any, row2: any): boo
     return false
   }
 
-  let idColumns = getIdColumns(table)
+  let primaryKey = getPrimaryKey(table)
 
-  if (idColumns.length == 0) {
+  if (primaryKey.length == 0) {
     return false
   }
 
-  for (let idColumn of idColumns) {
-    if (row1[idColumn] === undefined || row1[idColumn] !== row2[idColumn]) {
+  for (let column of primaryKey) {
+    if (row1[column] === undefined || row1[column] !== row2[column]) {
       return false
     }
   }
@@ -446,16 +446,16 @@ export function instancesRepresentSameEntity(table: Table, instance1: any, insta
     return false
   }
   
-  let idColumns = getIdColumns(table)
+  let primaryKey = getPrimaryKey(table)
 
-  if (idColumns.length == 0) {
+  if (primaryKey.length == 0) {
     return false
   }
 
-  for (let idColumn of idColumns) {
-    let idProperty = getPropertyName(table, idColumn)
+  for (let column of primaryKey) {
+    let property = getPropertyName(table, column)
 
-    if (idProperty != undefined && (instance1[idProperty] === undefined || instance1[idProperty] !== instance2[idProperty])) {
+    if (property != undefined && (instance1[property] === undefined || instance1[property] !== instance2[property])) {
       return false
     }
   }
@@ -477,32 +477,21 @@ export function isRowRelevant(row: any, filter: any): boolean {
   return true
 }
 
-export function idsOnly(table: Table, row: any): any {
-  let idsOnly: any = {}
+export function reduceToPrimaryKeys(table: Table, row: any): any {
+  let reduced: any = {}
   
   for (let column of Object.keys(table.columns)) {
     if (isPrimaryKey(table, column)) {
-      idsOnly[column] = row[column]
+      reduced[column] = row[column]
     }
   }
 
-  return idsOnly
+  return reduced
 }
 
-export function getColumnsOfTable(row: any, table: Table, alias?: string): any {
-  let filteredRow: any = {}
-
-  for (let column of Object.keys(table.columns)) {
-    let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column : column
-    filteredRow[aliasedColumn] = row[aliasedColumn]
-  }
-
-  return filteredRow
-}
-
-export function allIdsSet(table: Table, row: any): boolean {
-  for (let idColumn of getIdColumns(table)) {
-    if (row[idColumn] === undefined) {
+export function areAllPrimaryKeyColumnsSet(table: Table, row: any): boolean {
+  for (let column of getPrimaryKey(table)) {
+    if (row[column] === undefined) {
       return false
     }
   }
@@ -510,10 +499,21 @@ export function allIdsSet(table: Table, row: any): boolean {
   return true
 }
 
+export function reduceToColumnsOfTable(table: Table, row: any, alias?: string): any {
+  let reduced: any = {}
+
+  for (let column of Object.keys(table.columns)) {
+    let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column : column
+    reduced[aliasedColumn] = row[aliasedColumn]
+  }
+
+  return reduced
+}
+
 export function idsNotSet(table: Table, row: any): string[] {
   let idsNotSet = []
 
-  for (let idColumn of getIdColumns(table)) {
+  for (let idColumn of getPrimaryKey(table)) {
     if (row[idColumn] === undefined) {
       idsNotSet.push(idColumn)
     }

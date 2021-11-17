@@ -1,10 +1,9 @@
 import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { Query } from 'knight-sql'
-import { addCriteria, UpdateCriteria } from '.'
-import { rowToUpdateCriteria } from './criteriaTools'
-import { buildSelectQuery } from './queryTools'
-import { determineRelationshipsToLoad, idsOnly, unjoinRows } from './rowTools'
+import { rowToUpdateCriteria, UpdateCriteria } from './criteriaTools'
+import { addCriteria, buildSelectQuery } from './queryTools'
+import { determineRelationshipsToLoad, reduceToPrimaryKeys, unjoinRows } from './rowTools'
 import { getRelationshipNameOfColumn, isForeignKey, Relationship, Schema } from './Schema'
 import { FiddledRows } from './util'
 
@@ -125,7 +124,7 @@ export async function insert(
                   throw new Error('Could not set many-to-one relationship id')
                 }
 
-                let updateRow = idsOnly(table, insertedRow)
+                let updateRow = reduceToPrimaryKeys(table, insertedRow)
                 l.lib('updateRow', updateRow)
 
                 let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
@@ -315,7 +314,7 @@ export async function insert(
           }
   
           // update the relationship owning row setting new newly obtained id
-          let updateRow: any = idsOnly(table, insertedRow)
+          let updateRow: any = reduceToPrimaryKeys(table, insertedRow)
           let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
           updateCriteria[relationship.thisId] = relationshipId
   
@@ -352,7 +351,7 @@ export async function insert(
         if (otherRelationship != undefined && insertedRelationshipRow != undefined && insertedRelationshipRow[otherRelationship.thisId] == undefined) {
           l.lib('Relationship is one-to-one. Setting id on already inserted relationship row...', insertedRelationshipRow)
           
-          let updateRow = idsOnly(relationshipTable, insertedRelationshipRow)
+          let updateRow = reduceToPrimaryKeys(relationshipTable, insertedRelationshipRow)
           updateRow[otherRelationship.thisId] = insertedRow[otherRelationship.otherId]
           l.lib('updateRow', updateRow)
   

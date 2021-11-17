@@ -19,17 +19,17 @@ export interface Relationship {
   otherRelationship?: string
 }
 
-export function getIdColumns(table: Table): string[] {
+export function getPrimaryKey(table: Table): string[] {
   // TODO: add caching
-  let idColumns: string[] = []
+  let primaryKey: string[] = []
 
   for (let column of Object.keys(table.columns)) {
     if (isPrimaryKey(table, column)) {
-      idColumns.push(column)
+      primaryKey.push(column)
     }
   }
 
-  return idColumns
+  return primaryKey
 }
 
 export function isPrimaryKey(table: Table, columnName: string): boolean {
