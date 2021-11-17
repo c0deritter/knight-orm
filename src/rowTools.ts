@@ -51,9 +51,9 @@ export function instanceToRow(schema: Schema, tableName: string, instance: any, 
 
   row = {}
   for (let columnName of Object.keys(table.columns)) {
-    let propertyName = getPropertyName(table.columns[columnName])
+    let propertyName = getPropertyName(table, columnName)
     
-    if (propertyName in instance) {
+    if (propertyName != undefined && propertyName in instance) {
       row[columnName] = instance[propertyName]
     }
   }
@@ -149,8 +149,11 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
 
   for (let columnName of Object.keys(table.columns)) {
     if (columnName in row) {
-      let propertyName = getPropertyName(table.columns[columnName])
-      instance[propertyName] = row[columnName]
+      let propertyName = getPropertyName(table, columnName)
+      
+      if (propertyName != undefined) {
+        instance[propertyName] = row[columnName]
+      }
     }
   }
 
@@ -450,9 +453,9 @@ export function instancesRepresentSameEntity(table: Table, instance1: any, insta
   }
 
   for (let idColumn of idColumns) {
-    let idProperty = getPropertyName(table.columns[idColumn])
+    let idProperty = getPropertyName(table, idColumn)
 
-    if (instance1[idProperty] === undefined || instance1[idProperty] !== instance2[idProperty]) {
+    if (idProperty != undefined && (instance1[idProperty] === undefined || instance1[idProperty] !== instance2[idProperty])) {
       return false
     }
   }

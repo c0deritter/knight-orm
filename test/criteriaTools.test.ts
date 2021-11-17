@@ -1,4 +1,5 @@
 import { expect } from 'chai'
+import { CriteriaObject } from 'knight-criteria'
 import 'mocha'
 import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, instanceToUpdateCriteria, validateCriteria } from '../src/criteriaTools'
 import { ManyObject, Object1, Object2, schema } from './testSchema'
@@ -170,7 +171,21 @@ describe('criteriaTools', function() {
   })
 
   describe('instanceCriteriaToRowCriteria', function() {
-    it('should convert instance criteria to row criteria', function() {
+    it('should convert simple instance criteria', function() {
+      let instanceCriteria = {
+        property1: 'a',
+        property2: { operator: '>', value: 1 }
+      }
+
+      let rowCriteria = instanceCriteriaToRowCriteria(schema, 'table1', instanceCriteria)
+
+      expect(rowCriteria).to.deep.equal({
+        column1: 'a',
+        column2: { operator: '>', value: 1 }
+      })
+    })
+
+    it('should convert instance criteria with a relationship', function() {
       let instanceCriteria = {
         property1: 'a',
         property2: { operator: '>', value: 1 },
@@ -196,19 +211,129 @@ describe('criteriaTools', function() {
       })
     })
 
+    it('should convert instance criteria given as array', function() {
+      let instanceCriteria = [
+        {
+          property1: 'a',
+          property2: { operator: '>', value: 1 }
+        },
+        'OR',
+        {
+          manyObjects: {
+            property1: { operator: 'LIKE', value: '%b%' },
+            object2: {
+              property1: 'c'
+            }
+          }  
+        }
+      ]
+
+      let rowCriteria = instanceCriteriaToRowCriteria(schema, 'table1', instanceCriteria)
+
+      expect(rowCriteria).to.deep.equal([
+        {
+          column1: 'a',
+          column2: { operator: '>', value: 1 }
+        },
+        'OR',
+        {
+          manyObjects: {
+            column1: { operator: 'LIKE', value: '%b%' },
+            object2: {
+              column1: 'c'
+            }
+          }
+        }
+      ])
+    })
+
     it('should preserve criteria specific properties that start with @', function() {
+      let instanceCriteria: CriteriaObject = {
+        '@not': true,
+        '@load': true,
+        '@loadSeparately': true,
+        '@count': 1,
+        '@min': 2,
+        '@max': { '@operator': '<', '@value': 10 },
+        '@limit': 10,
+        '@offset': 20
+      }
+
+      let rowCriteria = instanceCriteriaToRowCriteria(schema, 'table1', instanceCriteria)
+
+      expect(rowCriteria).to.deep.equal({
+        '@not': true,
+        '@load': true,
+        '@loadSeparately': true,
+        '@count': 1,
+        '@min': 2,
+        '@max': { '@operator': '<', '@value': 10 },
+        '@limit': 10,
+        '@offset': 20
+      })
+    })
+
+    it('should not preserve properties that start with @ but are invalid', function() {
       let instanceCriteria = {
-        manyObjects: {
-          '@load': true
+        '@invalid': true
+      }
+
+      let rowCriteria = instanceCriteriaToRowCriteria(schema, 'table1', instanceCriteria)
+
+      expect(rowCriteria).to.deep.equal({})
+    })
+
+    it('should convert an order by which refers single property', function() {
+      let instanceCriteria = {
+        '@orderBy': 'property1'
+      }
+
+      let rowCriteria = instanceCriteriaToRowCriteria(schema, 'table1', instanceCriteria)
+
+      expect(rowCriteria).to.deep.equal({
+        '@orderBy': 'column1'
+      })
+    })
+
+    it('should convert an order by which uses an order by object', function() {
+      let instanceCriteria = {
+        '@orderBy': {
+          field: 'property1',
+          direction: 'DESC'
         }
       }
 
       let rowCriteria = instanceCriteriaToRowCriteria(schema, 'table1', instanceCriteria)
 
       expect(rowCriteria).to.deep.equal({
-        manyObjects: {
-          '@load': true
+        '@orderBy': {
+          field: 'column1',
+          direction: 'DESC'
         }
+      })
+    })
+
+    it('should convert an order by which uses an array of single properties and order by objects', function() {
+      let instanceCriteria = {
+        '@orderBy': [
+          {
+            field: 'property1',
+            direction: 'DESC'
+          },
+          'property2'
+        ]
+      }
+
+      let rowCriteria = instanceCriteriaToRowCriteria(schema, 'table1', instanceCriteria)
+
+      expect(rowCriteria).to.deep.equal({
+        '@orderBy': [
+          {
+            field: 'column1',
+            direction: 'DESC'
+          },
+          'column2'
+        ]
       })
     })
   })

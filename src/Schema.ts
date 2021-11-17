@@ -95,10 +95,26 @@ export function getRelationshipNameOfColumn(table: Table, columnName: string): s
   }
 }
 
-export function getPropertyName(columnSchema: string | { property: string, id: boolean }): string {
-  if (typeof columnSchema == 'string') {
-    return columnSchema
+export function getPropertyName(table: Table, columnName: string): string|undefined {
+  let propertySchema = table.columns[columnName]
+
+  if (typeof propertySchema == 'string') {
+    return propertySchema
   }
 
-  return columnSchema.property
+  else if (typeof propertySchema == 'object' && propertySchema !== null && 'property' in propertySchema) {
+    return propertySchema.property
+  }
+}
+
+export function getColumnName(table: Table, propertyName: string): string|undefined {
+  let columnNames = Object.keys(table.columns)
+
+  for (let columnName of columnNames) {
+    let existingPropertyName = getPropertyName(table, columnName)
+
+    if (existingPropertyName == propertyName) {
+      return columnName
+    }
+  }
 }

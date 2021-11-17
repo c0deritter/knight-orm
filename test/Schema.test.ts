@@ -27,11 +27,11 @@ describe('Schema', function() {
 
   describe('getPropertyName', function() {
     it('should return the string which in this case is the property', function() {
-      expect(getPropertyName('a')).to.equal('a')
+      expect(getPropertyName(schema.table1, 'column1')).to.equal('property1')
     })
 
     it('should return the property from the column schema object', function() {
-      expect(getPropertyName({ property: 'a', id: false })).to.equal('a')
+      expect(getPropertyName(schema.table1, 'id')).to.equal('id')
     })
   })
 })
