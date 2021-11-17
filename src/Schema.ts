@@ -3,7 +3,7 @@ export interface Schema {
 }
 
 export interface Table {
-  columns: { [name: string]: string | { property: string, id: boolean } }
+  columns: { [name: string]: string | { property: string, primaryKey: boolean } }
   relationships?: { [relationship: string]: Relationship }
   newInstance: () => any
   rowToInstance?: (row: any, instance: any) => any
@@ -24,7 +24,7 @@ export function getIdColumns(table: Table): string[] {
   let idColumns: string[] = []
 
   for (let column of Object.keys(table.columns)) {
-    if (isIdColumn(table.columns[column])) {
+    if (isPrimaryKey(table, column)) {
       idColumns.push(column)
     }
   }
@@ -32,13 +32,23 @@ export function getIdColumns(table: Table): string[] {
   return idColumns
 }
 
-export function isIdColumn(column: string | { property: string, id: boolean }): boolean {
+export function isPrimaryKey(table: Table, columnName: string): boolean {
   // TODO: add caching
+  let column = table.columns[columnName]
+
+  if (column == undefined) {
+    throw new Error(`Column '${columnName} not contained table`)
+  }
+
   if (typeof column == 'string') {
     return false
   }
 
-  return column.id
+  if (typeof column == 'object' && column !== null && typeof column.primaryKey == 'boolean') {
+    return column.primaryKey
+  }
+
+  return false
 }
 
 export function isForeignKey(table: Table, columnName: string): boolean {

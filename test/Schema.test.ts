@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import 'mocha'
-import { getIdColumns, getPropertyName, isIdColumn } from '../src/Schema'
+import { getIdColumns, getPropertyName, isPrimaryKey } from '../src/Schema'
 import { schema } from './testSchema'
 
 describe('Schema', function() {
@@ -11,17 +11,13 @@ describe('Schema', function() {
     })
   })
 
-  describe('isIdColumn', function() {
+  describe('isPrimaryKey', function() {
     it('should return false if the column schema is of type string', function() {
-      expect(isIdColumn('a')).to.be.false
-    })
-  
-    it('should return false if the column schema is of type object but with id property set to false', function() {
-      expect(isIdColumn({ property: 'a', id: false })).to.be.false
+      expect(isPrimaryKey(schema['table1'], 'column1')).to.be.false
     })
   
     it('should return true if the column schema is of type object and the id property set to true', function() {
-      expect(isIdColumn({ property: 'a', id: true })).to.be.true
+      expect(isPrimaryKey(schema['table1'], 'id')).to.be.true
     })
   })
 

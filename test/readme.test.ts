@@ -2,6 +2,7 @@ import * as chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
+import { Schema } from '../src'
 import { insert } from '../src/isud'
 
 chai.use(chaiAsPromised)
@@ -115,10 +116,10 @@ async function pgQueryFn(sqlString: string, values?: any[]): Promise<any[]> {
   return result.rows
 }
 
-let schema = {
+let schema: Schema = {
   'knight': {
     columns: {
-      'id': { property: 'id', id: true },
+      'id': { property: 'id', primaryKey: true },
       'name': 'name',
       'best_friend_id': 'bestFriendId'
     },

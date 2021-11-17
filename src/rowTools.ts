@@ -1,6 +1,6 @@
 import { Criteria, CriteriaObject, summarizeCriteria } from 'knight-criteria'
 import { Log } from 'knight-log'
-import { getIdColumns, getPropertyName, isIdColumn, Schema, Table } from './Schema'
+import { getIdColumns, getPropertyName, isPrimaryKey, Schema, Table } from './Schema'
 
 let log = new Log('knight-orm/rowTools.ts')
 
@@ -481,7 +481,7 @@ export function idsOnly(table: Table, row: any): any {
   let idsOnly: any = {}
   
   for (let column of Object.keys(table.columns)) {
-    if (isIdColumn(table.columns[column])) {
+    if (isPrimaryKey(table, column)) {
       idsOnly[column] = row[column]
     }
   }

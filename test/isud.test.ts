@@ -735,6 +735,21 @@ describe('isud', function() {
         expect(rows[0]).to.deep.equal({ id: 1, column1: 'a', column2: null, table1_id: 2, table2_id: null })
       })
 
+      it('should regard criteria in a many-to-one relationship regarding the id', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: {} })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: {} })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: {} })
+
+        let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
+          object2: {
+            id: 1
+          }
+        })
+
+        expect(rows.length).to.equal(1)
+        expect(rows[0]).to.deep.equal({ id: 1, column1: null, column2: null, table1_id: 2, table2_id: null })
+      })
+
       it('should regard criteria in a many-to-one relationship and load it', async function() {
         await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }})
         await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 2 }})
@@ -943,6 +958,8 @@ describe('isud', function() {
 
         expect(rows.length).to.equal(0)
       })
+
+
     })
 
     describe('delete_', function() {
