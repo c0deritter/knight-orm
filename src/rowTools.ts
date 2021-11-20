@@ -1,6 +1,7 @@
 import { Criteria, CriteriaObject, summarizeCriteria } from 'knight-criteria'
 import { Log } from 'knight-log'
-import { getPrimaryKey, getPropertyName, isPrimaryKey, Schema, Table } from './Schema'
+import { getNotGeneratedPrimaryKeyColumns } from '.'
+import { getPrimaryKey, getPropertyName, isPrimaryKeyColumn, Schema, Table } from './Schema'
 
 let log = new Log('knight-orm/rowTools.ts')
 
@@ -421,6 +422,30 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
   return unjoinedRows
 }
 
+export function isPrimaryKeySet(table: Table, row: any): boolean {
+  let primaryKey = getPrimaryKey(table)
+
+  for (let column of primaryKey) {
+    if (row[column] == null) {
+      return false
+    }
+  }
+  
+  return true
+}
+
+export function areAllNotGeneratedPrimaryKeyColumnsSet(table: Table, row: any): boolean {
+  let notGenerated = getNotGeneratedPrimaryKeyColumns(table)
+
+  for (let column of notGenerated) {
+    if (row[column] == null) {
+      return false
+    }
+  }
+  
+  return true
+}
+
 export function rowsRepresentSameEntity(table: Table, row1: any, row2: any): boolean {
   if (row1 == undefined || row2 == undefined) {
     return false
@@ -481,7 +506,7 @@ export function reduceToPrimaryKeys(table: Table, row: any): any {
   let reduced: any = {}
   
   for (let column of Object.keys(table.columns)) {
-    if (isPrimaryKey(table, column)) {
+    if (isPrimaryKeyColumn(table, column)) {
       reduced[column] = row[column]
     }
   }

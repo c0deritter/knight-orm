@@ -15,7 +15,7 @@ let pool: Pool = new Pool({
   password: 'sqlorm_test'
 } as PoolConfig)
 
-describe('isud', function() {
+describe.only('isud', function() {
   describe('PostgreSQL', function () {
     after(async function() {
       await pool.end()
@@ -735,19 +735,19 @@ describe('isud', function() {
         expect(rows[0]).to.deep.equal({ id: 1, column1: 'a', column2: null, table1_id: 2, table2_id: null })
       })
 
-      it.only('should regard criteria in a many-to-one relationship regarding the id', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: {} })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: {} })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: {} })
+      it('should regard criteria in a many-to-one relationship regarding the id', async function() {
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: { id: 'x' } })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: { id: 'y' } })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: { id: 'z' } })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           object2: {
-            id: 1
+            id: 'x'
           }
         })
 
         expect(rows.length).to.equal(1)
-        expect(rows[0]).to.deep.equal({ id: 1, column1: null, column2: null, table1_id: 2, table2_id: null })
+        expect(rows[0]).to.deep.equal({ id: 1, column1: null, column2: null, table1_id: null, table2_id: 'x' })
       })
 
       it('should regard criteria in a many-to-one relationship and load it', async function() {

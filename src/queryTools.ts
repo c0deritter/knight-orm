@@ -61,11 +61,12 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
       subCondition.surroundWithBrackets = true
       condition.push(subCondition)
 
-      l.lib('Add sub criteria through recursion', arrayValue)
+      l.calling('Add sub criteria through recursion', arrayValue)
       addCriteria(schema, tableName, query, arrayValue as any, alias, subCondition)
+      l.called('Added sub criteria through recursion')
     }
   }
-  else if (typeof criteria == 'object') {
+  else if (typeof criteria == 'object' && criteria !== null) {
     l.lib('Given criteria is an object')
 
     if (criteria['@orderBy'] != undefined) {

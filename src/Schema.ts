@@ -3,11 +3,23 @@ export interface Schema {
 }
 
 export interface Table {
-  columns: { [name: string]: string | { property: string, primaryKey: boolean } }
-  relationships?: { [relationship: string]: Relationship }
+  columns: {
+    [name: string]: string | Column
+  }
+
+  relationships?: {
+    [relationship: string]: Relationship
+  }
+
   newInstance: () => any
   rowToInstance?: (row: any, instance: any) => any
   instanceToRow?: (instance: any, row: any) => any
+}
+
+export interface Column {
+  property: string,
+  primaryKey: boolean,
+  generated?: boolean
 }
 
 export interface Relationship {
@@ -24,7 +36,7 @@ export function getPrimaryKey(table: Table): string[] {
   let primaryKey: string[] = []
 
   for (let column of Object.keys(table.columns)) {
-    if (isPrimaryKey(table, column)) {
+    if (isPrimaryKeyColumn(table, column)) {
       primaryKey.push(column)
     }
   }
@@ -32,7 +44,20 @@ export function getPrimaryKey(table: Table): string[] {
   return primaryKey
 }
 
-export function isPrimaryKey(table: Table, columnName: string): boolean {
+export function getNotGeneratedPrimaryKeyColumns(table: Table): string[] {
+  // TODO: add caching
+  let notGenerated: string[] = []
+
+  for (let column of Object.keys(table.columns)) {
+    if (isNotGeneratedPrimaryKeyColumn(table, column)) {
+      notGenerated.push(column)
+    }
+  }
+
+  return notGenerated
+}
+
+export function isPrimaryKeyColumn(table: Table, columnName: string): boolean {
   // TODO: add caching
   let column = table.columns[columnName]
 
@@ -46,6 +71,25 @@ export function isPrimaryKey(table: Table, columnName: string): boolean {
 
   if (typeof column == 'object' && column !== null && typeof column.primaryKey == 'boolean') {
     return column.primaryKey
+  }
+
+  return false
+}
+
+export function isNotGeneratedPrimaryKeyColumn(table: Table, columnName: string): boolean {
+  // TODO: add caching
+  let column = table.columns[columnName]
+
+  if (column == undefined) {
+    throw new Error(`Column '${columnName} not contained table`)
+  }
+
+  if (typeof column == 'string') {
+    return false
+  }
+
+  if (typeof column == 'object' && column !== null && typeof column.primaryKey == 'boolean') {
+    return column.primaryKey && (column.generated == undefined || column.generated === false)
   }
 
   return false
@@ -87,7 +131,7 @@ export function isForeignKey(table: Table, columnName: string): boolean {
  * @returns The name of the relationship if the given column was part of any or undefined 
  * if the given column is not part of any relationship.
  */
-export function getRelationshipNameOfColumn(table: Table, columnName: string): string|undefined {
+export function getCorrespondingManyToOne(table: Table, columnName: string): string|undefined {
   if (table.columns[columnName] == undefined) {
     throw new Error(`Column '${columnName} not contained table`)
   }
@@ -99,7 +143,7 @@ export function getRelationshipNameOfColumn(table: Table, columnName: string): s
   for (let relationshipName of Object.keys(table.relationships)) {
     let relationship = table.relationships[relationshipName]
 
-    if (relationship.thisId == columnName) {
+    if (relationship.manyToOne === true && relationship.thisId == columnName) {
       return relationshipName
     }
   }

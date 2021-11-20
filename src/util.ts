@@ -1,5 +1,10 @@
+import { Log } from 'knight-log'
 import { rowsRepresentSameEntity } from './rowTools'
 import { Schema } from './Schema'
+
+let l = new Log('util.tsx')
+
+let fiddledRowsLog = l.cls('FiddledRows')
 
 export class FiddledRows {
   schema: Schema
@@ -36,6 +41,12 @@ export class FiddledRows {
   }
 
   async setResult(row: any, result: any): Promise<void> {
+    let l = fiddledRowsLog.mt('setResult')
+    l.param('row', row)
+    l.param('result', result)
+
+    l.dev('Trying to determine the fiddled row object which must exist at this point in time')
+
     let existingFiddledRow = undefined
     for (let fiddledRow of this.fiddledRows) {
       if (fiddledRow.row === row) {
@@ -48,10 +59,22 @@ export class FiddledRows {
     }
 
     existingFiddledRow.result = result
+    l.dev('Setting given result on the existing fiddled row', existingFiddledRow)
 
-    for (let fn of existingFiddledRow.afterSettingResultHandlers) {
-      await fn(result)
+    if (existingFiddledRow.afterSettingResultHandlers.length > 0) {
+      l.lib('Calling every registered handler after the result was set')
+  
+      for (let fn of existingFiddledRow.afterSettingResultHandlers) {
+        l.calling('Calling next result handler...')
+        await fn(result)
+        l.called('Called result handler')
+      }
     }
+    else {
+      l.lib('There are no handler to be called after the result was set')
+    }
+
+    l.returning('Finished setting result. Returning...')
   }
 
   addAfterSettingResultHandler(row: any, handler: (result: any) => Promise<void>) {

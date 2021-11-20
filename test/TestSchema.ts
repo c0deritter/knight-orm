@@ -35,7 +35,7 @@ export class ManyObject {
 export const schema = {
   'table1': {
     columns: {
-      'id': { property: 'id', primaryKey: true },
+      'id': { property: 'id', primaryKey: true, generated: true },
       'column1': 'property1',
       'column2': 'property2',
       'table1_id': 'object1Id',

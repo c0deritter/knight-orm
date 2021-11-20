@@ -1,6 +1,6 @@
 import { Criteria, CriteriaObject, OrderBy } from 'knight-criteria'
 import { Log } from 'knight-log'
-import { getColumnName, getPropertyName, isPrimaryKey, Schema } from './Schema'
+import { getColumnName, getPropertyName, isPrimaryKeyColumn, Schema } from './Schema'
 
 let log = new Log('knight-orm/criteriaTools.ts')
 
@@ -259,7 +259,7 @@ export function rowToUpdateCriteria(schema: Schema, tableName: string, row: any)
   }
 
   for (let column of Object.keys(table.columns)) {
-    if (isPrimaryKey(table, column)) {
+    if (isPrimaryKeyColumn(table, column)) {
       (updateCriteria['@criteria'] as CriteriaObject)[column] = row[column] === undefined ? null : row[column]
     }
     else if (column in row && row[column] !== undefined) {
@@ -291,7 +291,7 @@ export function rowToDeleteCriteria(schema: Schema, tableName: string, row: any)
   let deleteCriteria: CriteriaObject = {}
 
   for (let column of Object.keys(table.columns)) {
-    if (isPrimaryKey(table, column) && row[column] !== undefined) {
+    if (isPrimaryKeyColumn(table, column) && row[column] !== undefined) {
       deleteCriteria[column] = row[column]
     }
   }
