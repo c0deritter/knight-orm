@@ -7,7 +7,7 @@ describe('Schema', function() {
   describe('getPrimaryKey', function() {
     it('should return all id columns', function() {
       expect(getPrimaryKey(schema['table1'])).to.deep.equal(['id'])
-      expect(getPrimaryKey(schema['table_many'])).to.deep.equal(['table1_id', 'table2_id'])
+      expect(getPrimaryKey(schema['many_to_many'])).to.deep.equal(['table1_id', 'table2_id'])
     })
   })
 

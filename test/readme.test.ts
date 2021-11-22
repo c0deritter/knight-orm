@@ -119,7 +119,7 @@ async function pgQueryFn(sqlString: string, values?: any[]): Promise<any[]> {
 let schema: Schema = {
   'knight': {
     columns: {
-      'id': { property: 'id', primaryKey: true },
+      'id': { property: 'id', primaryKey: true, generated: true },
       'name': 'name',
       'best_friend_id': 'bestFriendId'
     },

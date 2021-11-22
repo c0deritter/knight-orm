@@ -4,31 +4,56 @@ export class Object1 {
   id?: number
   property1?: string
   property2?: number
-  object1Id?: number
-  object2Id?: number
+  property3?: Date
+  manyToOneId?: number
+  manyToOneRecursiveId?: number
+  oneToOneId?: number
+  oneToOneRecursiveId?: number
+  oneToManyRescursiveId?: number
 
-  manyObjects?: ManyObject[]
-  object1?: Object1
-  object2?: Object2
+  manyToOne?: Object2
+  manyToOneRecursive?: Object1
+  oneToOne?: Object2
+  oneToOneRecursive?: Object1
+  oneToMany?: Object2[]
+  oneToManyRecursive?: Object1[]
+  oneToManyRecursiveOne?: Object1
+  manyToMany?: ManyToMany[]
+  manyToManyRecursive?: ManyToManyRecursive[]
 }
 
 export class Object2 {
   id?: string
   property1?: string
-  object1Id?: number|null
+  property2?: number
+  property3?: Date
+  oneToOneId?: number
+  oneToManyId?: number
   
-  object1?: Object1
-  manyObjects?: ManyObject[]
+  oneToOne?: Object1
+  oneToManyOne?: Object1
+  manyToMany?: ManyToMany[]
 }
 
-export class ManyObject {
+export class ManyToMany {
   object1Id?: number
   object2Id?: string
   property1?: string
-  object1Id2?: number|null
+  property2?: number
+  property3?: Date
 
   object1?: Object1
   object2?: Object2
+}
+
+export class ManyToManyRecursive {
+  object11Id?: number
+  object12Id?: number
+  property1?: string
+  property2?: number
+  property3?: Date
+
+  object11?: Object1
   object12?: Object1
 }
 
@@ -38,31 +63,69 @@ export const schema = {
       'id': { property: 'id', primaryKey: true, generated: true },
       'column1': 'property1',
       'column2': 'property2',
-      'table1_id': 'object1Id',
-      'table2_id': 'object2Id'
+      'column3': 'property3',
+      'many_to_one_id': 'manyToOneId',
+      'many_to_one_recursive_id': 'manyToOneRecursiveId',
+      'one_to_one_id': 'oneToOneId',
+      'one_to_one_recursive_id': 'oneToOneRecursiveId',
+      'one_to_many_recursive_id': 'oneToManyRecursiveId'
     },
     relationships: {
-      manyObjects: {
-        oneToMany: true,
-        thisId: 'id',
-        otherTable: 'table_many',
-        otherId: 'table1_id',
-        delete: true
-      },
-      object1: {
+      manyToOne: {
         manyToOne: true,
-        thisId: 'table1_id',
+        thisId: 'many_to_one_id',
+        otherTable: 'table2',
+        otherId: 'id'
+      },
+      manyToOneRecursive: {
+        manyToOne: true,
+        thisId: 'many_to_one_recursive_id',
         otherTable: 'table1',
-        otherId: 'id',
-        otherRelationship: 'object1',
-        delete: true
+        otherId: 'id'
       },
-      object2: {
+      oneToOne: {
         manyToOne: true,
-        thisId: 'table2_id',
+        thisId: 'one_to_one_id',
         otherTable: 'table2',
         otherId: 'id',
-        otherRelationship: 'object1'
+        otherRelationship: 'oneToOne'
+      },
+      oneToOneRecursive: {
+        manyToOne: true,
+        thisId: 'one_to_one_recursive_id',
+        otherTable: 'table1',
+        otherId: 'id',
+        otherRelationship: 'oneToOneRecursive'
+      },
+      oneToMany: {
+        oneToMany: true,
+        thisId: 'id',
+        otherTable: 'table2',
+        otherId: 'one_to_many_id'
+      },
+      oneToManyRecursive: {
+        oneToMany: true,
+        thisId: 'id',
+        otherTable: 'table1',
+        otherId: 'one_to_many_recursive_id'
+      },
+      oneToManyRecursiveOne: {
+        manyToOne: true,
+        thisId: 'one_to_many_recursive_id',
+        otherTable: 'table1',
+        otherId: 'id'
+      },
+      manyToMany: {
+        oneToMany: true,
+        thisId: 'id',
+        otherTable: 'many_to_many',
+        otherId: 'table1_id'
+      },
+      manyToManyRecursive: {
+        oneToMany: true,
+        thisId: 'id',
+        otherTable: 'many_to_many_recursive',
+        otherId: 'table11_id'
       }
     },
     newInstance: () => new Object1
@@ -72,33 +135,42 @@ export const schema = {
     columns: {
       'id': { property: 'id', primaryKey: true },
       'column1': 'property1',
-      'table1_id': 'object1Id'
+      'column2': 'property2',
+      'column3': 'property3',
+      'one_to_one_id': 'oneToOneId',
+      'one_to_many_id': 'oneToManyId'
     },
     relationships: {
-      object1: {
+      oneToOne: {
         manyToOne: true,
-        thisId: 'table1_id',
+        thisId: 'one_to_one_id',
         otherTable: 'table1',
         otherId: 'id',
-        otherRelationship: 'object2'
+        otherRelationship: 'oneToOne'
       },
-      manyObjects: {
+      oneToManyOne: {
+        manyToOne: true,
+        thisId: 'one_to_many_id',
+        otherTable: 'table1',
+        otherId: 'id'
+      },
+      manyToMany: {
         oneToMany: true,
         thisId: 'id',
-        otherTable: 'table_many',
-        otherId: 'table2_id',
-        delete: true
+        otherTable: 'many_to_many',
+        otherId: 'table2_id'
       }
     },
     newInstance: () => new Object2
   },
 
-  'table_many': {
+  'many_to_many': {
     columns: {
       'table1_id': { property: 'object1Id', primaryKey: true },
       'table2_id': { property: 'object2Id', primaryKey: true },
       'column1': 'property1',
-      'table1_id2': 'object1Id2'
+      'column2': 'property2',
+      'column3': 'property3'
     },
     relationships: {
       object1: {
@@ -112,14 +184,33 @@ export const schema = {
         thisId: 'table2_id',
         otherTable: 'table2',
         otherId: 'id'
+      }
+    },
+    newInstance: () => new ManyToMany
+  },
+
+  'many_to_many_recursive': {
+    columns: {
+      'table11_id': { property: 'object11Id', primaryKey: true },
+      'table12_id': { property: 'object12Id', primaryKey: true },
+      'column1': 'property1',
+      'column2': 'property2',
+      'column3': 'property3'
+    },
+    relationships: {
+      object11: {
+        manyToOne: true,
+        thisId: 'table11_id',
+        otherTable: 'table1',
+        otherId: 'id'
       },
       object12: {
         manyToOne: true,
-        thisId: 'table1_id2',
+        thisId: 'table12_id',
         otherTable: 'table1',
         otherId: 'id'
       }
     },
-    newInstance: () => new ManyObject
+    newInstance: () => new ManyToManyRecursive
   }
 } as Schema

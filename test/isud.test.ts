@@ -15,582 +15,1535 @@ let pool: Pool = new Pool({
   password: 'sqlorm_test'
 } as PoolConfig)
 
-describe.only('isud', function() {
+describe('isud', function() {
   describe('PostgreSQL', function () {
     after(async function() {
       await pool.end()
     })
 
     beforeEach(async function() {
-      await pool.query('CREATE TABLE table1 (id SERIAL, column1 VARCHAR(20), column2 INTEGER, table1_id INTEGER, table2_id VARCHAR(20))')
-      await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20), table1_id INTEGER)')
-      await pool.query('CREATE TABLE table_many (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20), table1_id2 INTEGER)')
+      await pool.query('CREATE TABLE table1 (id SERIAL, column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP, many_to_one_id VARCHAR(20), many_to_one_recursive_id INTEGER, one_to_one_id VARCHAR(20), one_to_one_recursive_id INTEGER, one_to_many_recursive_id INTEGER)')
+      await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP, one_to_one_id INTEGER, one_to_many_id INTEGER)')
+      await pool.query('CREATE TABLE many_to_many (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP)')
+      await pool.query('CREATE TABLE many_to_many_recursive (table11_id INTEGER, table12_id INTEGER, column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP)')
     })
 
     afterEach(async function() {
       await pool.query('DROP TABLE IF EXISTS table1 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table2 CASCADE')
-      await pool.query('DROP TABLE IF EXISTS table_many CASCADE')
+      await pool.query('DROP TABLE IF EXISTS many_to_many CASCADE')
+      await pool.query('DROP TABLE IF EXISTS many_to_many_recursive CASCADE')
     })
     
     describe('insert', function() {
       it('should insert a simple row', async function() {
         let row = {
-          column1: 'a',
-          column2: 1
+          column1: 'a'
         }
   
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
   
-        expect(insertedRow.id).to.equal(1)
-        expect(insertedRow.column1).to.equal('a')
-        expect(insertedRow.column2).to.equal(1)
+        expect(insertedRow).to.be.not.undefined
+        expect(insertedRow).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
 
         let rows = await pgQueryFn('SELECT * FROM table1')
 
         expect(rows.length).to.equal(1)
-        expect(rows[0].id).to.equal(1)
-        expect(rows[0].column1).to.equal('a')
-        expect(rows[0].column2).to.equal(1)
-      })
-  
-      it('should insert a row with a one-to-many relationship', async function() {
-        let row: any = {
-          column1: 'a',
-          column2: 1
-        }
-
-        row.manyObjects = [
-          {
-            column1: 'b',
-            object1: row
-          },
-          {
-            column1: 'c',
-            object1: row
-          }
-        ]
-
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let expectedRow = {
+        expect(rows[0]).to.deep.equal({
           id: 1,
           column1: 'a',
-          column2: 1,
-          table1_id: null,
-          table2_id: null,
-          manyObjects: [
-            {
-              table1_id: 1,
-              table2_id: null,
-              column1: 'b',
-              table1_id2: null
-            } as any,
-            {
-              table1_id: 1,
-              table2_id: null,
-              column1: 'c',
-              table1_id2: null
-            }
-          ]
-        }
-
-        expectedRow.manyObjects[0].object1 = expectedRow
-        expectedRow.manyObjects[1].object1 = expectedRow
-
-        expect(insertedRow.id).to.equal(1)
-        expect(insertedRow).to.deep.equal(expectedRow)
-
-        let table1Rows = await pgQueryFn('SELECT * FROM table1')
-
-        expect(table1Rows.length).to.equal(1)
-        expect(table1Rows[0].id).to.equal(1)
-        expect(table1Rows[0].column1).to.equal('a')
-        expect(table1Rows[0].column2).to.equal(1)
-
-        let tableManyRows = await pgQueryFn('SELECT * FROM table_many')
-
-        expect(tableManyRows.length).to.equal(2)
-        expect(tableManyRows[0].table1_id).to.equal(1)
-        expect(tableManyRows[0].table2_id).to.be.null
-        expect(tableManyRows[0].column1).to.equal('b')
-        expect(tableManyRows[0].table1_id2).to.be.null
-        expect(tableManyRows[1].table1_id).to.equal(1)
-        expect(tableManyRows[1].table2_id).to.be.null
-        expect(tableManyRows[1].column1).to.equal('c')
-        expect(tableManyRows[1].table1_id2).to.be.null
-
-        let table2Rows = await pgQueryFn('SELECT * FROM table2')
-
-        expect(table2Rows.length).to.equal(0)
-      })
-
-      it('should insert a row with a many-to-many relationship', async function() {
-        let row: any = {
-          column1: 'a',
-          column2: 1,
-          manyObjects: [{}, {}]
-        }
-
-        row.manyObjects[0] = {
-          column1: 'b',
-          object1: row,
-          object2: {
-            id: 'x',
-            column1: 'c'
-          }
-        }
-
-        row.manyObjects[0].object2.manyObjects = [ row.manyObjects[0] ]
-
-        row.manyObjects[1] = {
-          column1: 'd',
-          object1: row,
-          object2: {
-            id: 'y',
-            column1: 'e'
-          }
-        }
-
-        row.manyObjects[1].object2.manyObjects = [ row.manyObjects[1] ]
-        
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let expectedRow = {
-          id: 1,
-          column1: 'a',
-          column2: 1,
-          table1_id: null,
-          table2_id: null,
-          manyObjects: [
-            {
-              table1_id: 1,
-              table2_id: 'x',
-              column1: 'b',
-              table1_id2: null,
-              object2: {
-                id: 'x',
-                column1: 'c',
-                table1_id: null
-              }
-            } as any,
-            {
-              table1_id: 1,
-              table2_id: 'y',
-              column1: 'd',
-              table1_id2: null,
-              object2: {
-                id: 'y',
-                column1: 'e',
-                table1_id: null
-              }
-            }            
-          ]
-        }
-
-        expectedRow.manyObjects[0].object1 = expectedRow
-        expectedRow.manyObjects[1].object1 = expectedRow
-
-        expect(insertedRow).to.deep.equal(expectedRow)
-
-        let table1Rows = await pgQueryFn('SELECT * FROM table1')
-
-        expect(table1Rows.length).to.equal(1)
-        expect(table1Rows[0].id).to.equal(1)
-        expect(table1Rows[0].column1).to.equal('a')
-        expect(table1Rows[0].column2).to.equal(1)
-
-        let tableManyRows = await pgQueryFn('SELECT * FROM table_many')
-
-        expect(tableManyRows.length).to.equal(2)
-        expect(tableManyRows[0].table1_id).to.equal(1)
-        expect(tableManyRows[0].table2_id).to.equal('x')
-        expect(tableManyRows[0].column1).to.equal('b')
-        expect(tableManyRows[0].table1_id2).to.be.null
-        expect(tableManyRows[1].table1_id).to.equal(1)
-        expect(tableManyRows[1].table2_id).to.equal('y')
-        expect(tableManyRows[1].column1).to.equal('d')
-        expect(tableManyRows[1].table1_id2).to.be.null
-
-        let table2Rows = await pgQueryFn('SELECT * FROM table2')
-
-        expect(table2Rows.length).to.equal(2)
-        expect(table2Rows[0].id).to.equal('x')
-        expect(table2Rows[0].column1).to.equal('c')
-        expect(table2Rows[1].id).to.equal('y')
-        expect(table2Rows[1].column1).to.equal('e')
-      })
-
-      it('should insert a row with a many-to-many relationship where both id\'s refer to the same table and only one is set', async function() {
-        let row: any = {
-          column1: 'a',
-          column2: 1,
-          manyObjects: []
-        }
-
-        row.manyObjects.push(
-          {
-            object1: row
-          },
-          {
-            object1: row
-          }
-        )
-
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let expectedRow: any = {
-          id: 1,
-          column1: 'a',
-          column2: 1,
-          table1_id: null,
-          table2_id: null,
-          manyObjects: [
-            {
-              table1_id: 1,
-              table2_id: null,
-              table1_id2: null,
-              column1: null
-            },
-            {
-              table1_id: 1,
-              table2_id: null,
-              table1_id2: null,
-              column1: null
-            }
-          ]
-        }
-
-        expectedRow.manyObjects[0].object1 = expectedRow
-        expectedRow.manyObjects[1].object1 = expectedRow
-
-        expect(insertedRow.id).to.equal(1)
-        expect(insertedRow).to.deep.equal(expectedRow)
-
-        let table1Rows = await pgQueryFn('SELECT * FROM table1')
-
-        expect(table1Rows.length).to.equal(1)
-        expect(table1Rows[0].id).to.equal(1)
-        expect(table1Rows[0].column1).to.equal('a')
-        expect(table1Rows[0].column2).to.equal(1)
-
-        let tableManyRows = await pgQueryFn('SELECT * FROM table_many')
-
-        expect(tableManyRows.length).to.equal(2)
-        expect(tableManyRows[0].table1_id).to.equal(1)
-        expect(tableManyRows[0].table2_id).to.be.null
-        expect(tableManyRows[0].table1_id2).to.be.null
-        expect(tableManyRows[1].table1_id).to.equal(1)
-        expect(tableManyRows[1].table2_id).to.be.null
-        expect(tableManyRows[1].table1_id2).to.be.null
-      })
-
-      it('should insert a row with a many-to-one relationship', async function() {
-        let row: any = {
-          column1: 'a',
-          object1: {
-            column1: 'b',
-            column2: 1
-          },
-          object2: {
-            id: 'x',
-            column1: 'c',
-            table1_id: null
-          }
-        }
-
-        row.object1.manyObjects = [ row ]
-        row.object2.manyObjects = [ row ]
-        
-        let insertedRow = await insert(schema, 'table_many', 'postgres', pgQueryFn, row)
-
-        expect(insertedRow.table1_id).to.equal(1)
-        expect(insertedRow.table2_id).to.equal('x')
-        expect(insertedRow.column1).to.equal('a')
-        expect(insertedRow.object1).to.deep.equal({
-          id: 1,
-          column1: 'b',
-          column2: 1,
-          table1_id: null,
-          table2_id: null
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
         })
-        expect(insertedRow.object2).to.deep.equal({
-          id: 'x',
-          column1: 'c',
-          table1_id: null
+      })
+
+      it('should insert a many-to-one relationship', async function() {
+        let row = {
+          column1: 'a',
+          manyToOne: {
+            id: 'x',
+            column1: 'b'
+          }
+        }
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        expect(insertedRow).to.be.not.undefined
+        expect(insertedRow).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: 'x',
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToOne: {
+            id: 'x',
+            column1: 'b',
+            column2: null,
+            column3: null,
+            one_to_one_id: null,
+            one_to_many_id: null
+          }
         })
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
         expect(table1Rows.length).to.equal(1)
-        expect(table1Rows[0].id).to.equal(1)
-        expect(table1Rows[0].column1).to.equal('b')
-        expect(table1Rows[0].column2).to.equal(1)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: 'x',
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+        })
 
         let table2Rows = await pgQueryFn('SELECT * FROM table2')
 
         expect(table2Rows.length).to.equal(1)
-        expect(table2Rows[0].id).to.equal('x')
-        expect(table2Rows[0].column1).to.equal('c')
+        expect(table2Rows[0]).to.deep.equal({
+          id: 'x',
+          column1: 'b',
+          column2: null,
+          column3: null,
+          one_to_one_id: null,
+          one_to_many_id: null
+        })
       })
 
-      it('should insert a row which many-to-one relationship which refers to an object which is about to be inserted up the recursion chain', async function() {
-        let row: any = {
-          object1: {}
+      it('should insert a many-to-one relationship which references the same table', async function() {
+        let row = {
+          column1: 'a',
+          manyToOneRecursive: {
+            column1: 'b'
+          }
         }
-
-        row.object1.object1 = row
 
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let expectedRow = {
+        expect(insertedRow).to.be.not.undefined
+        expect(insertedRow).to.deep.equal({
           id: 1,
-          column1: null,
+          column1: 'a',
           column2: null,
-          table1_id: 2,
-          table2_id: null,
-          object1: {
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: 2,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToOneRecursive: {
             id: 2,
-            column1: null,
+            column1: 'b',
             column2: null,
-            table1_id: 1,
-            table2_id: null
-          } as any
+            column3: null,
+            many_to_one_id: null,
+            many_to_one_recursive_id: null,
+            one_to_one_id: null,
+            one_to_one_recursive_id: null,
+            one_to_many_recursive_id: null,
+            }
+        })
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1 ORDER BY id')
+
+        expect(table1Rows.length).to.equal(2)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: 2,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(table1Rows[1]).to.deep.equal({
+          id: 2,
+          column1: 'b',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+      })
+
+      it('should insert a one-to-one relationship', async function() {
+        let row = {
+          column1: 'a',
+          oneToOne: {
+            id: 'x',
+            column1: 'b'
+          }
         }
 
-        expectedRow.object1.object1 = expectedRow
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        expect(insertedRow).to.deep.equal(expectedRow)
+        expect(insertedRow).to.be.not.undefined
+        expect(insertedRow).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: 'x',
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          oneToOne: {
+            id: 'x',
+            column1: 'b',
+            column2: null,
+            column3: null,
+            one_to_one_id: 1,
+            one_to_many_id: null
+          }
+        })
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
-        expect(table1Rows.length).to.equal(2)
-        expect(table1Rows[0].id).to.equal(2)
-        expect(table1Rows[0].table1_id).to.equal(1)
-        expect(table1Rows[0].table2_id).to.be.null
-        expect(table1Rows[1].id).to.equal(1)
-        expect(table1Rows[1].table1_id).to.equal(2)
-        expect(table1Rows[1].table2_id).to.be.null
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: 'x',
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        let table2Rows = await pgQueryFn('SELECT * FROM table2')
+
+        expect(table2Rows.length).to.equal(1)
+        expect(table2Rows[0]).to.deep.equal({
+          id: 'x',
+          column1: 'b',
+          column2: null,
+          column3: null,
+          one_to_one_id: 1,
+          one_to_many_id: null
+        })
       })
 
-      it('should insert a row with a one-to-one relationship', async function() {
-        let row: any = {
+      it('should insert a one-to-one relationship which also references back to the source row object', async function() {
+        let row = {
           column1: 'a',
-          column2: 1,
-          object1: {
+          oneToOne: {
+            id: 'x',
             column1: 'b',
-            column2: 2
+            oneToOne: {}
+          }
+        }
+
+        row.oneToOne.oneToOne = row
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let expected = {
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: 'x',
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          oneToOne: {
+            id: 'x',
+            column1: 'b',
+            column2: null,
+            column3: null,
+            one_to_one_id: 1,
+            one_to_many_id: null,
+            oneToOne: {}
+          }
+        }
+
+        expected.oneToOne.oneToOne = expected
+
+        expect(insertedRow).to.be.not.undefined
+        expect(insertedRow).to.deep.equal(expected)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: 'x',
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        let table2Rows = await pgQueryFn('SELECT * FROM table2')
+
+        expect(table2Rows.length).to.equal(1)
+        expect(table2Rows[0]).to.deep.equal({
+          id: 'x',
+          column1: 'b',
+          column2: null,
+          column3: null,
+          one_to_one_id: 1,
+          one_to_many_id: null
+        })
+      })
+
+      it('should insert a one-to-one relationship which references the same table', async function() {
+        let row = {
+          column1: 'a',
+          oneToOneRecursive: {
+            column1: 'b'
           }
         }
 
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let expectedRow = {
+        expect(insertedRow).to.be.not.undefined
+        expect(insertedRow).to.deep.equal({
           id: 1,
           column1: 'a',
-          column2: 1,
-          table1_id: 2,
-          table2_id: null,
-          object1: {
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: 2,
+          one_to_many_recursive_id: null,
+          oneToOneRecursive: {
             id: 2,
             column1: 'b',
-            column2: 2,
-            table1_id: 1,
-            table2_id: null
-          } as any
-        }
-
-        expect(insertedRow).to.deep.equal(expectedRow)
-
-        let rows = await pgQueryFn('SELECT * FROM table1')
-
-        expect(rows.length).to.equal(2)
-        expect(rows[0].id).to.equal(2)
-        expect(rows[0].column1).to.equal('b')
-        expect(rows[0].column2).to.equal(2)
-        expect(rows[0].table1_id).to.equal(1)
-        expect(rows[0].table2_id).to.be.null
-        expect(rows[1].id).to.equal(1)
-        expect(rows[1].column1).to.equal('a')
-        expect(rows[1].column2).to.equal(1)
-        expect(rows[1].table1_id).to.equal(2)
-        expect(rows[1].table2_id).to.be.null
-      })
-
-      it('should insert a row with a one-to-one relationship where the other end of the relationship is referencing a row object', async function() {
-        let row: any = {
-          column1: 'a',
-          column2: 1,
-          object1: {
-            column1: 'b',
-            column2: 2
-          }
-        }
-
-        row.object1.object1 = row
-
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        let expectedRow = {
-          id: 1,
-          column1: 'a',
-          column2: 1,
-          table1_id: 2,
-          table2_id: null,
-          object1: {
-            id: 2,
-            column1: 'b',
-            column2: 2,
-            table1_id: 1,
-            table2_id: null
-          } as any
-        }
-
-        expectedRow.object1.object1 = expectedRow
-
-        expect(insertedRow).to.deep.equal(expectedRow)
-
-        let rows = await pgQueryFn('SELECT * FROM table1')
-
-        expect(rows.length).to.equal(2)
-        expect(rows[0].id).to.equal(2)
-        expect(rows[0].column1).to.equal('b')
-        expect(rows[0].column2).to.equal(2)
-        expect(rows[0].table1_id).to.equal(1)
-        expect(rows[0].table2_id).to.be.null
-        expect(rows[1].id).to.equal(1)
-        expect(rows[1].column1).to.equal('a')
-        expect(rows[1].column2).to.equal(1)
-        expect(rows[1].table1_id).to.equal(2)
-        expect(rows[1].table2_id).to.be.null
-      })
-
-      it('should insert a row with a many-to-many relationship which also has a many-to-many relationship which references back to the root row', async function() {
-        let row: any = {
-          manyObjects: [{
-            object2: {
-              id: 'x',
-              manyObjects: [{}]
+            column2: null,
+            column3: null,
+            many_to_one_id: null,
+            many_to_one_recursive_id: null,
+            one_to_one_id: null,
+            one_to_one_recursive_id: 1,
+            one_to_many_recursive_id: null
             }
-          }]
+        })
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1 ORDER BY id')
+
+        expect(table1Rows.length).to.equal(2)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: 2,
+          one_to_many_recursive_id: null
+        })
+
+        expect(table1Rows[1]).to.deep.equal({
+          id: 2,
+          column1: 'b',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: 1,
+          one_to_many_recursive_id: null
+        })
+      })
+
+      it('should insert a one-to-one relationship which references the same table and which also references back to the source row object', async function() {
+        let row = {
+          column1: 'a',
+          oneToOneRecursive: {
+            column1: 'b',
+            oneToOneRecursive: {}
+          }
         }
 
-        row.manyObjects[0].object2.manyObjects[0].object1 = row
+        row.oneToOneRecursive.oneToOneRecursive = row
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let expected = {
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: 2,
+          one_to_many_recursive_id: null,
+          oneToOneRecursive: {
+            id: 2,
+            column1: 'b',
+            column2: null,
+            column3: null,
+            many_to_one_id: null,
+            many_to_one_recursive_id: null,
+            one_to_one_id: null,
+            one_to_one_recursive_id: 1,
+            one_to_many_recursive_id: null,
+            oneToOneRecursive: {}
+          }
+        }
+
+        expected.oneToOneRecursive.oneToOneRecursive = expected
+
+        expect(insertedRow).to.be.not.undefined
+        expect(insertedRow).to.deep.equal(expected)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1 ORDER BY id')
+
+        expect(table1Rows.length).to.equal(2)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: 2,
+          one_to_many_recursive_id: null
+        })
+
+        expect(table1Rows[1]).to.deep.equal({
+          id: 2,
+          column1: 'b',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: 1,
+          one_to_many_recursive_id: null
+        })
+      })
+
+      it('should insert a one-to-one relationship which references the same entity', async function() {
+        let row = {
+          column1: 'a',
+          oneToOneRecursive: {}
+        }
+
+        row.oneToOneRecursive = row
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        
+        let expected = {
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: 1,
+          one_to_many_recursive_id: null,
+          oneToOneRecursive: {}
+        }
+
+        expected.oneToOneRecursive = expected
+
+        expect(insertedRow).to.be.not.undefined
+        expect(insertedRow).to.deep.equal(expected)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1 ORDER BY id')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: 1,
+          one_to_many_recursive_id: null
+        })
+      })
+
+      it('should insert a one-to-many relationship', async function() {
+        let row = {
+          column1: 'a',
+          oneToMany: [
+            {
+              id: 'x',
+              column1: 'b'
+            },
+            {
+              id: 'y',
+              column1: 'c'
+            }
+          ]
+        }
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        expect(insertedRow).to.not.be.undefined
+        expect(insertedRow).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          oneToMany: [
+            {
+              id: 'x',
+              column1: 'b',
+              column2: null,
+              column3: null,
+              one_to_one_id: null,
+              one_to_many_id: 1
+            },
+            {
+              id: 'y',
+              column1: 'c',
+              column2: null,
+              column3: null,
+              one_to_one_id: null,
+              one_to_many_id: 1
+            }
+          ]
+        })
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        let table2Rows = await pgQueryFn('SELECT * FROM table2')
+
+        expect(table2Rows.length).to.equal(2)
+        
+        expect(table2Rows[0]).to.deep.equal({
+          id: 'x',
+          column1: 'b',
+          column2: null,
+          column3: null,
+          one_to_one_id: null,
+          one_to_many_id: 1
+        })
+
+        expect(table2Rows[1]).to.deep.equal({
+          id: 'y',
+          column1: 'c',
+          column2: null,
+          column3: null,
+          one_to_one_id: null,
+          one_to_many_id: 1
+        })
+      })
+
+      it('should insert a one-to-many relationship which also references back to the source row object', async function() {
+        let row = {
+          column1: 'a',
+          oneToMany: [
+            {
+              id: 'x',
+              column1: 'b',
+              oneToManyOne: {}
+            },
+            {
+              id: 'y',
+              column1: 'c',
+              oneToManyOne: {}
+            }
+          ]
+        }
+
+        row.oneToMany[0].oneToManyOne = row
+        row.oneToMany[1].oneToManyOne = row
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let expected = {
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          oneToMany: [
+            {
+              id: 'x',
+              column1: 'b',
+              column2: null,
+              column3: null,
+              one_to_one_id: null,
+              one_to_many_id: 1,
+              oneToManyOne: {}
+            },
+            {
+              id: 'y',
+              column1: 'c',
+              column2: null,
+              column3: null,
+              one_to_one_id: null,
+              one_to_many_id: 1,
+              oneToManyOne: {}
+            }
+          ]
+        }
+
+        expected.oneToMany[0].oneToManyOne = expected
+        expected.oneToMany[1].oneToManyOne = expected
+
+        expect(insertedRow).to.not.be.undefined
+        expect(insertedRow).to.deep.equal(expected)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        let table2Rows = await pgQueryFn('SELECT * FROM table2')
+
+        expect(table2Rows.length).to.equal(2)
+        
+        expect(table2Rows[0]).to.deep.equal({
+          id: 'x',
+          column1: 'b',
+          column2: null,
+          column3: null,
+          one_to_one_id: null,
+          one_to_many_id: 1
+        })
+
+        expect(table2Rows[1]).to.deep.equal({
+          id: 'y',
+          column1: 'c',
+          column2: null,
+          column3: null,
+          one_to_one_id: null,
+          one_to_many_id: 1
+        })
+      })
+
+      it('should insert a one-to-many relationship which references the same table', async function() {
+        let row = {
+          column1: 'a',
+          oneToManyRecursive: [
+            {
+              column1: 'b'
+            },
+            {
+              column1: 'c'
+            }
+          ]
+        }
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        expect(insertedRow).to.not.be.undefined
+        expect(insertedRow).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          oneToManyRecursive: [
+            {
+              id: 2,
+              column1: 'b',
+              column2: null,
+              column3: null,
+              many_to_one_id: null,
+              many_to_one_recursive_id: null,
+              one_to_one_id: null,
+              one_to_one_recursive_id: null,
+              one_to_many_recursive_id: 1
+            },
+            {
+              id: 3,
+              column1: 'c',
+              column2: null,
+              column3: null,
+              many_to_one_id: null,
+              many_to_one_recursive_id: null,
+              one_to_one_id: null,
+              one_to_one_recursive_id: null,
+              one_to_many_recursive_id: 1
+            }
+          ]
+        })
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(3)
+
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(table1Rows[1]).to.deep.equal({
+          id: 2,
+          column1: 'b',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: 1
+        })
+
+        expect(table1Rows[2]).to.deep.equal({
+          id: 3,
+          column1: 'c',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: 1
+        })
+      })
+
+      it('should insert a one-to-many relationship which references the same table and which also references back to the source row object', async function() {
+        let row = {
+          column1: 'a',
+          oneToManyRecursive: [
+            {
+              column1: 'b',
+              oneToManyRecursiveOne: {}
+            },
+            {
+              column1: 'c',
+              oneToManyRecursiveOne: {}
+            }
+          ]
+        }
+
+        row.oneToManyRecursive[0].oneToManyRecursiveOne = row
+        row.oneToManyRecursive[1].oneToManyRecursiveOne = row
         
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let expectedRow = {
+        let expected = {
           id: 1,
-          column1: null,
+          column1: 'a',
           column2: null,
-          table1_id: null,
-          table2_id: null,
-          manyObjects: [{
-            table1_id: 1,
-            table2_id: 'x',
-            column1: null,
-            table1_id2: null,
-            object2: {
-              id: 'x',
-              column1: null,
-              table1_id: null,
-              manyObjects: [{
-                table1_id: 1,
-                table2_id: 'x',
-                column1: null,
-                table1_id2: null
-              } as any]
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          oneToManyRecursive: [
+            {
+              id: 2,
+              column1: 'b',
+              column2: null,
+              column3: null,
+              many_to_one_id: null,
+              many_to_one_recursive_id: null,
+              one_to_one_id: null,
+              one_to_one_recursive_id: null,
+              one_to_many_recursive_id: 1,
+              oneToManyRecursiveOne: {}
+            },
+            {
+              id: 3,
+              column1: 'c',
+              column2: null,
+              column3: null,
+              many_to_one_id: null,
+              many_to_one_recursive_id: null,
+              one_to_one_id: null,
+              one_to_one_recursive_id: null,
+              one_to_many_recursive_id: 1,
+              oneToManyRecursiveOne: {}
             }
-          }]
+          ]
         }
 
-        expectedRow.manyObjects[0].object2.manyObjects[0].object1 = expectedRow
-
-        expect(insertedRow).to.deep.equal(expectedRow)
+        expected.oneToManyRecursive[0].oneToManyRecursiveOne = expected
+        expected.oneToManyRecursive[1].oneToManyRecursiveOne = expected
+        
+        expect(insertedRow).to.not.be.undefined
+        expect(insertedRow).to.deep.equal(expected)
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
-        expect(table1Rows.length).to.equal(1)
 
-        let tableManyRows = await pgQueryFn('SELECT * FROM table_many')
-        expect(tableManyRows.length).to.equal(2)
-        expect(tableManyRows[0].table1_id).to.equal(1)
-        expect(tableManyRows[0].table2_id).to.equal('x')
-        expect(tableManyRows[0].table1_id2).to.be.null
-        expect(tableManyRows[1].table1_id).to.equal(1)
-        expect(tableManyRows[1].table2_id).to.equal('x')
-        expect(tableManyRows[1].table1_id2).to.be.null
+        expect(table1Rows.length).to.equal(3)
+
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(table1Rows[1]).to.deep.equal({
+          id: 2,
+          column1: 'b',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: 1
+        })
+
+        expect(table1Rows[2]).to.deep.equal({
+          id: 3,
+          column1: 'c',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: 1
+        })
       })
 
-      it('should insert a row which many-to-one relationship is part of the id and which is already being inserted up the recursion chain', async function() {
+      it('should insert a many-to-many relationship', async function() {
         let row = {
-          object2: {
-            id: 'x',
-            manyObjects: [{} as any]
-          }
+          column1: 'a',
+          manyToMany: [
+            {
+              column1: 'b',
+              object2: {
+                id: 'x',
+                column1: 'c'
+              }
+            },
+            {
+              column1: 'd',
+              object2: {
+                id: 'y',
+                column1: 'e'
+              }
+            }
+          ]
         }
-
-        row.object2.manyObjects[0].object1 = row
 
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let expectedRow = {
+        expect(insertedRow).to.deep.equal({
           id: 1,
-          column1: null,
+          column1: 'a',
           column2: null,
-          table1_id: null,
-          table2_id: 'x',
-          object2: {
-            id: 'x',
-            column1: null,
-            table1_id: 1,
-            manyObjects: [{
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToMany: [
+            {
               table1_id: 1,
               table2_id: 'x',
-              column1: null,
-              table1_id2: null
-            } as any]
-          }
-        }
+              column1: 'b',
+              column2: null,
+              column3: null,
+              object2: {
+                id: 'x',
+                column1: 'c',
+                column2: null,
+                column3: null,
+                one_to_one_id: null,
+                one_to_many_id: null      
+              }
+            },
+            {
+              table1_id: 1,
+              table2_id: 'y',
+              column1: 'd',
+              column2: null,
+              column3: null,
+              object2: {
+                id: 'y',
+                column1: 'e',
+                column2: null,
+                column3: null,
+                one_to_one_id: null,
+                one_to_many_id: null
+              }
+            }
+          ]
+        })
 
-        expectedRow.object2.manyObjects[0].object1 = expectedRow
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
 
-        expect(insertedRow).to.deep.equal(expectedRow)
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many ORDER BY table1_id')
+
+        expect(tableManyRows.length).to.equal(2)
+
+        expect(tableManyRows[0]).to.deep.equal({
+          table1_id: 1,
+          table2_id: 'x',
+          column1: 'b',
+          column2: null,
+          column3: null
+        })
+
+        expect(tableManyRows[1]).to.deep.equal({
+          table1_id: 1,
+          table2_id: 'y',
+          column1: 'd',
+          column2: null,
+          column3: null
+        })
+
+        let table2Rows = await pgQueryFn('SELECT * FROM table2 ORDER BY id')
+
+        expect(table2Rows.length).to.equal(2)
+        
+        expect(table2Rows[0]).to.deep.equal({
+          id: 'x',
+          column1: 'c',
+          column2: null,
+          column3: null,
+          one_to_one_id: null,
+          one_to_many_id: null
+        })
+
+        expect(table2Rows[1]).to.deep.equal({
+          id: 'y',
+          column1: 'e',
+          column2: null,
+          column3: null,
+          one_to_one_id: null,
+          one_to_many_id: null
+        })
       })
 
-      it('should insert a row which many-to-one relationship is not part of the id and which is already being inserted up the recursion chain', async function() {
+      it('should insert a many-to-many relationship which also references back to the source row object', async function() {
         let row = {
-          object2: {
-            id: 'x',
-            manyObjects: [{} as any]
-          }
+          column1: 'a',
+          manyToMany: [
+            {
+              column1: 'b',
+              object1: {},
+              object2: {
+                id: 'x',
+                column1: 'c',
+                manyToMany: []
+              } as any
+            },
+            {
+              column1: 'd',
+              object1: {},
+              object2: {
+                id: 'y',
+                column1: 'e',
+                manyToMany: []
+              }
+            }
+          ]
         }
 
-        row.object2.manyObjects[0].object12 = row
+        row.manyToMany[0].object1 = row
+        row.manyToMany[0].object2.manyToMany.push(row.manyToMany[0])
+        row.manyToMany[1].object1 = row
+        row.manyToMany[1].object2.manyToMany.push(row.manyToMany[1])
 
         let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
 
-        let expectedRow = {
+        let expected = {
           id: 1,
-          column1: null,
+          column1: 'a',
           column2: null,
-          table1_id: null,
-          table2_id: 'x',
-          object2: {
-            id: 'x',
-            column1: null,
-            table1_id: 1,
-            manyObjects: [{
-              table1_id: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToMany: [
+            {
+              table1_id: 1,
               table2_id: 'x',
-              column1: null,
-              table1_id2: 1
-            } as any]
-          }
+              column1: 'b',
+              column2: null,
+              column3: null,
+              object1: {},
+              object2: {
+                id: 'x',
+                column1: 'c',
+                column2: null,
+                column3: null,
+                one_to_one_id: null,
+                one_to_many_id: null,
+                // manyToMany: []
+              } as any
+            },
+            {
+              table1_id: 1,
+              table2_id: 'y',
+              column1: 'd',
+              column2: null,
+              column3: null,
+              object1: {},
+              object2: {
+                id: 'y',
+                column1: 'e',
+                column2: null,
+                column3: null,
+                one_to_one_id: null,
+                one_to_many_id: null,
+                // manyToMany: []
+              }
+            }
+          ]
         }
 
-        expectedRow.object2.manyObjects[0].object12 = expectedRow
+        expected.manyToMany[0].object1 = expected
+        // expected.manyToMany[0].object2.manyToMany.push(expected.manyToMany[0])
+        expected.manyToMany[1].object1 = expected
+        // expected.manyToMany[1].object2.manyToMany.push(expected.manyToMany[1])
 
-        expect(insertedRow).to.deep.equal(expectedRow)
+        expect(insertedRow).to.deep.equal(expected)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many ORDER BY table1_id')
+
+        expect(tableManyRows.length).to.equal(2)
+
+        expect(tableManyRows[0]).to.deep.equal({
+          table1_id: 1,
+          table2_id: 'x',
+          column1: 'b',
+          column2: null,
+          column3: null
+        })
+
+        expect(tableManyRows[1]).to.deep.equal({
+          table1_id: 1,
+          table2_id: 'y',
+          column1: 'd',
+          column2: null,
+          column3: null
+        })
+
+        let table2Rows = await pgQueryFn('SELECT * FROM table2 ORDER BY id')
+
+        expect(table2Rows.length).to.equal(2)
+        
+        expect(table2Rows[0]).to.deep.equal({
+          id: 'x',
+          column1: 'c',
+          column2: null,
+          column3: null,
+          one_to_one_id: null,
+          one_to_many_id: null
+        })
+
+        expect(table2Rows[1]).to.deep.equal({
+          id: 'y',
+          column1: 'e',
+          column2: null,
+          column3: null,
+          one_to_one_id: null,
+          one_to_many_id: null
+        })
+      })
+
+      it('should insert a many-to-many relationship which references the same table', async function() {
+        let row = {
+          column1: 'a',
+          manyToManyRecursive: [
+            {
+              column1: 'b',
+              object12: {
+                column1: 'c'
+              }
+            },
+            {
+              column1: 'd',
+              object12: {
+                column1: 'e'
+              }
+            }
+          ]
+        }
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        expect(insertedRow).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToManyRecursive: [
+            {
+              table11_id: 1,
+              table12_id: 2,
+              column1: 'b',
+              column2: null,
+              column3: null,
+              object12: {
+                id: 2,
+                column1: 'c',
+                column2: null,
+                column3: null,
+                many_to_one_id: null,
+                many_to_one_recursive_id: null,
+                one_to_one_id: null,
+                one_to_one_recursive_id: null,
+                one_to_many_recursive_id: null
+              }
+            },
+            {
+              table11_id: 1,
+              table12_id: 3,
+              column1: 'd',
+              column2: null,
+              column3: null,
+              object12: {
+                id: 3,
+                column1: 'e',
+                column2: null,
+                column3: null,
+                many_to_one_id: null,
+                many_to_one_recursive_id: null,
+                one_to_one_id: null,
+                one_to_one_recursive_id: null,
+                one_to_many_recursive_id: null
+              }
+            }
+          ]
+        })
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1 ORDER BY id')
+
+        expect(table1Rows.length).to.equal(3)
+
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(table1Rows[1]).to.deep.equal({
+          id: 2,
+          column1: 'c',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(table1Rows[2]).to.deep.equal({
+          id: 3,
+          column1: 'e',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many_recursive ORDER BY table11_id')
+
+        expect(tableManyRows.length).to.equal(2)
+
+        expect(tableManyRows[0]).to.deep.equal({
+          table11_id: 1,
+          table12_id: 2,
+          column1: 'b',
+          column2: null,
+          column3: null
+        })
+
+        expect(tableManyRows[1]).to.deep.equal({
+          table11_id: 1,
+          table12_id: 3,
+          column1: 'd',
+          column2: null,
+          column3: null
+        })
+      })
+
+      it('should insert a many-to-many relationship which references the same table and which references back to the source row object', async function() {
+        let row = {
+          column1: 'a',
+          manyToManyRecursive: [
+            {
+              column1: 'b',
+              object11: {},
+              object12: {
+                column1: 'c',
+                manyToManyRecursive: []
+              } as any
+            },
+            {
+              column1: 'd',
+              object11: {},
+              object12: {
+                column1: 'e',
+                manyToManyRecursive: []
+              }
+            }
+          ]
+        }
+
+        row.manyToManyRecursive[0].object11 = row
+        row.manyToManyRecursive[0].object12.manyToManyRecursive.push(row.manyToManyRecursive[0])
+        row.manyToManyRecursive[1].object11 = row
+        row.manyToManyRecursive[1].object12.manyToManyRecursive.push(row.manyToManyRecursive[1])
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let expected = {
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToManyRecursive: [
+            {
+              table11_id: 1,
+              table12_id: 2,
+              column1: 'b',
+              column2: null,
+              column3: null,
+              object11: {},
+              object12: {
+                id: 2,
+                column1: 'c',
+                column2: null,
+                column3: null,
+                many_to_one_id: null,
+                many_to_one_recursive_id: null,
+                one_to_one_id: null,
+                one_to_one_recursive_id: null,
+                one_to_many_recursive_id: null,
+                // manyToManyRecursive: []
+              } as any
+            },
+            {
+              table11_id: 1,
+              table12_id: 3,
+              column1: 'd',
+              column2: null,
+              column3: null,
+              object11: {},
+              object12: {
+                id: 3,
+                column1: 'e',
+                column2: null,
+                column3: null,
+                many_to_one_id: null,
+                many_to_one_recursive_id: null,
+                one_to_one_id: null,
+                one_to_one_recursive_id: null,
+                one_to_many_recursive_id: null,
+                // manyToManyRecursive: []
+              }
+            }
+          ]
+        }
+
+        expected.manyToManyRecursive[0].object11 = expected
+        // expected.manyToManyRecursive[0].object12.manyToManyRecursive.push(expected.manyToManyRecursive[0])
+        expected.manyToManyRecursive[1].object11 = expected
+        // expected.manyToManyRecursive[1].object12.manyToManyRecursive.push(expected.manyToManyRecursive[1])
+
+        expect(insertedRow).to.deep.equal(expected)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1 ORDER BY id')
+
+        expect(table1Rows.length).to.equal(3)
+
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(table1Rows[1]).to.deep.equal({
+          id: 2,
+          column1: 'c',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(table1Rows[2]).to.deep.equal({
+          id: 3,
+          column1: 'e',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many_recursive ORDER BY table11_id')
+
+        expect(tableManyRows.length).to.equal(2)
+
+        expect(tableManyRows[0]).to.deep.equal({
+          table11_id: 1,
+          table12_id: 2,
+          column1: 'b',
+          column2: null,
+          column3: null
+        })
+
+        expect(tableManyRows[1]).to.deep.equal({
+          table11_id: 1,
+          table12_id: 3,
+          column1: 'd',
+          column2: null,
+          column3: null
+        })
+      })
+
+      it('should insert a many-to-many relationship which references the same entity', async function() {
+        let row = {
+          column1: 'a',
+          manyToManyRecursive: [
+            {
+              column1: 'b',
+              object12: {}
+            },
+            {
+              column1: 'c',
+              object12: {}
+            }
+          ]
+        }
+
+        row.manyToManyRecursive[0].object12 = row
+        row.manyToManyRecursive[1].object12 = row
+
+        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        let expected = {
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToManyRecursive: [
+            {
+              table11_id: 1,
+              table12_id: 1,
+              column1: 'b',
+              column2: null,
+              column3: null,
+              object12: {
+                id: 1,
+                column1: 'a',
+                column2: null,
+                column3: null,
+                many_to_one_id: null,
+                many_to_one_recursive_id: null,
+                one_to_one_id: null,
+                one_to_one_recursive_id: null,
+                one_to_many_recursive_id: null
+              }
+            },
+            {
+              table11_id: 1,
+              table12_id: 1,
+              column1: 'c',
+              column2: null,
+              column3: null,
+              object12: {
+                id: 1,
+                column1: 'a',
+                column2: null,
+                column3: null,
+                many_to_one_id: null,
+                many_to_one_recursive_id: null,
+                one_to_one_id: null,
+                one_to_one_recursive_id: null,
+                one_to_many_recursive_id: null
+              }
+            }
+          ]
+        }
+
+        expected.manyToManyRecursive[0].object12 = expected
+        expected.manyToManyRecursive[1].object12 = expected
+
+        expect(insertedRow).to.deep.equal(expected)
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1 ORDER BY id')
+
+        expect(table1Rows.length).to.equal(1)
+
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many_recursive ORDER BY column1')
+
+        expect(tableManyRows.length).to.equal(2)
+
+        expect(tableManyRows[0]).to.deep.equal({
+          table11_id: 1,
+          table12_id: 1,
+          column1: 'b',
+          column2: null,
+          column3: null
+        })
+
+        expect(tableManyRows[1]).to.deep.equal({
+          table11_id: 1,
+          table12_id: 1,
+          column1: 'c',
+          column2: null,
+          column3: null
+        })
       })
 
       it('should not insert the same object twice inside many-to-one', async function() {
@@ -662,22 +1615,61 @@ describe.only('isud', function() {
 
     describe('select', function() {
       it('should select all rows', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3 })
+        let date1 = new Date
+        let date2 = new Date
+        let date3 = new Date
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {})
 
         expect(rows.length).to.equal(3)
-        expect(rows[0]).to.deep.equal({ id: 1, column1: 'a', column2: 1, table1_id: null, table2_id: null })
-        expect(rows[1]).to.deep.equal({ id: 2, column1: 'b', column2: 2, table1_id: null, table2_id: null })
-        expect(rows[2]).to.deep.equal({ id: 3, column1: 'c', column2: 3, table1_id: null, table2_id: null })
+
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          column3: date1,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(rows[1]).to.deep.equal({
+          id: 2,
+          column1: 'b',
+          column2: 2,
+          column3: date2,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(rows[2]).to.deep.equal({
+          id: 3,
+          column1: 'c',
+          column2: 3,
+          column3: date3,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
       })
 
       it('should order by a column', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3 })
+        let date1 = new Date
+        let date2 = new Date
+        let date3 = new Date
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           '@orderBy': {
@@ -687,222 +1679,411 @@ describe.only('isud', function() {
         })
 
         expect(rows.length).to.equal(3)
-        expect(rows[0]).to.deep.equal({ id: 3, column1: 'c', column2: 3, table1_id: null, table2_id: null })
-        expect(rows[1]).to.deep.equal({ id: 2, column1: 'b', column2: 2, table1_id: null, table2_id: null })
-        expect(rows[2]).to.deep.equal({ id: 1, column1: 'a', column2: 1, table1_id: null, table2_id: null })
+        
+        expect(rows[0]).to.deep.equal({
+          id: 3,
+          column1: 'c',
+          column2: 3,
+          column3: date3,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(rows[1]).to.deep.equal({
+          id: 2,
+          column1: 'b',
+          column2: 2,
+          column3: date2,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(rows[2]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          column3: date1,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
       })
 
       it('should limit the results', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3 })
+        let date1 = new Date
+        let date2 = new Date
+        let date3 = new Date
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           '@limit': 2
         })
 
         expect(rows.length).to.equal(2)
-        expect(rows[0]).to.deep.equal({ id: 1, column1: 'a', column2: 1, table1_id: null, table2_id: null })
-        expect(rows[1]).to.deep.equal({ id: 2, column1: 'b', column2: 2, table1_id: null, table2_id: null })
+
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: 1,
+          column3: date1,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        expect(rows[1]).to.deep.equal({
+          id: 2,
+          column1: 'b',
+          column2: 2,
+          column3: date2,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
       })
 
       it('should offset the results', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3 })
+        let date1 = new Date
+        let date2 = new Date
+        let date3 = new Date
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           '@offset': 2
         })
 
         expect(rows.length).to.equal(1)
-        expect(rows[0]).to.deep.equal({ id: 3, column1: 'c', column2: 3, table1_id: null, table2_id: null })
+
+        expect(rows[0]).to.deep.equal({
+          id: 3,
+          column1: 'c',
+          column2: 3,
+          column3: date3,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
       })
 
       it('should regard criteria in a many-to-one relationship', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 2 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 3 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          object1: {
+          manyToOneRecursive: {
             column2: 1
           }
         })
 
         expect(rows.length).to.equal(1)
-        expect(rows[0]).to.deep.equal({ id: 1, column1: 'a', column2: null, table1_id: 2, table2_id: null })
+
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: 2,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
       })
 
       it('should regard criteria in a many-to-one relationship regarding the id', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: { id: 'x' } })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: { id: 'y' } })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { object2: { id: 'z' } })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
-          object2: {
-            id: 'x'
+          manyToOneRecursive: {
+            id: 2
           }
         })
 
         expect(rows.length).to.equal(1)
-        expect(rows[0]).to.deep.equal({ id: 1, column1: null, column2: null, table1_id: null, table2_id: 'x' })
+
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: null,
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: 2,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
       })
 
       it('should regard criteria in a many-to-one relationship and load it', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 2 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 3 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          object1: {
+          manyToOneRecursive: {
             '@load': true,
             column2: 1
           }
         })
 
         expect(rows.length).to.equal(1)
+
         expect(rows[0]).to.deep.equal({
           id: 1,
           column1: 'a',
           column2: null,
-          table1_id: 2,
-          table2_id: null,
-          object1: {
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: 2,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToOneRecursive: {
             id: 2,
             column1: null,
             column2: 1,
-            table1_id: 1,
-            table2_id: null
+            column3: null,
+            many_to_one_id: null,
+            many_to_one_recursive_id: null,
+            one_to_one_id: null,
+            one_to_one_recursive_id: null,
+            one_to_many_recursive_id: null
           }
         })
       })
 
       it('should load a many-to-one relationship separately', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 2 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 3 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          object1: {
+          manyToOneRecursive: {
             '@loadSeparately': true,
             column2: 1
           }
         })
 
         expect(rows.length).to.equal(3)
+
         expect(rows[0]).to.deep.equal({
           id: 1,
           column1: 'a',
           column2: null,
-          table1_id: 2,
-          table2_id: null,
-          object1: {
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: 2,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToOneRecursive: {
             id: 2,
             column1: null,
             column2: 1,
-            table1_id: 1,
-            table2_id: null
+            column3: null,
+            many_to_one_id: null,
+            many_to_one_recursive_id: null,
+            one_to_one_id: null,
+            one_to_one_recursive_id: null,
+            one_to_many_recursive_id: null
           }
         })
+
         expect(rows[1]).to.deep.equal({
           id: 3,
           column1: 'a',
           column2: null,
-          table1_id: 4,
-          table2_id: null,
-          object1: null
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: 4,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToOneRecursive: null
         })
+
         expect(rows[2]).to.deep.equal({
           id: 5,
           column1: 'a',
           column2: null,
-          table1_id: 6,
-          table2_id: null,
-          object1: null
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: 6,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToOneRecursive: null
         })
       })
 
       it('should regard criteria in a one-to-many relationship', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'd' }, { column1: 'e' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'f' }, { column1: 'g' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'h' }, { column1: 'i' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          manyObjects: {
+          oneToManyRecursive: {
             column1: 'd'
           }
         })
 
         expect(rows.length).to.equal(1)
-        expect(rows[0]).to.deep.equal({ id: 1, column1: 'a', column2: null, table1_id: null, table2_id: null })
+
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
       })
 
       it('should regard criteria in a one-to-many relationship and load it', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'd' }, { column1: 'e' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'f' }, { column1: 'g' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'h' }, { column1: 'i' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          manyObjects: {
+          oneToManyRecursive: {
             '@load': true,
             column1: 'd'
           }
         })
 
         expect(rows.length).to.equal(1)
+
         expect(rows[0]).to.deep.equal({
           id: 1,
           column1: 'a',
           column2: null,
-          table1_id: null,
-          table2_id: null,
-          manyObjects: [
-            { table1_id: 1, table2_id: null, column1: 'd', table1_id2: null }
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          oneToManyRecursive: [
+            {
+              id: 2,
+              column1: 'd',
+              column2: null,
+              column3: null,
+              many_to_one_id: null,
+              many_to_one_recursive_id: null,
+              one_to_one_id: null,
+              one_to_one_recursive_id: null,
+              one_to_many_recursive_id: 1
+            }
           ]
         })
       })
 
       it('should load a one-to-many relationship separately', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'd' }, { column1: 'e' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'f' }, { column1: 'g' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyObjects: [ { column1: 'h' }, { column1: 'i' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          manyObjects: {
+          oneToManyRecursive: {
             '@loadSeparately': true,
             column1: 'd'
           }
         })
 
         expect(rows.length).to.equal(3)
+
         expect(rows[0]).to.deep.equal({
           id: 1,
           column1: 'a',
           column2: null,
-          table1_id: null,
-          table2_id: null,
-          manyObjects: [
-            { table1_id: 1, table2_id: null, column1: 'd', table1_id2: null }
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          oneToManyRecursive: [
+            {
+              id: 2,
+              column1: 'd',
+              column2: null,
+              column3: null,
+              many_to_one_id: null,
+              many_to_one_recursive_id: null,
+              one_to_one_id: null,
+              one_to_one_recursive_id: null,
+              one_to_many_recursive_id: 1
+            }
           ]
+        })
+
+        expect(rows[1]).to.deep.equal({
+          id: 4,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          oneToManyRecursive: []
+        })
+
+        expect(rows[2]).to.deep.equal({
+          id: 7,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          oneToManyRecursive: []
         })
       })
 
       it('should process criteria given as array', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 1 }, manyObjects: [ { column1: 'd' }, { column1: 'e' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 2 }, manyObjects: [ { column1: 'f' }, { column1: 'g' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', object1: { column2: 3 }, manyObjects: [ { column1: 'h' }, { column1: 'i' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }, oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }, oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
+        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }, oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, [
           {
             column1: 'a',
-            object1: {
+            manyToOneRecursive: {
               '@load': true,
               column2: 1
             }
@@ -910,9 +2091,9 @@ describe.only('isud', function() {
           'OR',
           {
             column1: 'a',
-            manyObjects: {
+            oneToManyRecursive: {
               '@loadSeparately': true,
-              column1: [ 'd' ]
+              column1: 'd'
             }
           }
         ])
@@ -922,44 +2103,96 @@ describe.only('isud', function() {
           id: 1,
           column1: 'a',
           column2: null,
-          table1_id: 2,
-          table2_id: null,
-          object1: { id: 2, column1: null, column2: 1, table1_id: 1, table2_id: null },
-          manyObjects: [
-            { table1_id: 1, table2_id: null, column1: 'd', table1_id2: null }
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: 2,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToOneRecursive: {
+            id: 2,
+            column1: null,
+            column2: 1,
+            column3: null,
+            many_to_one_id: null,
+            many_to_one_recursive_id: null,
+            one_to_one_id: null,
+            one_to_one_recursive_id: null,
+            one_to_many_recursive_id: null
+          },
+          oneToManyRecursive: [
+            {
+              id: 3,
+              column1: 'd',
+              column2: null,
+              column3: null,
+              many_to_one_id: null,
+              many_to_one_recursive_id: null,
+              one_to_one_id: null,
+              one_to_one_recursive_id: null,
+              one_to_many_recursive_id: 1
+            }
           ]
         })
+
         expect(rows[1]).to.deep.equal({
-          id: 3,
-          column1: 'a',
-          column2: null,
-          table1_id: 4,
-          table2_id: null,
-          object1: { id: 4, column1: null, column2: 2, table1_id: 3, table2_id: null },
-          manyObjects: []
-        })
-        expect(rows[2]).to.deep.equal({
           id: 5,
           column1: 'a',
           column2: null,
-          table1_id: 6,
-          table2_id: null,
-          object1: { id: 6, column1: null, column2: 3, table1_id: 5, table2_id: null },
-          manyObjects: []
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: 6,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToOneRecursive: {
+            id: 6,
+            column1: null,
+            column2: 2,
+            column3: null,
+            many_to_one_id: null,
+            many_to_one_recursive_id: null,
+            one_to_one_id: null,
+            one_to_one_recursive_id: null,
+            one_to_many_recursive_id: null
+          },
+          oneToManyRecursive: []
+        })
+
+        expect(rows[2]).to.deep.equal({
+          id: 9,
+          column1: 'a',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: 10,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToOneRecursive: {
+            id: 10,
+            column1: null,
+            column2: 3,
+            column3: null,
+            many_to_one_id: null,
+            many_to_one_recursive_id: null,
+            one_to_one_id: null,
+            one_to_one_recursive_id: null,
+            one_to_many_recursive_id: null
+          },
+          oneToManyRecursive: []
         })
       })
 
       it('should not select rows which columns are null', async function() {
-        await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
-        await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
-        await insert(schema, 'table_many', 'postgres', pgQueryFn, {})
+        await insert(schema, 'many_to_many', 'postgres', pgQueryFn, {})
+        await insert(schema, 'many_to_many', 'postgres', pgQueryFn, {})
+        await insert(schema, 'many_to_many', 'postgres', pgQueryFn, {})
 
-        let rows = await select(schema, 'table_many', 'postgres', pgQueryFn, {})
+        let rows = await select(schema, 'many_to_many', 'postgres', pgQueryFn, {})
 
         expect(rows.length).to.equal(0)
       })
-
-
     })
 
     describe('delete_', function() {
@@ -973,8 +2206,12 @@ describe.only('isud', function() {
           id: 1,
           column1: 'a',
           column2: 1,
-          table1_id: null,
-          table2_id: null
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
         }])
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
@@ -984,8 +2221,12 @@ describe.only('isud', function() {
           id: 2,
           column1: 'b',
           column2: 2,
-          table1_id: null,
-          table2_id: null
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
         }])
       })
 
@@ -999,8 +2240,12 @@ describe.only('isud', function() {
           id: 1,
           column1: 'a',
           column2: 1,
-          table1_id: null,
-          table2_id: null
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
         }])
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
@@ -1010,8 +2255,12 @@ describe.only('isud', function() {
           id: 2,
           column1: 'b',
           column2: 2,
-          table1_id: null,
-          table2_id: null
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
         }])
       })
 
@@ -1029,16 +2278,24 @@ describe.only('isud', function() {
             id: 1,
             column1: 'a',
             column2: 1,
-            table1_id: null,
-            table2_id: null  
-          },
+            column3: null,
+            many_to_one_id: null,
+            many_to_one_recursive_id: null,
+            one_to_one_id: null,
+            one_to_one_recursive_id: null,
+            one_to_many_recursive_id: null
+            },
           {
             id: 2,
             column1: 'b',
             column2: 2,
-            table1_id: null,
-            table2_id: null  
-          }
+            column3: null,
+            many_to_one_id: null,
+            many_to_one_recursive_id: null,
+            one_to_one_id: null,
+            one_to_one_recursive_id: null,
+            one_to_many_recursive_id: null
+            }
         ])
       })
     })
