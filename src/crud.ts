@@ -2,7 +2,7 @@ import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql from 'knight-sql'
 import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
-import { delete_ as isudDelete, insert, select } from './isud'
+import { delete_ as isudDelete, store, select } from './isud'
 import { buildCountQuery } from './queryTools'
 import { idsNotSet, instanceToRow, rowToInstance } from './rowTools'
 import { Schema } from './Schema'
@@ -17,7 +17,7 @@ export async function create<T>(schema: Schema, tableName: string, db: string, q
 
   let row = instanceToRow(schema, tableName, instance)
   l.lib('row', row)
-  let insertedRow = await insert(schema, tableName, db, queryFn, row)
+  let insertedRow = await store(schema, tableName, db, queryFn, row)
   l.lib('insertedRow', insertedRow)
   let insertedInstance = rowToInstance(schema, tableName, insertedRow)
   l.returning('Returning insertedInstance...', insertedInstance)

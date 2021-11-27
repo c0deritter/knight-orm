@@ -441,7 +441,7 @@ describe('rowTools', function() {
       })
     })
 
-    it.only('should unjoin one-to-one relationships', function() {
+    it('should unjoin one-to-one relationships', function() {
       let rows = [
         {
           table1__id: 1,

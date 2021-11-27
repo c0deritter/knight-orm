@@ -76,6 +76,25 @@ export function isPrimaryKeyColumn(table: Table, columnName: string): boolean {
   return false
 }
 
+export function isGeneratedPrimaryKeyColumn(table: Table, columnName: string): boolean {
+  // TODO: add caching
+  let column = table.columns[columnName]
+
+  if (column == undefined) {
+    throw new Error(`Column '${columnName} not contained table`)
+  }
+
+  if (typeof column == 'string') {
+    return false
+  }
+
+  if (typeof column == 'object' && column !== null) {
+    return column.primaryKey === true && column.generated === true
+  }
+
+  return false
+}
+
 export function isNotGeneratedPrimaryKeyColumn(table: Table, columnName: string): boolean {
   // TODO: add caching
   let column = table.columns[columnName]
@@ -88,8 +107,8 @@ export function isNotGeneratedPrimaryKeyColumn(table: Table, columnName: string)
     return false
   }
 
-  if (typeof column == 'object' && column !== null && typeof column.primaryKey == 'boolean') {
-    return column.primaryKey && (column.generated == undefined || column.generated === false)
+  if (typeof column == 'object' && column !== null) {
+    return column.primaryKey === true && (column.generated == undefined || column.generated === false)
   }
 
   return false

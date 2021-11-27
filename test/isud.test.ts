@@ -2,7 +2,7 @@ import * as chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
-import { delete_, insert, select } from '../src/isud'
+import { delete_, store, select, isUpdate } from '../src/isud'
 import { schema } from './testSchema'
 
 chai.use(chaiAsPromised)
@@ -35,13 +35,80 @@ describe('isud', function() {
       await pool.query('DROP TABLE IF EXISTS many_to_many_recursive CASCADE')
     })
     
-    describe('insert', function() {
+    describe('isUpdate', function() {
+      it('should return false if the generated primary key is not set', async function() {
+        let row = {
+        }
+
+        let result = await isUpdate(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        expect(result).to.be.false
+      })
+
+      it('should return true if the generated primary key is already set', async function() {
+        let row = {
+          id: 1
+        }
+
+        let result = await isUpdate(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        expect(result).to.be.true
+      })
+
+      it('should return false if a row with the not generated primary does not exist', async function() {
+        let row = {
+          id: 'x'
+        }
+
+        let result = await isUpdate(schema, 'table2', 'postgres', pgQueryFn, row)
+
+        expect(result).to.be.false
+      })
+
+      it('should return true if a row with the not generated primary does already exist', async function() {
+        await pgQueryFn('INSERT INTO table2 (id) VALUES (\'x\')')
+
+        let row = {
+          id: 'x'
+        }
+
+        let result = await isUpdate(schema, 'table2', 'postgres', pgQueryFn, row)
+
+        expect(result).to.be.true
+      })
+
+      it('should return false if a row with the composite primary key does not exist', async function() {
+        let row = {
+          table1_id: 1,
+          table2_id: 'x'
+        }
+
+        let result = await isUpdate(schema, 'many_to_many', 'postgres', pgQueryFn, row)
+
+        expect(result).to.be.false
+      })
+
+      it('should return true if a row with the composite primary key does already exist', async function() {
+        await pgQueryFn('INSERT INTO many_to_many (table1_id, table2_id) VALUES (1, \'x\')')
+
+        let row = {
+          table1_id: 1,
+          table2_id: 'x'
+        }
+
+        let result = await isUpdate(schema, 'many_to_many', 'postgres', pgQueryFn, row)
+
+        expect(result).to.be.true
+      })
+    })
+    
+    describe('store', function() {
       it('should insert a simple row', async function() {
         let row = {
           column1: 'a'
         }
   
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
   
         expect(insertedRow).to.be.not.undefined
         expect(insertedRow).to.deep.equal({
@@ -72,7 +139,7 @@ describe('isud', function() {
         })
       })
 
-      it('should insert a many-to-one relationship', async function() {
+      it('should insert a many-to-one relationship which primary key is not generated', async function() {
         let row = {
           column1: 'a',
           manyToOne: {
@@ -81,7 +148,7 @@ describe('isud', function() {
           }
         }
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         expect(insertedRow).to.be.not.undefined
         expect(insertedRow).to.deep.equal({
@@ -132,7 +199,7 @@ describe('isud', function() {
         })
       })
 
-      it('should insert a many-to-one relationship which references the same table', async function() {
+      it('should insert a many-to-one relationship which primary key is generated', async function() {
         let row = {
           column1: 'a',
           manyToOneRecursive: {
@@ -140,7 +207,7 @@ describe('isud', function() {
           }
         }
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         expect(insertedRow).to.be.not.undefined
         expect(insertedRow).to.deep.equal({
@@ -203,7 +270,7 @@ describe('isud', function() {
           }
         }
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         expect(insertedRow).to.be.not.undefined
         expect(insertedRow).to.deep.equal({
@@ -266,7 +333,7 @@ describe('isud', function() {
 
         row.oneToOne.oneToOne = row
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         let expected = {
           id: 1,
@@ -330,7 +397,7 @@ describe('isud', function() {
           }
         }
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         expect(insertedRow).to.be.not.undefined
         expect(insertedRow).to.deep.equal({
@@ -395,7 +462,7 @@ describe('isud', function() {
 
         row.oneToOneRecursive.oneToOneRecursive = row
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         let expected = {
           id: 1,
@@ -462,7 +529,7 @@ describe('isud', function() {
 
         row.oneToOneRecursive = row
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
         
         let expected = {
           id: 1,
@@ -513,7 +580,7 @@ describe('isud', function() {
           ]
         }
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         expect(insertedRow).to.not.be.undefined
         expect(insertedRow).to.deep.equal({
@@ -604,7 +671,7 @@ describe('isud', function() {
         row.oneToMany[0].oneToManyOne = row
         row.oneToMany[1].oneToManyOne = row
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         let expected = {
           id: 1,
@@ -695,7 +762,7 @@ describe('isud', function() {
           ]
         }
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         expect(insertedRow).to.not.be.undefined
         expect(insertedRow).to.deep.equal({
@@ -793,7 +860,7 @@ describe('isud', function() {
         row.oneToManyRecursive[0].oneToManyRecursiveOne = row
         row.oneToManyRecursive[1].oneToManyRecursiveOne = row
         
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         let expected = {
           id: 1,
@@ -901,7 +968,7 @@ describe('isud', function() {
           ]
         }
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         expect(insertedRow).to.deep.equal({
           id: 1,
@@ -1035,7 +1102,7 @@ describe('isud', function() {
         row.manyToMany[1].object1 = row
         row.manyToMany[1].object2.manyToMany.push(row.manyToMany[1])
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         let expected = {
           id: 1,
@@ -1169,7 +1236,7 @@ describe('isud', function() {
           ]
         }
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         expect(insertedRow).to.deep.equal({
           id: 1,
@@ -1310,7 +1377,7 @@ describe('isud', function() {
         row.manyToManyRecursive[1].object11 = row
         row.manyToManyRecursive[1].object12.manyToManyRecursive.push(row.manyToManyRecursive[1])
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         let expected = {
           id: 1,
@@ -1452,7 +1519,7 @@ describe('isud', function() {
         row.manyToManyRecursive[0].object12 = row
         row.manyToManyRecursive[1].object12 = row
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         let expected = {
           id: 1,
@@ -1557,7 +1624,7 @@ describe('isud', function() {
           object12: table1Row
         }
 
-        let insertedRow = await insert(schema, 'table_many', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table_many', 'postgres', pgQueryFn, row)
 
         expect(insertedRow.table1_id).to.equal(1)
         expect(insertedRow.table1_id2).to.equal(1)
@@ -1594,7 +1661,7 @@ describe('isud', function() {
           manyObjects: [ tableManyRow, tableManyRow, tableManyRow ]
         }
 
-        let insertedRow = await insert(schema, 'table1', 'postgres', pgQueryFn, row)
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
         expect(insertedRow.id).to.equal(1)
         expect(insertedRow.manyObjects).to.deep.equal([{
@@ -1611,6 +1678,109 @@ describe('isud', function() {
         expect(table1Rows[0].table2_id).to.be.null
         expect(table1Rows[0].column1).to.equal('a')
       })
+
+      it('should update a simple row', async function() {
+        await pgQueryFn('INSERT INTO table1 (column1) VALUES ($1)', ['a'])
+  
+        let row = {
+          id: 1,
+          column1: 'b'
+        }
+
+        let updatedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+  
+        expect(updatedRow).to.be.not.undefined
+        expect(updatedRow).to.deep.equal({
+          id: 1,
+          column1: 'b',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null
+        })
+
+        let rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(rows.length).to.equal(1)
+        expect(rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'b',
+          column2: null,
+          column3: null,
+          many_to_one_id: null,
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+        })
+      })
+
+      it('should update a many-to-one relationship which id is not generated', async function() {
+        await pgQueryFn('INSERT INTO table1 (column1) VALUES ($1)', ['a'])
+        await pgQueryFn('INSERT INTO table2 (id, column1) VALUES ($1, $2)', ['x', 'b'])
+
+        let row = {
+          id: 1,
+          column1: 'b',
+          manyToOne: {
+            id: 'x',
+            column1: 'c'
+          }
+        }
+
+        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+
+        expect(insertedRow).to.be.not.undefined
+        expect(insertedRow).to.deep.equal({
+          id: 1,
+          column1: 'b',
+          column2: null,
+          column3: null,
+          many_to_one_id: 'x',
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+          manyToOne: {
+            id: 'x',
+            column1: 'c',
+            column2: null,
+            column3: null,
+            one_to_one_id: null,
+            one_to_many_id: null
+          }
+        })
+
+        let table1Rows = await pgQueryFn('SELECT * FROM table1')
+
+        expect(table1Rows.length).to.equal(1)
+        expect(table1Rows[0]).to.deep.equal({
+          id: 1,
+          column1: 'b',
+          column2: null,
+          column3: null,
+          many_to_one_id: 'x',
+          many_to_one_recursive_id: null,
+          one_to_one_id: null,
+          one_to_one_recursive_id: null,
+          one_to_many_recursive_id: null,
+        })
+
+        let table2Rows = await pgQueryFn('SELECT * FROM table2')
+
+        expect(table2Rows.length).to.equal(1)
+        expect(table2Rows[0]).to.deep.equal({
+          id: 'x',
+          column1: 'c',
+          column2: null,
+          column3: null,
+          one_to_one_id: null,
+          one_to_many_id: null
+        })
+      })
     })
 
     describe('select', function() {
@@ -1618,9 +1788,9 @@ describe('isud', function() {
         let date1 = new Date
         let date2 = new Date
         let date3 = new Date
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {})
 
@@ -1667,9 +1837,9 @@ describe('isud', function() {
         let date1 = new Date
         let date2 = new Date
         let date3 = new Date
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           '@orderBy': {
@@ -1721,9 +1891,9 @@ describe('isud', function() {
         let date1 = new Date
         let date2 = new Date
         let date3 = new Date
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           '@limit': 2
@@ -1760,9 +1930,9 @@ describe('isud', function() {
         let date1 = new Date
         let date2 = new Date
         let date3 = new Date
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1, column3: date1 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           '@offset': 2
@@ -1784,9 +1954,9 @@ describe('isud', function() {
       })
 
       it('should regard criteria in a many-to-one relationship', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
@@ -1811,9 +1981,9 @@ describe('isud', function() {
       })
 
       it('should regard criteria in a many-to-one relationship regarding the id', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           manyToOneRecursive: {
@@ -1837,9 +2007,9 @@ describe('isud', function() {
       })
 
       it('should regard criteria in a many-to-one relationship and load it', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
@@ -1876,9 +2046,9 @@ describe('isud', function() {
       })
 
       it('should load a many-to-one relationship separately', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
@@ -1941,9 +2111,9 @@ describe('isud', function() {
       })
 
       it('should regard criteria in a one-to-many relationship', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
@@ -1968,9 +2138,9 @@ describe('isud', function() {
       })
 
       it('should regard criteria in a one-to-many relationship and load it', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
@@ -2009,9 +2179,9 @@ describe('isud', function() {
       })
 
       it('should load a one-to-many relationship separately', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
@@ -2076,9 +2246,9 @@ describe('isud', function() {
       })
 
       it('should process criteria given as array', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }, oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }, oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }, oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }, oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }, oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }, oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, [
           {
@@ -2185,9 +2355,9 @@ describe('isud', function() {
       })
 
       it('should not select rows which columns are null', async function() {
-        await insert(schema, 'many_to_many', 'postgres', pgQueryFn, {})
-        await insert(schema, 'many_to_many', 'postgres', pgQueryFn, {})
-        await insert(schema, 'many_to_many', 'postgres', pgQueryFn, {})
+        await store(schema, 'many_to_many', 'postgres', pgQueryFn, {})
+        await store(schema, 'many_to_many', 'postgres', pgQueryFn, {})
+        await store(schema, 'many_to_many', 'postgres', pgQueryFn, {})
 
         let rows = await select(schema, 'many_to_many', 'postgres', pgQueryFn, {})
 
@@ -2197,8 +2367,8 @@ describe('isud', function() {
 
     describe('delete_', function() {
       it('should delete a simple row by id', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
 
         let deletedRows = await delete_(schema, 'table1', 'postgres', pgQueryFn, { id: 1 })
 
@@ -2231,8 +2401,8 @@ describe('isud', function() {
       })
 
       it('should delete a simple row by another column than the id', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
 
         let deletedRows = await delete_(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a' })
 
@@ -2265,8 +2435,8 @@ describe('isud', function() {
       })
 
       it('should not delete anything if the criteria contained invalid columns', async function() {
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
-        await insert(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', column2: 1 })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'b', column2: 2 })
 
         expect(delete_(schema, 'table1', 'postgres', pgQueryFn, { invalid: 'invalid' })).to.be.rejectedWith(Error)
 

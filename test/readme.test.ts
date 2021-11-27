@@ -3,7 +3,7 @@ import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
 import { Schema } from '../src'
-import { insert } from '../src/isud'
+import { store } from '../src/isud'
 
 chai.use(chaiAsPromised)
 const expect = chai.expect
@@ -33,22 +33,22 @@ describe('README.md', function () {
       await pool.query('DROP TABLE IF EXISTS address CASCADE')
     })
 
-    describe('insert', function () {
-      it('should insert a simple row', async function () {
+    describe('store', function () {
+      it('should store a simple row', async function () {
         let row = {
           name: 'Luisa'
         }
       
-        let inserted = await insert(schema, 'knight', 'postgres', pgQueryFn, row)
+        let stored = await store(schema, 'knight', 'postgres', pgQueryFn, row)
 
-        expect(inserted).to.deep.equal({
+        expect(stored).to.deep.equal({
           id: 1,
           name: 'Luisa',
           best_friend_id: null
         })
       })
 
-      it('should insert a sophisticated row', async function() {
+      it('should store a sophisticated row', async function() {
         let row = {
           name: 'Luisa',
           bestFriend: {
@@ -59,9 +59,9 @@ describe('README.md', function () {
           }
         }      
 
-        let inserted = await insert(schema, 'knight', 'postgres', pgQueryFn, row)
+        let stored = await store(schema, 'knight', 'postgres', pgQueryFn, row)
 
-        expect(inserted).to.deep.equal({
+        expect(stored).to.deep.equal({
           id: 1,
           name: 'Luisa',
           best_friend_id: 2,
@@ -79,7 +79,7 @@ describe('README.md', function () {
         })
       })
 
-      it('should insert starting from an address row', async function() {
+      it('should store starting from an address row', async function() {
         let row = {
           street: 'Great Garden Street',
           knight: {
@@ -90,9 +90,9 @@ describe('README.md', function () {
           }
         }
 
-        let inserted = await insert(schema, 'address', 'postgres', pgQueryFn, row)
+        let stored = await store(schema, 'address', 'postgres', pgQueryFn, row)
 
-        expect(inserted).to.deep.equal({
+        expect(stored).to.deep.equal({
           knight_id: 1,
           street: 'Great Garden Street',
           knight: {
