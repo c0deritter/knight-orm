@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import 'mocha'
 import { determineRelationshipsToLoad, instanceToRow, rowsRepresentSameEntity, rowToInstance, unjoinRows } from '../src/rowTools'
-import { ManyToMany, Object1, Object2, schema } from './testSchema'
+import { ManyToManyObject2, Object1, Object2, schema } from './testSchema'
 
 describe('rowTools', function() {
   describe('instanceToRow', function() {
@@ -10,15 +10,15 @@ describe('rowTools', function() {
       object1.id = 1
       object1.property1 = 'a'
       object1.property2 = 1
-      object1.manyToOneId = 2
-      object1.oneToOneId = 3
+      object1.manyToOneObject1Id = 2
+      object1.oneToOneObject1Id = 3
 
       expect(instanceToRow(schema, 'table1', object1)).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: 1,
-        many_to_one_id: 2,
-        one_to_one_id: 3
+        many_to_one_object1_id: 2,
+        one_to_one_object1_id: 3
       })
     })
 
@@ -27,25 +27,25 @@ describe('rowTools', function() {
       object1.id = 1
       object1.property1 = 'a'
       object1.property2 = 1
-      object1.manyToMany = [new ManyToMany, new ManyToMany]
-      object1.manyToMany[0].object1Id = 1
-      object1.manyToMany[0].object2Id = 'x'
-      object1.manyToMany[0].property1 = 'b'
-      object1.manyToMany[0].property2 = 2
-      object1.manyToMany[0].object1 = object1
-      object1.manyToMany[0].object2 = new Object2
-      object1.manyToMany[0].object2.id = 'x'
-      object1.manyToMany[0].object2.property1 = 'c'
-      object1.manyToMany[0].object2.property2 = 3
-      object1.manyToMany[1].object1Id = 1
-      object1.manyToMany[1].object2Id = 'y'
-      object1.manyToMany[1].property1 = 'd'
-      object1.manyToMany[1].property2 = 4
-      object1.manyToMany[1].object1 = object1
-      object1.manyToMany[1].object2 = new Object2
-      object1.manyToMany[1].object2.id = 'y'
-      object1.manyToMany[1].object2.property1 = 'e'
-      object1.manyToMany[1].object2.property2 = 5
+      object1.manyToManyObject2 = [new ManyToManyObject2, new ManyToManyObject2]
+      object1.manyToManyObject2[0].object1Id = 1
+      object1.manyToManyObject2[0].object2Id = 'x'
+      object1.manyToManyObject2[0].property1 = 'b'
+      object1.manyToManyObject2[0].property2 = 2
+      object1.manyToManyObject2[0].object1 = object1
+      object1.manyToManyObject2[0].object2 = new Object2
+      object1.manyToManyObject2[0].object2.id = 'x'
+      object1.manyToManyObject2[0].object2.property1 = 'c'
+      object1.manyToManyObject2[0].object2.property2 = 3
+      object1.manyToManyObject2[1].object1Id = 1
+      object1.manyToManyObject2[1].object2Id = 'y'
+      object1.manyToManyObject2[1].property1 = 'd'
+      object1.manyToManyObject2[1].property2 = 4
+      object1.manyToManyObject2[1].object1 = object1
+      object1.manyToManyObject2[1].object2 = new Object2
+      object1.manyToManyObject2[1].object2.id = 'y'
+      object1.manyToManyObject2[1].object2.property1 = 'e'
+      object1.manyToManyObject2[1].object2.property2 = 5
 
       let row = instanceToRow(schema, 'table1', object1)
 
@@ -53,7 +53,7 @@ describe('rowTools', function() {
         id: 1,
         column1: 'a',
         column2: 1,
-        manyToMany: [
+        manyToManyObject2: [
           {
             table1_id: 1,
             table2_id: 'x',
@@ -79,8 +79,8 @@ describe('rowTools', function() {
         ]
       }
 
-      expectedRow.manyToMany[0].object1 = expectedRow
-      expectedRow.manyToMany[1].object1 = expectedRow
+      expectedRow.manyToManyObject2[0].object1 = expectedRow
+      expectedRow.manyToManyObject2[1].object1 = expectedRow
 
       expect(row).to.deep.equal(expectedRow)
     })
@@ -90,8 +90,8 @@ describe('rowTools', function() {
       object1.id = 1
       object1.property1 = 'a'
       object1.property2 = 2
-      object1.manyToOneId = 2
-      object1.oneToOneId = 3
+      object1.manyToOneObject1Id = 2
+      object1.oneToOneObject1Id = 3
 
       schema.table1.instanceToRow = function(instance: Object1, row: any) {
         row.id++
@@ -106,8 +106,8 @@ describe('rowTools', function() {
         id: 2,
         column1: 'b',
         column2: 2 ,
-        many_to_one_id: 2,
-        one_to_one_id: 3
+        many_to_one_object1_id: 2,
+        one_to_one_object1_id: 3
       })
     })
   })
@@ -118,16 +118,16 @@ describe('rowTools', function() {
         id: 1,
         column1: 'a',
         column2: 1,
-        many_to_one_id: 2,
-        one_to_one_id: 3
+        many_to_one_object1_id: 2,
+        one_to_one_object1_id: 3
       }
 
       expect(rowToInstance(schema, 'table1', row)).to.deep.equal({
         id: 1,
         property1: 'a',
         property2: 1,
-        manyToOneId: 2,
-        oneToOneId: 3
+        manyToOneObject1Id: 2,
+        oneToOneObject1Id: 3
       })
     })
 
@@ -136,7 +136,7 @@ describe('rowTools', function() {
         id: 1,
         column1: 'a',
         column2: 1,
-        manyToMany: [
+        manyToManyObject2: [
           {
             table1_id: 1,
             table2_id: 'x',
@@ -158,8 +158,8 @@ describe('rowTools', function() {
         ]
       }
 
-      row.manyToMany[0].object1 = row
-      row.manyToMany[1].object1 = row
+      row.manyToManyObject2[0].object1 = row
+      row.manyToManyObject2[1].object1 = row
 
       let instance = rowToInstance(schema, 'table1', row)
 
@@ -167,7 +167,7 @@ describe('rowTools', function() {
         id: 1,
         property1: 'a',
         property2: 1,
-        manyToMany: [
+        manyToManyObject2: [
           {
             object1Id: 1,
             object2Id: 'x',
@@ -176,7 +176,7 @@ describe('rowTools', function() {
               id: 'x',
               property1: 'c'
             }
-          } as ManyToMany,
+          } as ManyToManyObject2,
           {
             object1Id: 1,
             object2Id: 'y',
@@ -185,12 +185,12 @@ describe('rowTools', function() {
               id: 'y',
               property1: 'e'
             }
-          } as ManyToMany
+          } as ManyToManyObject2
         ]
       }
 
-      expectedInstance.manyToMany[0].object1 = expectedInstance
-      expectedInstance.manyToMany[1].object1 = expectedInstance
+      expectedInstance.manyToManyObject2[0].object1 = expectedInstance
+      expectedInstance.manyToManyObject2[1].object1 = expectedInstance
 
       expect(instance).to.deep.equal(expectedInstance)
     })
@@ -200,8 +200,8 @@ describe('rowTools', function() {
         id: 1,
         column1: 'a',
         column2: 1,
-        many_to_one_id: 2,
-        one_to_one_id: 3
+        many_to_one_object1_id: 2,
+        one_to_one_object1_id: 3
       }
 
       schema.table1.rowToInstance = function(instance: Object1, row: any) {
@@ -217,8 +217,8 @@ describe('rowTools', function() {
         id: 1,
         property1: 'a',
         property2: 1,
-        manyToOneId: 2,
-        oneToOneId: 3
+        manyToOneObject1Id: 2,
+        oneToOneObject1Id: 3
       })
     })
   })
@@ -283,82 +283,82 @@ describe('rowTools', function() {
           table1__column1: 'a',
           table1__column2: 1,
           table1__column3: null,
-          table1__many_to_one_id: 'x',
-          table1__many_to_one_recursive_id: 2,
-          table1__one_to_one_id: null,
-          table1__one_to_one_recursive_id: null,
-          table1__one_to_many_recursive_id: null,
-          table1__manyToOne__id: 'x',
-          table1__manyToOne__column1: 'b',
-          table1__manyToOne__column2: 2,
-          table1__manyToOne__column3: null,
-          table1__manyToOne__one_to_one_id: null,
-          table1__manyToOne__one_to_many_id: null,
-          table1__manyToOneRecursive__id: 2,
-          table1__manyToOneRecursive__column1: 'c',
-          table1__manyToOneRecursive__column2: 3,
-          table1__manyToOneRecursive__column3: null,
-          table1__manyToOneRecursive__many_to_one_id: null,
-          table1__manyToOneRecursive__many_to_one_recursive_id: null,
-          table1__manyToOneRecursive__one_to_one_id: null,
-          table1__manyToOneRecursive__one_to_one_recursive_id: null,
-          table1__manyToOneRecursive__one_to_many_recursive_id: null,
+          table1__many_to_one_object2_id: 'x',
+          table1__many_to_one_object1_id: 2,
+          table1__one_to_one_object2_id: null,
+          table1__one_to_one_object1_id: null,
+          table1__one_to_many_object1_many_to_one_id: null,
+          table1__manyToOneObject1__id: 2,
+          table1__manyToOneObject1__column1: 'c',
+          table1__manyToOneObject1__column2: 3,
+          table1__manyToOneObject1__column3: null,
+          table1__manyToOneObject1__many_to_one_object2_id: null,
+          table1__manyToOneObject1__many_to_one_object1_id: null,
+          table1__manyToOneObject1__one_to_one_object2_id: null,
+          table1__manyToOneObject1__one_to_one_object1_id: null,
+          table1__manyToOneObject1__one_to_many_object1_many_to_one_id: null,
+          table1__manyToOneObject2__id: 'x',
+          table1__manyToOneObject2__column1: 'b',
+          table1__manyToOneObject2__column2: 2,
+          table1__manyToOneObject2__column3: null,
+          table1__manyToOneObject2__one_to_one_object1_id: null,
+          table1__manyToOneObject2__one_to_many_object2_many_to_one_id: null,
         },
         {
           table1__id: 3,
           table1__column1: 'd',
           table1__column2: 4,
           table1__column3: null,
-          table1__many_to_one_id: 'y',
-          table1__many_to_one_recursive_id: 4,
-          table1__one_to_one_id: null,
-          table1__one_to_one_recursive_id: null,
-          table1__one_to_many_recursive_id: null,
-          table1__manyToOne__id: 'y',
-          table1__manyToOne__column1: 'e',
-          table1__manyToOne__column2: 5,
-          table1__manyToOne__column3: null,
-          table1__manyToOne__one_to_one_id: null,
-          table1__manyToOne__one_to_many_id: null,
-          table1__manyToOneRecursive__id: 4,
-          table1__manyToOneRecursive__column1: 'f',
-          table1__manyToOneRecursive__column2: 6,
-          table1__manyToOneRecursive__column3: null,
-          table1__manyToOneRecursive__many_to_one_id: null,
-          table1__manyToOneRecursive__many_to_one_recursive_id: null,
-          table1__manyToOneRecursive__one_to_one_id: null,
-          table1__manyToOneRecursive__one_to_one_recursive_id: null,
-          table1__manyToOneRecursive__one_to_many_recursive_id: null,
+          table1__many_to_one_object2_id: 'y',
+          table1__many_to_one_object1_id: 4,
+          table1__one_to_one_object2_id: null,
+          table1__one_to_one_object1_id: null,
+          table1__one_to_many_object1_many_to_one_id: null,
+          table1__manyToOneObject1__id: 4,
+          table1__manyToOneObject1__column1: 'f',
+          table1__manyToOneObject1__column2: 6,
+          table1__manyToOneObject1__column3: null,
+          table1__manyToOneObject1__many_to_one_object2_id: null,
+          table1__manyToOneObject1__many_to_one_object1_id: null,
+          table1__manyToOneObject1__one_to_one_object2_id: null,
+          table1__manyToOneObject1__one_to_one_object1_id: null,
+          table1__manyToOneObject1__one_to_many_object1_many_to_one_id: null,
+          table1__manyToOneObject2__id: 'y',
+          table1__manyToOneObject2__column1: 'e',
+          table1__manyToOneObject2__column2: 5,
+          table1__manyToOneObject2__column3: null,
+          table1__manyToOneObject2__one_to_one_object1_id: null,
+          table1__manyToOneObject2__one_to_many_object2_many_to_one_id: null,
         },
         {
           table1__id: 5,
           table1__column1: 'g',
           table1__column2: 7,
           table1__column3: null,
-          table1__many_to_one_id: null,
-          table1__many_to_one_recursive_id: null,
-          table1__one_to_one_id: null,
-          table1__one_to_one_recursive_id: null,
-          table1__one_to_many_recursive_id: null,
-          table1__manyToOne__id: null,
-          table1__manyToOne__column1: null,
-          table1__manyToOne__column2: null,
-          table1__manyToOne__column3: null,
-          table1__manyToOne__one_to_one_id: null,
-          table1__manyToOne__one_to_many_id: null,
-          table1__manyToOneRecursive__id: null,
-          table1__manyToOneRecursive__column1: null,
-          table1__manyToOneRecursive__column2: null,
-          table1__manyToOneRecursive__column3: null,
-          table1__manyToOneRecursive__many_to_one_id: null,
-          table1__manyToOneRecursive__many_to_one_recursive_id: null,
-          table1__manyToOneRecursive__one_to_one_id: null,
-          table1__manyToOneRecursive__one_to_one_recursive_id: null,
-          table1__manyToOneRecursive__one_to_many_recursive_id: null,
+          table1__many_to_one_object2_id: null,
+          table1__many_to_one_object1_id: null,
+          table1__one_to_one_object2_id: null,
+          table1__one_to_one_object1_id: null,
+          table1__one_to_many_object1_many_to_one_id: null,
+          table1__manyToOneObject1__id: null,
+          table1__manyToOneObject1__column1: null,
+          table1__manyToOneObject1__column2: null,
+          table1__manyToOneObject1__column3: null,
+          table1__manyToOneObject1__many_to_one_object2_id: null,
+          table1__manyToOneObject1__many_to_one_object1_id: null,
+          table1__manyToOneObject1__one_to_one_object2_id: null,
+          table1__manyToOneObject1__one_to_one_object1_id: null,
+          table1__manyToOneObject1__one_to_many_object1_many_to_one_id: null,
+          table1__manyToOneObject2__id: null,
+          table1__manyToOneObject2__column1: null,
+          table1__manyToOneObject2__column2: null,
+          table1__manyToOneObject2__column3: null,
+          table1__manyToOneObject2__one_to_one_object1_id: null,
+          table1__manyToOneObject2__one_to_many_object2_many_to_one_id: null,
         }
       ]
 
-      let criteria = { manyToOne: { '@load': true }, manyToOneRecursive: { '@load': true } }
+      let criteria = { manyToOneObject2: { '@load': true }, manyToOneObject1: { '@load': true } }
 
       let unjoinedRows = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
@@ -369,29 +369,29 @@ describe('rowTools', function() {
         column1: 'a',
         column2: 1,
         column3: null,
-        many_to_one_id: 'x',
-        many_to_one_recursive_id: 2,
-        one_to_one_id: null,
-        one_to_one_recursive_id: null,
-        one_to_many_recursive_id: null,
-        manyToOne: {
+        many_to_one_object1_id: 2,
+        many_to_one_object2_id: 'x',
+        one_to_one_object1_id: null,
+        one_to_one_object2_id: null,
+        one_to_many_object1_many_to_one_id: null,
+        manyToOneObject2: {
           id: 'x',
           column1: 'b',
           column2: 2,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: null
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: null
         },
-        manyToOneRecursive: {
+        manyToOneObject1: {
           id: 2,
           column1: 'c',
           column2: 3,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         }
       })
 
@@ -400,29 +400,29 @@ describe('rowTools', function() {
         column1: 'd',
         column2: 4,
         column3: null,
-        many_to_one_id: 'y',
-        many_to_one_recursive_id: 4,
-        one_to_one_id: null,
-        one_to_one_recursive_id: null,
-        one_to_many_recursive_id: null,
-        manyToOne: {
+        many_to_one_object1_id: 4,
+        many_to_one_object2_id: 'y',
+        one_to_one_object1_id: null,
+        one_to_one_object2_id: null,
+        one_to_many_object1_many_to_one_id: null,
+        manyToOneObject2: {
           id: 'y',
           column1: 'e',
           column2: 5,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: null
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: null
         },
-        manyToOneRecursive: {
+        manyToOneObject1: {
           id: 4,
           column1: 'f',
           column2: 6,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         }
       })
 
@@ -431,13 +431,13 @@ describe('rowTools', function() {
         column1: 'g',
         column2: 7,
         column3: null,
-        many_to_one_id: null,
-        many_to_one_recursive_id: null,
-        one_to_one_id: null,
-        one_to_one_recursive_id: null,
-        one_to_many_recursive_id: null,
-        manyToOne: null,
-        manyToOneRecursive: null
+        many_to_one_object1_id: null,
+        many_to_one_object2_id: null,
+        one_to_one_object1_id: null,
+        one_to_one_object2_id: null,
+        one_to_many_object1_many_to_one_id: null,
+        manyToOneObject1: null,
+        manyToOneObject2: null,
       })
     })
 
@@ -448,82 +448,82 @@ describe('rowTools', function() {
           table1__column1: 'a',
           table1__column2: 1,
           table1__column3: null,
-          table1__many_to_one_id: null,
-          table1__many_to_one_recursive_id: null,
-          table1__one_to_one_id: 'x',
-          table1__one_to_one_recursive_id: 2,
-          table1__one_to_many_recursive_id: null,
-          table1__oneToOne__id: 'x',
-          table1__oneToOne__column1: 'b',
-          table1__oneToOne__column2: 2,
-          table1__oneToOne__column3: null,
-          table1__oneToOne__one_to_one_id: 1,
-          table1__oneToOne__one_to_many_id: null,
-          table1__oneToOneRecursive__id: 2,
-          table1__oneToOneRecursive__column1: 'c',
-          table1__oneToOneRecursive__column2: 3,
-          table1__oneToOneRecursive__column3: null,
-          table1__oneToOneRecursive__many_to_one_id: null,
-          table1__oneToOneRecursive__many_to_one_recursive_id: null,
-          table1__oneToOneRecursive__one_to_one_id: null,
-          table1__oneToOneRecursive__one_to_one_recursive_id: 1,
-          table1__oneToOneRecursive__one_to_many_recursive_id: null,
+          table1__many_to_one_object2_id: null,
+          table1__many_to_one_object1_id: null,
+          table1__one_to_one_object2_id: 'x',
+          table1__one_to_one_object1_id: 2,
+          table1__one_to_many_object1_many_to_one_id: null,
+          table1__oneToOneObject1__id: 2,
+          table1__oneToOneObject1__column1: 'c',
+          table1__oneToOneObject1__column2: 3,
+          table1__oneToOneObject1__column3: null,
+          table1__oneToOneObject1__many_to_one_object2_id: null,
+          table1__oneToOneObject1__many_to_one_object1_id: null,
+          table1__oneToOneObject1__one_to_one_object2_id: null,
+          table1__oneToOneObject1__one_to_one_object1_id: 1,
+          table1__oneToOneObject1__one_to_many_object1_many_to_one_id: null,
+          table1__oneToOneObject2__id: 'x',
+          table1__oneToOneObject2__column1: 'b',
+          table1__oneToOneObject2__column2: 2,
+          table1__oneToOneObject2__column3: null,
+          table1__oneToOneObject2__one_to_one_object1_id: 1,
+          table1__oneToOneObject2__one_to_many_object2_many_to_one_id: null,
         },
         {
           table1__id: 3,
           table1__column1: 'd',
           table1__column2: 4,
           table1__column3: null,
-          table1__many_to_one_id: null,
-          table1__many_to_one_recursive_id: null,
-          table1__one_to_one_id: 'y',
-          table1__one_to_one_recursive_id: 4,
-          table1__one_to_many_recursive_id: null,
-          table1__oneToOne__id: 'y',
-          table1__oneToOne__column1: 'e',
-          table1__oneToOne__column2: 5,
-          table1__oneToOne__column3: null,
-          table1__oneToOne__one_to_one_id: 3,
-          table1__oneToOne__one_to_many_id: null,
-          table1__oneToOneRecursive__id: 4,
-          table1__oneToOneRecursive__column1: 'f',
-          table1__oneToOneRecursive__column2: 6,
-          table1__oneToOneRecursive__column3: null,
-          table1__oneToOneRecursive__many_to_one_id: null,
-          table1__oneToOneRecursive__many_to_one_recursive_id: null,
-          table1__oneToOneRecursive__one_to_one_id: null,
-          table1__oneToOneRecursive__one_to_one_recursive_id: 3,
-          table1__oneToOneRecursive__one_to_many_recursive_id: null,
+          table1__many_to_one_object2_id: null,
+          table1__many_to_one_object1_id: null,
+          table1__one_to_one_object2_id: 'y',
+          table1__one_to_one_object1_id: 4,
+          table1__one_to_many_object1_many_to_one_id: null,
+          table1__oneToOneObject1__id: 4,
+          table1__oneToOneObject1__column1: 'f',
+          table1__oneToOneObject1__column2: 6,
+          table1__oneToOneObject1__column3: null,
+          table1__oneToOneObject1__many_to_one_object2_id: null,
+          table1__oneToOneObject1__many_to_one_object1_id: null,
+          table1__oneToOneObject1__one_to_one_object2_id: null,
+          table1__oneToOneObject1__one_to_one_object1_id: 3,
+          table1__oneToOneObject1__one_to_many_object1_many_to_one_id: null,
+          table1__oneToOneObject2__id: 'y',
+          table1__oneToOneObject2__column1: 'e',
+          table1__oneToOneObject2__column2: 5,
+          table1__oneToOneObject2__column3: null,
+          table1__oneToOneObject2__one_to_one_object1_id: 3,
+          table1__oneToOneObject2__one_to_many_object2_many_to_one_id: null,
         },
         {
           table1__id: 5,
           table1__column1: 'g',
           table1__column2: 7,
           table1__column3: null,
-          table1__many_to_one_id: null,
-          table1__many_to_one_recursive_id: null,
-          table1__one_to_one_id: null,
-          table1__one_to_one_recursive_id: null,
-          table1__one_to_many_recursive_id: null,
-          table1__oneToOne__id: null,
-          table1__oneToOne__column1: null,
-          table1__oneToOne__column2: null,
-          table1__oneToOne__column3: null,
-          table1__oneToOne__one_to_one_id: null,
-          table1__oneToOne__one_to_many_id: null,
-          table1__oneToOneRecursive__id: null,
-          table1__oneToOneRecursive__column1: null,
-          table1__oneToOneRecursive__column2: null,
-          table1__oneToOneRecursive__column3: null,
-          table1__oneToOneRecursive__many_to_one_id: null,
-          table1__oneToOneRecursive__many_to_one_recursive_id: null,
-          table1__oneToOneRecursive__one_to_one_id: null,
-          table1__oneToOneRecursive__one_to_one_recursive_id: null,
-          table1__oneToOneRecursive__one_to_many_recursive_id: null,
+          table1__many_to_one_object2_id: null,
+          table1__many_to_one_object1_id: null,
+          table1__one_to_one_object2_id: null,
+          table1__one_to_one_object1_id: null,
+          table1__one_to_many_object1_many_to_one_id: null,
+          table1__oneToOneObject1__id: null,
+          table1__oneToOneObject1__column1: null,
+          table1__oneToOneObject1__column2: null,
+          table1__oneToOneObject1__column3: null,
+          table1__oneToOneObject1__many_to_one_object2_id: null,
+          table1__oneToOneObject1__many_to_one_object1_id: null,
+          table1__oneToOneObject1__one_to_one_object2_id: null,
+          table1__oneToOneObject1__one_to_one_object1_id: null,
+          table1__oneToOneObject1__one_to_many_object1_many_to_one_id: null,
+          table1__oneToOneObject2__id: null,
+          table1__oneToOneObject2__column1: null,
+          table1__oneToOneObject2__column2: null,
+          table1__oneToOneObject2__column3: null,
+          table1__oneToOneObject2__one_to_one_object1_id: null,
+          table1__oneToOneObject2__one_to_many_object2_many_to_one_id: null,
         }
       ]
 
-      let criteria = { oneToOne: { '@load': true }, oneToOneRecursive: { '@load': true } }
+      let criteria = { oneToOneObject2: { '@load': true }, oneToOneObject1: { '@load': true } }
 
       let unjoinedRows = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
@@ -534,29 +534,29 @@ describe('rowTools', function() {
         column1: 'a',
         column2: 1,
         column3: null,
-        many_to_one_id: null,
-        many_to_one_recursive_id: null,
-        one_to_one_id: 'x',
-        one_to_one_recursive_id: 2,
-        one_to_many_recursive_id: null,
-        oneToOne: {
+        many_to_one_object1_id: null,
+        many_to_one_object2_id: null,
+        one_to_one_object1_id: 2,
+        one_to_one_object2_id: 'x',
+        one_to_many_object1_many_to_one_id: null,
+        oneToOneObject2: {
           id: 'x',
           column1: 'b',
           column2: 2,
           column3: null,
-          one_to_one_id: 1,
-          one_to_many_id: null
+          one_to_one_object1_id: 1,
+          one_to_many_object2_many_to_one_id: null
         },
-        oneToOneRecursive: {
+        oneToOneObject1: {
           id: 2,
           column1: 'c',
           column2: 3,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: 1,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: 1,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         }
       })
 
@@ -565,29 +565,29 @@ describe('rowTools', function() {
         column1: 'd',
         column2: 4,
         column3: null,
-        many_to_one_id: null,
-        many_to_one_recursive_id: null,
-        one_to_one_id: 'y',
-        one_to_one_recursive_id: 4,
-        one_to_many_recursive_id: null,
-        oneToOne: {
+        many_to_one_object1_id: null,
+        many_to_one_object2_id: null,
+        one_to_one_object1_id: 4,
+        one_to_one_object2_id: 'y',
+        one_to_many_object1_many_to_one_id: null,
+        oneToOneObject2: {
           id: 'y',
           column1: 'e',
           column2: 5,
           column3: null,
-          one_to_one_id: 3,
-          one_to_many_id: null
+          one_to_one_object1_id: 3,
+          one_to_many_object2_many_to_one_id: null
         },
-        oneToOneRecursive: {
+        oneToOneObject1: {
           id: 4,
           column1: 'f',
           column2: 6,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: 3,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: 3,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         }
       })
 
@@ -596,13 +596,13 @@ describe('rowTools', function() {
         column1: 'g',
         column2: 7,
         column3: null,
-        many_to_one_id: null,
-        many_to_one_recursive_id: null,
-        one_to_one_id: null,
-        one_to_one_recursive_id: null,
-        one_to_many_recursive_id: null,
-        oneToOne: null,
-        oneToOneRecursive: null
+        many_to_one_object1_id: null,
+        many_to_one_object2_id: null,
+        one_to_one_object1_id: null,
+        one_to_one_object2_id: null,
+        one_to_many_object1_many_to_one_id: null,
+        oneToOneObject1: null,
+        oneToOneObject2: null,
       })
     })
 
@@ -612,15 +612,12 @@ describe('rowTools', function() {
           table1__id: 1,
           table1__column1: 'a',
           table1__column2: 1,
-          table1__table1_id: null,
-          table1__table2_id: null,
-          table1__manyObjects__table1_id: 1,
-          table1__manyObjects__table2_id: 1,
-          table1__manyObjects__column1: 'b',
-          table1__manyObjects__table1_id2: null,
-          table1__manyObjects__object2__id: 1,
-          table1__manyObjects__object2__column1: 'c',
-          table1__manyObjects__object2__table1_id: null
+          table1__manyToManyObject2__table1_id: 1,
+          table1__manyToManyObject2__table2_id: 1,
+          table1__manyToManyObject2__column1: 'b',
+          table1__manyToManyObject2__object2__id: 1,
+          table1__manyToManyObject2__object2__column1: 'c',
+          table1__manyToManyObject2__object2__table1_id: null
         },
         {
           table1__id: 1,
@@ -628,31 +625,27 @@ describe('rowTools', function() {
           table1__column2: 1,
           table1__table1_id: null,
           table1__table2_id: null,
-          table1__manyObjects__table1_id: 1,
-          table1__manyObjects__table2_id: null,
-          table1__manyObjects__column1: 'd',
-          table1__manyObjects__table1_id2: null,
-          table1__manyObjects__object2__id: null,
-          table1__manyObjects__object2__column1: null,
-          table1__manyObjects__object2__table1_id: null
+          table1__manyToManyObject2__table1_id: 1,
+          table1__manyToManyObject2__table2_id: null,
+          table1__manyToManyObject2__column1: 'd',
+          table1__manyToManyObject2__object2__id: null,
+          table1__manyToManyObject2__object2__column1: null,
+          table1__manyToManyObject2__object2__table1_id: null
         },
         {
           table1__id: 2,
           table1__column1: 'e',
           table1__column2: 2,
-          table1__table1_id: null,
-          table1__table2_id: null,
-          table1__manyObjects__table1_id: null,
-          table1__manyObjects__table2_id: null,
-          table1__manyObjects__column1: null,
-          table1__manyObjects__table1_id2: null,
-          table1__manyObjects__object2__id: null,
-          table1__manyObjects__object2__column1: null,
-          table1__manyObjects__object2__table1_id: null
+          table1__manyToManyObject2__table1_id: null,
+          table1__manyToManyObject2__table2_id: null,
+          table1__manyToManyObject2__column1: null,
+          table1__manyToManyObject2__object2__id: null,
+          table1__manyToManyObject2__object2__column1: null,
+          table1__manyToManyObject2__object2__table1_id: null
         }
       ]
 
-      let criteria = { manyObjects: { '@load': true, object2: { '@load': true } }}
+      let criteria = { manyToManyObject2: { '@load': true, object2: { '@load': true } }}
 
       let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
@@ -661,14 +654,11 @@ describe('rowTools', function() {
         id: 1,
         column1: 'a',
         column2: 1,
-        table1_id: null,
-        table2_id: null,
-        manyObjects: [
+        manyToManyObject2: [
           {
             table1_id: 1,
             table2_id: 1,
             column1: 'b',
-            table1_id2: null,
             object2: {
               id: 1,
               column1: 'c',
@@ -677,7 +667,6 @@ describe('rowTools', function() {
           },
           {
             table1_id: 1,
-            table2_id: null,
             column1: 'd',
             table1_id2: null,
             object2: null
@@ -689,9 +678,7 @@ describe('rowTools', function() {
         id: 2,
         column1: 'e',
         column2: 2,
-        table1_id: null,
-        table2_id: null,
-        manyObjects: []
+        manyToManyObject2: []
       })
     })
 
@@ -701,41 +688,35 @@ describe('rowTools', function() {
           table1__id: 1,
           table1__column1: 'a',
           table1__column2: 1,
-          table1__table1_id: null,
-          table1__table2_id: null,
-          table1__manyObjects__table1_id: 1,
-          table1__manyObjects__table2_id: 'x',
-          table1__manyObjects__column1: 'b',
-          table1__manyObjects__table1_id2: null,
-          table1__manyObjects__object2__id: 'x',
-          table1__manyObjects__object2__column1: 'c',
-          table1__manyObjects__object2__table1_id: null,
-          table1__manyObjects__object2__manyObjects__table1_id: 2,
-          table1__manyObjects__object2__manyObjects__table2_id: 'x',
-          table1__manyObjects__object2__manyObjects__column1: 'd',
-          table1__manyObjects__object2__manyObjects__table1_id2: null,
+          table1__manyToManyObject2__table1_id: 1,
+          table1__manyToManyObject2__table2_id: 'x',
+          table1__manyToManyObject2__column1: 'b',
+          table1__manyToManyObject2__object2__id: 'x',
+          table1__manyToManyObject2__object2__column1: 'c',
+          table1__manyToManyObject2__object2__table1_id: null,
+          table1__manyToManyObject2__object2__manyToManyObject2__table1_id: 2,
+          table1__manyToManyObject2__object2__manyToManyObject2__table2_id: 'x',
+          table1__manyToManyObject2__object2__manyToManyObject2__column1: 'd',
+          table1__manyToManyObject2__object2__manyToManyObject2__table1_id2: null,
         },
         {
           table1__id: 1,
           table1__column1: 'a',
           table1__column2: 1,
-          table1__table1_id: null,
-          table1__table2_id: null,
-          table1__manyObjects__table1_id: 1,
-          table1__manyObjects__table2_id: 'x',
-          table1__manyObjects__column1: 'b',
-          table1__manyObjects__table1_id2: null,
-          table1__manyObjects__object2__id: 'x',
-          table1__manyObjects__object2__column1: 'c',
-          table1__manyObjects__object2__table1_id: null,
-          table1__manyObjects__object2__manyObjects__table1_id: 3,
-          table1__manyObjects__object2__manyObjects__table2_id: 'x',
-          table1__manyObjects__object2__manyObjects__column1: 'e',
-          table1__manyObjects__object2__manyObjects__table1_id2: null,
+          table1__manyToManyObject2__table1_id: 1,
+          table1__manyToManyObject2__table2_id: 'x',
+          table1__manyToManyObject2__column1: 'b',
+          table1__manyToManyObject2__object2__id: 'x',
+          table1__manyToManyObject2__object2__column1: 'c',
+          table1__manyToManyObject2__object2__table1_id: null,
+          table1__manyToManyObject2__object2__manyToManyObject2__table1_id: 3,
+          table1__manyToManyObject2__object2__manyToManyObject2__table2_id: 'x',
+          table1__manyToManyObject2__object2__manyToManyObject2__column1: 'e',
+          table1__manyToManyObject2__object2__manyToManyObject2__table1_id2: null,
         }
       ]
 
-      let criteria = { manyObjects: { '@load': true, object2: { '@load': true, manyObjects: { '@load': true } }}}
+      let criteria = { manyToManyObject2: { '@load': true, object2: { '@load': true, manyToManyObject2: { '@load': true } }}}
 
       let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
@@ -744,18 +725,15 @@ describe('rowTools', function() {
         id: 1,
         column1: 'a',
         column2: 1,
-        table1_id: null,
-        table2_id: null,
-        manyObjects: [{
+        manyToManyObject2: [{
           table1_id: 1,
           table2_id: 'x',
           column1: 'b',
-          table1_id2: null,
           object2: {
             id: 'x',
             column1: 'c',
             table1_id: null,
-            manyObjects: [
+            manyToManyObject2: [
               {
                 table1_id: 2,
                 table2_id: 'x',
@@ -785,10 +763,10 @@ describe('rowTools', function() {
           table1__object2__id: 'x',
           table1__object2__column1: 'c',
           table1__object2__table1_id: null,
-          table1__manyObjects__table1_id: null,
-          table1__manyObjects__table2_id: null,
-          table1__manyObjects__column1: null,
-          table1__manyObjects__table1_id2: null,
+          table1__manyToManyObject2__table1_id: null,
+          table1__manyToManyObject2__table2_id: null,
+          table1__manyToManyObject2__column1: null,
+          table1__manyToManyObject2__table1_id2: null,
         },
         {
           table1__id: 1,
@@ -799,14 +777,14 @@ describe('rowTools', function() {
           table1__object2__id: 'x',
           table1__object2__column1: 'c',
           table1__object2__table1_id: null,
-          table1__manyObjects__table1_id: null,
-          table1__manyObjects__table2_id: null,
-          table1__manyObjects__column1: null,
-          table1__manyObjects__table1_id2: null,
+          table1__manyToManyObject2__table1_id: null,
+          table1__manyToManyObject2__table2_id: null,
+          table1__manyToManyObject2__column1: null,
+          table1__manyToManyObject2__table1_id2: null,
         }
       ]
 
-      let criteria = { object2: { '@load': true }, manyObjects: { '@load': true, object2: { '@load': true } }}
+      let criteria = { object2: { '@load': true }, manyToManyObject2: { '@load': true, object2: { '@load': true } }}
 
       let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
 
@@ -823,7 +801,7 @@ describe('rowTools', function() {
           column1: 'c',
           table1_id: null
         },
-        manyObjects: []
+        manyToManyObject2: []
       } as any
 
       expect(instances[0]).to.deep.equal(expectedInstance)
@@ -841,8 +819,8 @@ describe('rowTools', function() {
       let row3 = { table1_id: 1, table2_id: 'x', column1: 'a' }
       let row4 = { table1_id: 1, table2_id: 'x', column1: 'b' }
 
-      expect(rowsRepresentSameEntity(schema['many_to_many'], row3, row4)).to.be.true
-      expect(rowsRepresentSameEntity(schema['many_to_many'], row3, row4)).to.be.true
+      expect(rowsRepresentSameEntity(schema['many_to_many_table2'], row3, row4)).to.be.true
+      expect(rowsRepresentSameEntity(schema['many_to_many_table2'], row3, row4)).to.be.true
     })
 
     it('should not detect two rows as the same entity', function() {
@@ -855,8 +833,8 @@ describe('rowTools', function() {
       let row3 = { table1_id: 1, table2_id: 'x' }
       let row4 = { table1_id: 2, table2_id: 'x', column1: 'a' }
 
-      expect(rowsRepresentSameEntity(schema['many_to_many'], row3, row4)).to.be.false
-      expect(rowsRepresentSameEntity(schema['many_to_many'], row3, row4)).to.be.false
+      expect(rowsRepresentSameEntity(schema['many_to_many_table2'], row3, row4)).to.be.false
+      expect(rowsRepresentSameEntity(schema['many_to_many_table2'], row3, row4)).to.be.false
     })
   })
 
@@ -875,7 +853,7 @@ describe('rowTools', function() {
     })
 
     it('should load a relationship which should be loaded separately', function() {
-      let criteria = { manyToMany: { '@loadSeparately': true }}
+      let criteria = { manyToManyObject2: { '@loadSeparately': true }}
       let rows = [
         { column1: 'a', column2: 1 },
         { column1: 'b', column2: 2 },
@@ -885,9 +863,9 @@ describe('rowTools', function() {
       let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(1)
-      expect(toLoad['.manyToMany']).to.deep.equal({
+      expect(toLoad['.manyToManyObject2']).to.deep.equal({
         tableName: 'table1',
-        relationshipName: 'manyToMany',
+        relationshipName: 'manyToManyObject2',
         relationshipCriteria: { '@loadSeparately': true },
         rows: [
           { column1: 'a', column2: 1 },
@@ -898,7 +876,7 @@ describe('rowTools', function() {
     })
 
     it('should not load a relationship which should be not loaded separately', function() {
-      let criteria = { manyObjects: { '@loadSeparately': false }}
+      let criteria = { manyToManyObject2: { '@loadSeparately': false }}
       let rows = [
         { column1: 'a', column2: 1 },
         { column1: 'b', column2: 2 },
@@ -911,18 +889,18 @@ describe('rowTools', function() {
     })
 
     it('should determine the relationships to load of an already JOIN loaded relationship', function() {
-      let criteria = { manyToMany: { '@load': true, object1: { '@load': true }, object2: { '@loadSeparately': true }}}
+      let criteria = { manyToManyObject2: { '@load': true, object1: { '@load': true }, object2: { '@loadSeparately': true }}}
       let rows = [
-        { column1: 'a', column2: 1, manyToMany: [ { column1: 'a1' }, { column1: 'a2' } ] },
-        { column1: 'b', column2: 2, manyToMany: [ { column1: 'b1' } ] },
-        { column1: 'c', column2: 3, manyToMany: [] },
+        { column1: 'a', column2: 1, manyToManyObject2: [ { column1: 'a1' }, { column1: 'a2' } ] },
+        { column1: 'b', column2: 2, manyToManyObject2: [ { column1: 'b1' } ] },
+        { column1: 'c', column2: 3, manyToManyObject2: [] },
       ]
 
       let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(1)
-      expect(toLoad['.manyToMany.object2']).to.deep.equal({
-        tableName: 'many_to_many',
+      expect(toLoad['.manyToManyObject2.object2']).to.deep.equal({
+        tableName: 'many_to_many_table2',
         relationshipName: 'object2',
         relationshipCriteria: { '@loadSeparately': true },
         rows: [
@@ -934,11 +912,11 @@ describe('rowTools', function() {
     })
 
     it('should not determine the relationships to load of relationship that is not to load', function() {
-      let criteria = { manyToMany: { object1: { '@load': true }, object2: { '@loadSeparately': true }}}
+      let criteria = { manyToManyObject2: { object1: { '@load': true }, object2: { '@loadSeparately': true }}}
       let rows = [
-        { column1: 'a', column2: 1, manyToMany: [ { column1: 'a1' }, { column1: 'a2' } ] },
-        { column1: 'b', column2: 2, manyToMany: [ { column1: 'b1' } ] },
-        { column1: 'c', column2: 3, manyToMany: [] },
+        { column1: 'a', column2: 1, manyToManyObject2: [ { column1: 'a1' }, { column1: 'a2' } ] },
+        { column1: 'b', column2: 2, manyToManyObject2: [ { column1: 'b1' } ] },
+        { column1: 'c', column2: 3, manyToManyObject2: [] },
       ]
 
       let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
@@ -948,7 +926,7 @@ describe('rowTools', function() {
 
     it('should determine the relationships to load if inside an array', function() {
       let criteria = [
-        { manyToMany: { '@loadSeparately': true }},
+        { manyToManyObject2: { '@loadSeparately': true }},
         'XOR',
         {}
       ]
@@ -962,9 +940,9 @@ describe('rowTools', function() {
       let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(1)
-      expect(toLoad['.manyToMany']).to.deep.equal({
+      expect(toLoad['.manyToManyObject2']).to.deep.equal({
         tableName: 'table1',
-        relationshipName: 'manyToMany',
+        relationshipName: 'manyToManyObject2',
         relationshipCriteria: { '@loadSeparately': true },
         rows: [
           { column1: 'a', column2: 1 },
@@ -976,7 +954,7 @@ describe('rowTools', function() {
 
     it('should determine the relationships to load if inside an array of an array', function() {
       let criteria = [
-        [ { manyToMany: { '@loadSeparately': true }} ],
+        [ { manyToManyObject2: { '@loadSeparately': true }} ],
         'XOR',
         {}
       ]
@@ -990,9 +968,9 @@ describe('rowTools', function() {
       let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(1)
-      expect(toLoad['.manyToMany']).to.deep.equal({
+      expect(toLoad['.manyToManyObject2']).to.deep.equal({
         tableName: 'table1',
-        relationshipName: 'manyToMany',
+        relationshipName: 'manyToManyObject2',
         relationshipCriteria: { '@loadSeparately': true },
         rows: [
           { column1: 'a', column2: 1 },
@@ -1004,9 +982,9 @@ describe('rowTools', function() {
 
     it('should use the criteria of first occuring relationship if there is not just one criteria for that relationship', function() {
       let criteria = [
-        { manyToMany: { '@loadSeparately': true, column1: 'a' }},
+        { manyToManyObject2: { '@loadSeparately': true, column1: 'a' }},
         'XOR',
-        { manyToMany: { '@loadSeparately': true, column1: 'b' }}
+        { manyToManyObject2: { '@loadSeparately': true, column1: 'b' }}
       ]
 
       let rows = [
@@ -1018,9 +996,9 @@ describe('rowTools', function() {
       let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(1)
-      expect(toLoad['.manyToMany']).to.deep.equal({
+      expect(toLoad['.manyToManyObject2']).to.deep.equal({
         tableName: 'table1',
-        relationshipName: 'manyToMany',
+        relationshipName: 'manyToManyObject2',
         relationshipCriteria: { '@loadSeparately': true, column1: 'a' },
         rows: [
           { column1: 'a', column2: 1 },

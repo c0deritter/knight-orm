@@ -22,17 +22,17 @@ describe('isud', function() {
     })
 
     beforeEach(async function() {
-      await pool.query('CREATE TABLE table1 (id SERIAL, column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP, many_to_one_id VARCHAR(20), many_to_one_recursive_id INTEGER, one_to_one_id VARCHAR(20), one_to_one_recursive_id INTEGER, one_to_many_recursive_id INTEGER)')
-      await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP, one_to_one_id INTEGER, one_to_many_id INTEGER)')
-      await pool.query('CREATE TABLE many_to_many (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP)')
-      await pool.query('CREATE TABLE many_to_many_recursive (table11_id INTEGER, table12_id INTEGER, column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP)')
+      await pool.query('CREATE TABLE table1 (id SERIAL, column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP, many_to_one_object1_id INTEGER, many_to_one_object2_id VARCHAR(20), one_to_one_object1_id INTEGER, one_to_one_object2_id VARCHAR(20), one_to_many_object1_many_to_one_id INTEGER)')
+      await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP, one_to_one_object1_id INTEGER, one_to_many_object2_many_to_one_id INTEGER)')
+      await pool.query('CREATE TABLE many_to_many_table1 (table1_id1 INTEGER, table1_id2 INTEGER, column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP)')
+      await pool.query('CREATE TABLE many_to_many_table2 (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP)')
     })
 
     afterEach(async function() {
       await pool.query('DROP TABLE IF EXISTS table1 CASCADE')
       await pool.query('DROP TABLE IF EXISTS table2 CASCADE')
-      await pool.query('DROP TABLE IF EXISTS many_to_many CASCADE')
-      await pool.query('DROP TABLE IF EXISTS many_to_many_recursive CASCADE')
+      await pool.query('DROP TABLE IF EXISTS many_to_many_table1 CASCADE')
+      await pool.query('DROP TABLE IF EXISTS many_to_many_table2 CASCADE')
     })
     
     describe('isUpdate', function() {
@@ -83,20 +83,20 @@ describe('isud', function() {
           table2_id: 'x'
         }
 
-        let result = await isUpdate(schema, 'many_to_many', 'postgres', pgQueryFn, row)
+        let result = await isUpdate(schema, 'many_to_many_table2', 'postgres', pgQueryFn, row)
 
         expect(result).to.be.false
       })
 
       it('should return true if a row with the composite primary key does already exist', async function() {
-        await pgQueryFn('INSERT INTO many_to_many (table1_id, table2_id) VALUES (1, \'x\')')
+        await pgQueryFn('INSERT INTO many_to_many_table2 (table1_id, table2_id) VALUES (1, \'x\')')
 
         let row = {
           table1_id: 1,
           table2_id: 'x'
         }
 
-        let result = await isUpdate(schema, 'many_to_many', 'postgres', pgQueryFn, row)
+        let result = await isUpdate(schema, 'many_to_many_table2', 'postgres', pgQueryFn, row)
 
         expect(result).to.be.true
       })
@@ -116,11 +116,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         let rows = await pgQueryFn('SELECT * FROM table1')
@@ -131,18 +131,18 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
         })
       })
 
       it('should insert a many-to-one relationship which primary key is not generated', async function() {
         let row = {
           column1: 'a',
-          manyToOne: {
+          manyToOneObject2: {
             id: 'x',
             column1: 'b'
           }
@@ -156,18 +156,18 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: 'x',
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToOne: {
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: 'x',
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToOneObject2: {
             id: 'x',
             column1: 'b',
             column2: null,
             column3: null,
-            one_to_one_id: null,
-            one_to_many_id: null
+            one_to_one_object1_id: null,
+            one_to_many_object2_many_to_one_id: null
           }
         })
 
@@ -179,11 +179,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: 'x',
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: 'x',
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
         })
 
         let table2Rows = await pgQueryFn('SELECT * FROM table2')
@@ -194,15 +194,15 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: null
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: null
         })
       })
 
       it('should insert a many-to-one relationship which primary key is generated', async function() {
         let row = {
           column1: 'a',
-          manyToOneRecursive: {
+          manyToOneObject1: {
             column1: 'b'
           }
         }
@@ -215,21 +215,21 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: 2,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToOneRecursive: {
+          many_to_one_object1_id: 2,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToOneObject1: {
             id: 2,
             column1: 'b',
             column2: null,
             column3: null,
-            many_to_one_id: null,
-            many_to_one_recursive_id: null,
-            one_to_one_id: null,
-            one_to_one_recursive_id: null,
-            one_to_many_recursive_id: null,
+            many_to_one_object1_id: null,
+            many_to_one_object2_id: null,
+            one_to_one_object1_id: null,
+            one_to_one_object2_id: null,
+            one_to_many_object1_many_to_one_id: null,
             }
         })
 
@@ -241,11 +241,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: 2,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: 2,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(table1Rows[1]).to.deep.equal({
@@ -253,18 +253,18 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
       })
 
       it('should insert a one-to-one relationship', async function() {
         let row = {
           column1: 'a',
-          oneToOne: {
+          oneToOneObject2: {
             id: 'x',
             column1: 'b'
           }
@@ -278,18 +278,18 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: 'x',
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          oneToOne: {
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: 'x',
+          one_to_many_object1_many_to_one_id: null,
+          oneToOneObject2: {
             id: 'x',
             column1: 'b',
             column2: null,
             column3: null,
-            one_to_one_id: 1,
-            one_to_many_id: null
+            one_to_one_object1_id: 1,
+            one_to_many_object2_many_to_one_id: null
           }
         })
 
@@ -301,11 +301,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: 'x',
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: 'x',
+          one_to_many_object1_many_to_one_id: null
         })
 
         let table2Rows = await pgQueryFn('SELECT * FROM table2')
@@ -316,22 +316,22 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          one_to_one_id: 1,
-          one_to_many_id: null
+          one_to_one_object1_id: 1,
+          one_to_many_object2_many_to_one_id: null
         })
       })
 
       it('should insert a one-to-one relationship which also references back to the source row object', async function() {
         let row = {
           column1: 'a',
-          oneToOne: {
+          oneToOneObject2: {
             id: 'x',
             column1: 'b',
-            oneToOne: {}
+            oneToOneObject1: {}
           }
         }
 
-        row.oneToOne.oneToOne = row
+        row.oneToOneObject2.oneToOneObject1 = row
 
         let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
@@ -340,23 +340,23 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: 'x',
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          oneToOne: {
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: 'x',
+          one_to_many_object1_many_to_one_id: null,
+          oneToOneObject2: {
             id: 'x',
             column1: 'b',
             column2: null,
             column3: null,
-            one_to_one_id: 1,
-            one_to_many_id: null,
-            oneToOne: {}
+            one_to_one_object1_id: 1,
+            one_to_many_object2_many_to_one_id: null,
+            oneToOneObject1: {}
           }
         }
 
-        expected.oneToOne.oneToOne = expected
+        expected.oneToOneObject2.oneToOneObject1 = expected
 
         expect(insertedRow).to.be.not.undefined
         expect(insertedRow).to.deep.equal(expected)
@@ -369,11 +369,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: 'x',
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: 'x',
+          one_to_many_object1_many_to_one_id: null
         })
 
         let table2Rows = await pgQueryFn('SELECT * FROM table2')
@@ -384,15 +384,15 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          one_to_one_id: 1,
-          one_to_many_id: null
+          one_to_one_object1_id: 1,
+          one_to_many_object2_many_to_one_id: null
         })
       })
 
       it('should insert a one-to-one relationship which references the same table', async function() {
         let row = {
           column1: 'a',
-          oneToOneRecursive: {
+          oneToOneObject1: {
             column1: 'b'
           }
         }
@@ -405,21 +405,21 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: 2,
-          one_to_many_recursive_id: null,
-          oneToOneRecursive: {
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: 2,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          oneToOneObject1: {
             id: 2,
             column1: 'b',
             column2: null,
             column3: null,
-            many_to_one_id: null,
-            many_to_one_recursive_id: null,
-            one_to_one_id: null,
-            one_to_one_recursive_id: 1,
-            one_to_many_recursive_id: null
+            many_to_one_object1_id: null,
+            many_to_one_object2_id: null,
+            one_to_one_object1_id: 1,
+            one_to_one_object2_id: null,
+            one_to_many_object1_many_to_one_id: null
             }
         })
 
@@ -431,11 +431,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: 2,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: 2,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(table1Rows[1]).to.deep.equal({
@@ -443,24 +443,24 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: 1,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: 1,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
       })
 
       it('should insert a one-to-one relationship which references the same table and which also references back to the source row object', async function() {
         let row = {
           column1: 'a',
-          oneToOneRecursive: {
+          oneToOneObject1: {
             column1: 'b',
-            oneToOneRecursive: {}
+            oneToOneObject1: {}
           }
         }
 
-        row.oneToOneRecursive.oneToOneRecursive = row
+        row.oneToOneObject1.oneToOneObject1 = row
 
         let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
@@ -469,26 +469,26 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: 2,
-          one_to_many_recursive_id: null,
-          oneToOneRecursive: {
+          many_to_one_object2_id: null,
+          many_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_one_object1_id: 2,
+          one_to_many_object1_many_to_one_id: null,
+          oneToOneObject1: {
             id: 2,
             column1: 'b',
             column2: null,
             column3: null,
-            many_to_one_id: null,
-            many_to_one_recursive_id: null,
-            one_to_one_id: null,
-            one_to_one_recursive_id: 1,
-            one_to_many_recursive_id: null,
-            oneToOneRecursive: {}
+            many_to_one_object1_id: null,
+            many_to_one_object2_id: null,
+            one_to_one_object1_id: 1,
+            one_to_one_object2_id: null,
+            one_to_many_object1_many_to_one_id: null,
+            oneToOneObject1: {}
           }
         }
 
-        expected.oneToOneRecursive.oneToOneRecursive = expected
+        expected.oneToOneObject1.oneToOneObject1 = expected
 
         expect(insertedRow).to.be.not.undefined
         expect(insertedRow).to.deep.equal(expected)
@@ -501,11 +501,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: 2,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: 2,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(table1Rows[1]).to.deep.equal({
@@ -513,21 +513,21 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: 1,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: 1,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
       })
 
       it('should insert a one-to-one relationship which references the same entity', async function() {
         let row = {
           column1: 'a',
-          oneToOneRecursive: {}
+          oneToOneObject1: {}
         }
 
-        row.oneToOneRecursive = row
+        row.oneToOneObject1 = row
 
         let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
         
@@ -536,15 +536,15 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: 1,
-          one_to_many_recursive_id: null,
-          oneToOneRecursive: {}
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: 1,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          oneToOneObject1: {}
         }
 
-        expected.oneToOneRecursive = expected
+        expected.oneToOneObject1 = expected
 
         expect(insertedRow).to.be.not.undefined
         expect(insertedRow).to.deep.equal(expected)
@@ -557,18 +557,18 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: 1,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: 1,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
       })
 
       it('should insert a one-to-many relationship', async function() {
         let row = {
           column1: 'a',
-          oneToMany: [
+          oneToManyObject2: [
             {
               id: 'x',
               column1: 'b'
@@ -588,27 +588,27 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          oneToMany: [
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          oneToManyObject2: [
             {
               id: 'x',
               column1: 'b',
               column2: null,
               column3: null,
-              one_to_one_id: null,
-              one_to_many_id: 1
+              one_to_one_object1_id: null,
+              one_to_many_object2_many_to_one_id: 1
             },
             {
               id: 'y',
               column1: 'c',
               column2: null,
               column3: null,
-              one_to_one_id: null,
-              one_to_many_id: 1
+              one_to_one_object1_id: null,
+              one_to_many_object2_many_to_one_id: 1
             }
           ]
         })
@@ -621,11 +621,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         let table2Rows = await pgQueryFn('SELECT * FROM table2')
@@ -637,8 +637,8 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: 1
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: 1
         })
 
         expect(table2Rows[1]).to.deep.equal({
@@ -646,30 +646,30 @@ describe('isud', function() {
           column1: 'c',
           column2: null,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: 1
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: 1
         })
       })
 
       it('should insert a one-to-many relationship which also references back to the source row object', async function() {
         let row = {
           column1: 'a',
-          oneToMany: [
+          oneToManyObject2: [
             {
               id: 'x',
               column1: 'b',
-              oneToManyOne: {}
+              oneToManyObject2ManyToOne: {}
             },
             {
               id: 'y',
               column1: 'c',
-              oneToManyOne: {}
+              oneToManyObject2ManyToOne: {}
             }
           ]
         }
 
-        row.oneToMany[0].oneToManyOne = row
-        row.oneToMany[1].oneToManyOne = row
+        row.oneToManyObject2[0].oneToManyObject2ManyToOne = row
+        row.oneToManyObject2[1].oneToManyObject2ManyToOne = row
 
         let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
@@ -678,35 +678,35 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          oneToMany: [
+          many_to_one_object2_id: null,
+          many_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          oneToManyObject2: [
             {
               id: 'x',
               column1: 'b',
               column2: null,
               column3: null,
-              one_to_one_id: null,
-              one_to_many_id: 1,
-              oneToManyOne: {}
+              one_to_one_object1_id: null,
+              one_to_many_object2_many_to_one_id: 1,
+              oneToManyObject2ManyToOne: {}
             },
             {
               id: 'y',
               column1: 'c',
               column2: null,
               column3: null,
-              one_to_one_id: null,
-              one_to_many_id: 1,
-              oneToManyOne: {}
+              one_to_one_object1_id: null,
+              one_to_many_object2_many_to_one_id: 1,
+              oneToManyObject2ManyToOne: {}
             }
           ]
         }
 
-        expected.oneToMany[0].oneToManyOne = expected
-        expected.oneToMany[1].oneToManyOne = expected
+        expected.oneToManyObject2[0].oneToManyObject2ManyToOne = expected
+        expected.oneToManyObject2[1].oneToManyObject2ManyToOne = expected
 
         expect(insertedRow).to.not.be.undefined
         expect(insertedRow).to.deep.equal(expected)
@@ -719,11 +719,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         let table2Rows = await pgQueryFn('SELECT * FROM table2')
@@ -735,8 +735,8 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: 1
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: 1
         })
 
         expect(table2Rows[1]).to.deep.equal({
@@ -744,15 +744,15 @@ describe('isud', function() {
           column1: 'c',
           column2: null,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: 1
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: 1
         })
       })
 
       it('should insert a one-to-many relationship which references the same table', async function() {
         let row = {
           column1: 'a',
-          oneToManyRecursive: [
+          oneToManyObject1: [
             {
               column1: 'b'
             },
@@ -770,33 +770,33 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          oneToManyRecursive: [
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          oneToManyObject1: [
             {
               id: 2,
               column1: 'b',
               column2: null,
               column3: null,
-              many_to_one_id: null,
-              many_to_one_recursive_id: null,
-              one_to_one_id: null,
-              one_to_one_recursive_id: null,
-              one_to_many_recursive_id: 1
+              many_to_one_object1_id: null,
+              many_to_one_object2_id: null,
+              one_to_one_object1_id: null,
+              one_to_one_object2_id: null,
+              one_to_many_object1_many_to_one_id: 1
             },
             {
               id: 3,
               column1: 'c',
               column2: null,
               column3: null,
-              many_to_one_id: null,
-              many_to_one_recursive_id: null,
-              one_to_one_id: null,
-              one_to_one_recursive_id: null,
-              one_to_many_recursive_id: 1
+              many_to_one_object1_id: null,
+              many_to_one_object2_id: null,
+              one_to_one_object1_id: null,
+              one_to_one_object2_id: null,
+              one_to_many_object1_many_to_one_id: 1
             }
           ]
         })
@@ -810,11 +810,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(table1Rows[1]).to.deep.equal({
@@ -822,11 +822,11 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: 1
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: 1
         })
 
         expect(table1Rows[2]).to.deep.equal({
@@ -834,31 +834,31 @@ describe('isud', function() {
           column1: 'c',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: 1
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: 1
         })
       })
 
       it('should insert a one-to-many relationship which references the same table and which also references back to the source row object', async function() {
         let row = {
           column1: 'a',
-          oneToManyRecursive: [
+          oneToManyObject1: [
             {
               column1: 'b',
-              oneToManyRecursiveOne: {}
+              oneToManyObject1ManyToOne: {}
             },
             {
               column1: 'c',
-              oneToManyRecursiveOne: {}
+              oneToManyObject1ManyToOne: {}
             }
           ]
         }
 
-        row.oneToManyRecursive[0].oneToManyRecursiveOne = row
-        row.oneToManyRecursive[1].oneToManyRecursiveOne = row
+        row.oneToManyObject1[0].oneToManyObject1ManyToOne = row
+        row.oneToManyObject1[1].oneToManyObject1ManyToOne = row
         
         let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
@@ -867,41 +867,41 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          oneToManyRecursive: [
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          oneToManyObject1: [
             {
               id: 2,
               column1: 'b',
               column2: null,
               column3: null,
-              many_to_one_id: null,
-              many_to_one_recursive_id: null,
-              one_to_one_id: null,
-              one_to_one_recursive_id: null,
-              one_to_many_recursive_id: 1,
-              oneToManyRecursiveOne: {}
+              many_to_one_object1_id: null,
+              many_to_one_object2_id: null,
+              one_to_one_object1_id: null,
+              one_to_one_object2_id: null,
+              one_to_many_object1_many_to_one_id: 1,
+              oneToManyObject1ManyToOne: {}
             },
             {
               id: 3,
               column1: 'c',
               column2: null,
               column3: null,
-              many_to_one_id: null,
-              many_to_one_recursive_id: null,
-              one_to_one_id: null,
-              one_to_one_recursive_id: null,
-              one_to_many_recursive_id: 1,
-              oneToManyRecursiveOne: {}
+              many_to_one_object1_id: null,
+              many_to_one_object2_id: null,
+              one_to_one_object1_id: null,
+              one_to_one_object2_id: null,
+              one_to_many_object1_many_to_one_id: 1,
+              oneToManyObject1ManyToOne: {}
             }
           ]
         }
 
-        expected.oneToManyRecursive[0].oneToManyRecursiveOne = expected
-        expected.oneToManyRecursive[1].oneToManyRecursiveOne = expected
+        expected.oneToManyObject1[0].oneToManyObject1ManyToOne = expected
+        expected.oneToManyObject1[1].oneToManyObject1ManyToOne = expected
         
         expect(insertedRow).to.not.be.undefined
         expect(insertedRow).to.deep.equal(expected)
@@ -915,11 +915,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(table1Rows[1]).to.deep.equal({
@@ -927,11 +927,11 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: 1
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: 1
         })
 
         expect(table1Rows[2]).to.deep.equal({
@@ -939,18 +939,18 @@ describe('isud', function() {
           column1: 'c',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: 1
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: 1
         })
       })
 
       it('should insert a many-to-many relationship', async function() {
         let row = {
           column1: 'a',
-          manyToMany: [
+          manyToManyObject2: [
             {
               column1: 'b',
               object2: {
@@ -975,12 +975,12 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToMany: [
+          many_to_one_object2_id: null,
+          many_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToManyObject2: [
             {
               table1_id: 1,
               table2_id: 'x',
@@ -992,8 +992,8 @@ describe('isud', function() {
                 column1: 'c',
                 column2: null,
                 column3: null,
-                one_to_one_id: null,
-                one_to_many_id: null      
+                one_to_one_object1_id: null,
+                one_to_many_object2_many_to_one_id: null      
               }
             },
             {
@@ -1007,8 +1007,8 @@ describe('isud', function() {
                 column1: 'e',
                 column2: null,
                 column3: null,
-                one_to_one_id: null,
-                one_to_many_id: null
+                one_to_one_object1_id: null,
+                one_to_many_object2_many_to_one_id: null
               }
             }
           ]
@@ -1022,14 +1022,14 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
-        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many ORDER BY table1_id')
+        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many_table2 ORDER BY table1_id')
 
         expect(tableManyRows.length).to.equal(2)
 
@@ -1058,8 +1058,8 @@ describe('isud', function() {
           column1: 'c',
           column2: null,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: null
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: null
         })
 
         expect(table2Rows[1]).to.deep.equal({
@@ -1067,22 +1067,22 @@ describe('isud', function() {
           column1: 'e',
           column2: null,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: null
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: null
         })
       })
 
       it('should insert a many-to-many relationship which also references back to the source row object', async function() {
         let row = {
           column1: 'a',
-          manyToMany: [
+          manyToManyObject2: [
             {
               column1: 'b',
               object1: {},
               object2: {
                 id: 'x',
                 column1: 'c',
-                manyToMany: []
+                manyToManyObject2: []
               } as any
             },
             {
@@ -1091,16 +1091,16 @@ describe('isud', function() {
               object2: {
                 id: 'y',
                 column1: 'e',
-                manyToMany: []
+                manyToManyObject2: []
               }
             }
           ]
         }
 
-        row.manyToMany[0].object1 = row
-        row.manyToMany[0].object2.manyToMany.push(row.manyToMany[0])
-        row.manyToMany[1].object1 = row
-        row.manyToMany[1].object2.manyToMany.push(row.manyToMany[1])
+        row.manyToManyObject2[0].object1 = row
+        row.manyToManyObject2[0].object2.manyToManyObject2.push(row.manyToManyObject2[0])
+        row.manyToManyObject2[1].object1 = row
+        row.manyToManyObject2[1].object2.manyToManyObject2.push(row.manyToManyObject2[1])
 
         let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
@@ -1109,12 +1109,12 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToMany: [
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToManyObject2: [
             {
               table1_id: 1,
               table2_id: 'x',
@@ -1127,9 +1127,9 @@ describe('isud', function() {
                 column1: 'c',
                 column2: null,
                 column3: null,
-                one_to_one_id: null,
-                one_to_many_id: null,
-                // manyToMany: []
+                one_to_one_object1_id: null,
+                one_to_many_object2_many_to_one_id: null,
+                // manyToManyObject2: []
               } as any
             },
             {
@@ -1144,18 +1144,18 @@ describe('isud', function() {
                 column1: 'e',
                 column2: null,
                 column3: null,
-                one_to_one_id: null,
-                one_to_many_id: null,
-                // manyToMany: []
+                one_to_one_object1_id: null,
+                one_to_many_object2_many_to_one_id: null,
+                // manyToManyObject2: []
               }
             }
           ]
         }
 
-        expected.manyToMany[0].object1 = expected
-        // expected.manyToMany[0].object2.manyToMany.push(expected.manyToMany[0])
-        expected.manyToMany[1].object1 = expected
-        // expected.manyToMany[1].object2.manyToMany.push(expected.manyToMany[1])
+        expected.manyToManyObject2[0].object1 = expected
+        // expected.manyToManyObject2[0].object2.manyToManyObject2.push(expected.manyToManyObject2[0])
+        expected.manyToManyObject2[1].object1 = expected
+        // expected.manyToManyObject2[1].object2.manyToManyObject2.push(expected.manyToManyObject2[1])
 
         expect(insertedRow).to.deep.equal(expected)
 
@@ -1167,14 +1167,14 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
-        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many ORDER BY table1_id')
+        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many_table2 ORDER BY table1_id')
 
         expect(tableManyRows.length).to.equal(2)
 
@@ -1203,8 +1203,8 @@ describe('isud', function() {
           column1: 'c',
           column2: null,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: null
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: null
         })
 
         expect(table2Rows[1]).to.deep.equal({
@@ -1212,15 +1212,15 @@ describe('isud', function() {
           column1: 'e',
           column2: null,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: null
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: null
         })
       })
 
       it('should insert a many-to-many relationship which references the same table', async function() {
         let row = {
           column1: 'a',
-          manyToManyRecursive: [
+          manyToManyObject1: [
             {
               column1: 'b',
               object12: {
@@ -1243,15 +1243,15 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToManyRecursive: [
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToManyObject1: [
             {
-              table11_id: 1,
-              table12_id: 2,
+              table1_id1: 1,
+              table1_id2: 2,
               column1: 'b',
               column2: null,
               column3: null,
@@ -1260,16 +1260,16 @@ describe('isud', function() {
                 column1: 'c',
                 column2: null,
                 column3: null,
-                many_to_one_id: null,
-                many_to_one_recursive_id: null,
-                one_to_one_id: null,
-                one_to_one_recursive_id: null,
-                one_to_many_recursive_id: null
+                many_to_one_object1_id: null,
+                many_to_one_object2_id: null,
+                one_to_one_object1_id: null,
+                one_to_one_object2_id: null,
+                one_to_many_object1_many_to_one_id: null
               }
             },
             {
-              table11_id: 1,
-              table12_id: 3,
+              table1_id1: 1,
+              table1_id2: 3,
               column1: 'd',
               column2: null,
               column3: null,
@@ -1278,11 +1278,11 @@ describe('isud', function() {
                 column1: 'e',
                 column2: null,
                 column3: null,
-                many_to_one_id: null,
-                many_to_one_recursive_id: null,
-                one_to_one_id: null,
-                one_to_one_recursive_id: null,
-                one_to_many_recursive_id: null
+                many_to_one_object1_id: null,
+                many_to_one_object2_id: null,
+                one_to_one_object1_id: null,
+                one_to_one_object2_id: null,
+                one_to_many_object1_many_to_one_id: null
               }
             }
           ]
@@ -1297,11 +1297,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(table1Rows[1]).to.deep.equal({
@@ -1309,11 +1309,11 @@ describe('isud', function() {
           column1: 'c',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(table1Rows[2]).to.deep.equal({
@@ -1321,28 +1321,28 @@ describe('isud', function() {
           column1: 'e',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
-        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many_recursive ORDER BY table11_id')
+        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many_table1 ORDER BY table1_id1')
 
         expect(tableManyRows.length).to.equal(2)
 
         expect(tableManyRows[0]).to.deep.equal({
-          table11_id: 1,
-          table12_id: 2,
+          table1_id1: 1,
+          table1_id2: 2,
           column1: 'b',
           column2: null,
           column3: null
         })
 
         expect(tableManyRows[1]).to.deep.equal({
-          table11_id: 1,
-          table12_id: 3,
+          table1_id1: 1,
+          table1_id2: 3,
           column1: 'd',
           column2: null,
           column3: null
@@ -1352,13 +1352,13 @@ describe('isud', function() {
       it('should insert a many-to-many relationship which references the same table and which references back to the source row object', async function() {
         let row = {
           column1: 'a',
-          manyToManyRecursive: [
+          manyToManyObject1: [
             {
               column1: 'b',
               object11: {},
               object12: {
                 column1: 'c',
-                manyToManyRecursive: []
+                manyToManyObject1: []
               } as any
             },
             {
@@ -1366,16 +1366,16 @@ describe('isud', function() {
               object11: {},
               object12: {
                 column1: 'e',
-                manyToManyRecursive: []
+                manyToManyObject1: []
               }
             }
           ]
         }
 
-        row.manyToManyRecursive[0].object11 = row
-        row.manyToManyRecursive[0].object12.manyToManyRecursive.push(row.manyToManyRecursive[0])
-        row.manyToManyRecursive[1].object11 = row
-        row.manyToManyRecursive[1].object12.manyToManyRecursive.push(row.manyToManyRecursive[1])
+        row.manyToManyObject1[0].object11 = row
+        row.manyToManyObject1[0].object12.manyToManyObject1.push(row.manyToManyObject1[0])
+        row.manyToManyObject1[1].object11 = row
+        row.manyToManyObject1[1].object12.manyToManyObject1.push(row.manyToManyObject1[1])
 
         let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
@@ -1384,15 +1384,15 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToManyRecursive: [
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToManyObject1: [
             {
-              table11_id: 1,
-              table12_id: 2,
+              table1_id1: 1,
+              table1_id2: 2,
               column1: 'b',
               column2: null,
               column3: null,
@@ -1402,17 +1402,17 @@ describe('isud', function() {
                 column1: 'c',
                 column2: null,
                 column3: null,
-                many_to_one_id: null,
-                many_to_one_recursive_id: null,
-                one_to_one_id: null,
-                one_to_one_recursive_id: null,
-                one_to_many_recursive_id: null,
-                // manyToManyRecursive: []
+                many_to_one_object1_id: null,
+                many_to_one_object2_id: null,
+                one_to_one_object1_id: null,
+                one_to_one_object2_id: null,
+                one_to_many_object1_many_to_one_id: null,
+                // manyToManyObject1: []
               } as any
             },
             {
-              table11_id: 1,
-              table12_id: 3,
+              table1_id1: 1,
+              table1_id2: 3,
               column1: 'd',
               column2: null,
               column3: null,
@@ -1422,21 +1422,21 @@ describe('isud', function() {
                 column1: 'e',
                 column2: null,
                 column3: null,
-                many_to_one_id: null,
-                many_to_one_recursive_id: null,
-                one_to_one_id: null,
-                one_to_one_recursive_id: null,
-                one_to_many_recursive_id: null,
-                // manyToManyRecursive: []
+                many_to_one_object2_id: null,
+                many_to_one_object1_id: null,
+                one_to_one_object2_id: null,
+                one_to_one_object1_id: null,
+                one_to_many_object1_many_to_one_id: null,
+                // manyToManyObject1: []
               }
             }
           ]
         }
 
-        expected.manyToManyRecursive[0].object11 = expected
-        // expected.manyToManyRecursive[0].object12.manyToManyRecursive.push(expected.manyToManyRecursive[0])
-        expected.manyToManyRecursive[1].object11 = expected
-        // expected.manyToManyRecursive[1].object12.manyToManyRecursive.push(expected.manyToManyRecursive[1])
+        expected.manyToManyObject1[0].object11 = expected
+        // expected.manyToManyObject1[0].object12.manyToManyObject1.push(expected.manyToManyObject1[0])
+        expected.manyToManyObject1[1].object11 = expected
+        // expected.manyToManyObject1[1].object12.manyToManyObject1.push(expected.manyToManyObject1[1])
 
         expect(insertedRow).to.deep.equal(expected)
 
@@ -1449,11 +1449,11 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(table1Rows[1]).to.deep.equal({
@@ -1461,11 +1461,11 @@ describe('isud', function() {
           column1: 'c',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(table1Rows[2]).to.deep.equal({
@@ -1473,28 +1473,28 @@ describe('isud', function() {
           column1: 'e',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
-        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many_recursive ORDER BY table11_id')
+        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many_table1 ORDER BY table1_id1')
 
         expect(tableManyRows.length).to.equal(2)
 
         expect(tableManyRows[0]).to.deep.equal({
-          table11_id: 1,
-          table12_id: 2,
+          table1_id1: 1,
+          table1_id2: 2,
           column1: 'b',
           column2: null,
           column3: null
         })
 
         expect(tableManyRows[1]).to.deep.equal({
-          table11_id: 1,
-          table12_id: 3,
+          table1_id1: 1,
+          table1_id2: 3,
           column1: 'd',
           column2: null,
           column3: null
@@ -1504,7 +1504,7 @@ describe('isud', function() {
       it('should insert a many-to-many relationship which references the same entity', async function() {
         let row = {
           column1: 'a',
-          manyToManyRecursive: [
+          manyToManyObject1: [
             {
               column1: 'b',
               object12: {}
@@ -1516,8 +1516,8 @@ describe('isud', function() {
           ]
         }
 
-        row.manyToManyRecursive[0].object12 = row
-        row.manyToManyRecursive[1].object12 = row
+        row.manyToManyObject1[0].object12 = row
+        row.manyToManyObject1[1].object12 = row
 
         let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
@@ -1526,15 +1526,15 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToManyRecursive: [
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToManyObject1: [
             {
-              table11_id: 1,
-              table12_id: 1,
+              table1_id1: 1,
+              table1_id2: 1,
               column1: 'b',
               column2: null,
               column3: null,
@@ -1543,16 +1543,16 @@ describe('isud', function() {
                 column1: 'a',
                 column2: null,
                 column3: null,
-                many_to_one_id: null,
-                many_to_one_recursive_id: null,
-                one_to_one_id: null,
-                one_to_one_recursive_id: null,
-                one_to_many_recursive_id: null
+                many_to_one_object1_id: null,
+                many_to_one_object2_id: null,
+                one_to_one_object1_id: null,
+                one_to_one_object2_id: null,
+                one_to_many_object1_many_to_one_id: null
               }
             },
             {
-              table11_id: 1,
-              table12_id: 1,
+              table1_id1: 1,
+              table1_id2: 1,
               column1: 'c',
               column2: null,
               column3: null,
@@ -1561,18 +1561,18 @@ describe('isud', function() {
                 column1: 'a',
                 column2: null,
                 column3: null,
-                many_to_one_id: null,
-                many_to_one_recursive_id: null,
-                one_to_one_id: null,
-                one_to_one_recursive_id: null,
-                one_to_many_recursive_id: null
+                many_to_one_object1_id: null,
+                many_to_one_object2_id: null,
+                one_to_one_object1_id: null,
+                one_to_one_object2_id: null,
+                one_to_many_object1_many_to_one_id: null
               }
             }
           ]
         }
 
-        expected.manyToManyRecursive[0].object12 = expected
-        expected.manyToManyRecursive[1].object12 = expected
+        expected.manyToManyObject1[0].object12 = expected
+        expected.manyToManyObject1[1].object12 = expected
 
         expect(insertedRow).to.deep.equal(expected)
 
@@ -1585,98 +1585,32 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
-        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many_recursive ORDER BY column1')
+        let tableManyRows = await pgQueryFn('SELECT * FROM many_to_many_table1 ORDER BY column1')
 
         expect(tableManyRows.length).to.equal(2)
 
         expect(tableManyRows[0]).to.deep.equal({
-          table11_id: 1,
-          table12_id: 1,
+          table1_id1: 1,
+          table1_id2: 1,
           column1: 'b',
           column2: null,
           column3: null
         })
 
         expect(tableManyRows[1]).to.deep.equal({
-          table11_id: 1,
-          table12_id: 1,
+          table1_id1: 1,
+          table1_id2: 1,
           column1: 'c',
           column2: null,
           column3: null
         })
-      })
-
-      it('should not insert the same object twice inside many-to-one', async function() {
-        let table1Row = {
-          column1: 'a',
-          column2: 1
-        }
-
-        let row = {
-          object1: table1Row,
-          object12: table1Row
-        }
-
-        let insertedRow = await store(schema, 'table_many', 'postgres', pgQueryFn, row)
-
-        expect(insertedRow.table1_id).to.equal(1)
-        expect(insertedRow.table1_id2).to.equal(1)
-        expect(insertedRow.object1).to.deep.equal({
-          id: 1,
-          column1: 'a',
-          column2: 1,
-          table1_id: null,
-          table2_id: null
-        })
-        expect(insertedRow.object12).to.deep.equal({
-          id: 1,
-          column1: 'a',
-          column2: 1,
-          table1_id: null,
-          table2_id: null
-        })
-        expect(insertedRow.object1 === insertedRow.object12).to.be.true
-
-        let table1Rows = await pgQueryFn('SELECT * FROM table1')
-
-        expect(table1Rows.length).to.equal(1)
-        expect(table1Rows[0].id).to.equal(1)
-        expect(table1Rows[0].column1).to.equal('a')
-        expect(table1Rows[0].column2).to.equal(1)
-      })
-
-      it('should not insert the same object twice when it is inside one-to-many', async function() {
-        let tableManyRow = {
-          column1: 'a'
-        }
-
-        let row = {
-          manyObjects: [ tableManyRow, tableManyRow, tableManyRow ]
-        }
-
-        let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
-
-        expect(insertedRow.id).to.equal(1)
-        expect(insertedRow.manyObjects).to.deep.equal([{
-          table1_id: 1,
-          table2_id: null,
-          column1: 'a',
-          table1_id2: null,
-        }])
-
-        let table1Rows = await pgQueryFn('SELECT * FROM table_many')
-
-        expect(table1Rows.length).to.equal(1)
-        expect(table1Rows[0].table1_id).to.equal(1)
-        expect(table1Rows[0].table2_id).to.be.null
-        expect(table1Rows[0].column1).to.equal('a')
       })
 
       it('should update a simple row', async function() {
@@ -1695,11 +1629,11 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         let rows = await pgQueryFn('SELECT * FROM table1')
@@ -1710,11 +1644,11 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
         })
       })
 
@@ -1725,7 +1659,7 @@ describe('isud', function() {
         let row = {
           id: 1,
           column1: 'b',
-          manyToOne: {
+          manyToOneObject2: {
             id: 'x',
             column1: 'c'
           }
@@ -1739,18 +1673,18 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          many_to_one_id: 'x',
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToOne: {
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: 'x',
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToOneObject2: {
             id: 'x',
             column1: 'c',
             column2: null,
             column3: null,
-            one_to_one_id: null,
-            one_to_many_id: null
+            one_to_one_object1_id: null,
+            one_to_many_object2_many_to_one_id: null
           }
         })
 
@@ -1762,11 +1696,11 @@ describe('isud', function() {
           column1: 'b',
           column2: null,
           column3: null,
-          many_to_one_id: 'x',
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: 'x',
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
         })
 
         let table2Rows = await pgQueryFn('SELECT * FROM table2')
@@ -1777,8 +1711,8 @@ describe('isud', function() {
           column1: 'c',
           column2: null,
           column3: null,
-          one_to_one_id: null,
-          one_to_many_id: null
+          one_to_one_object1_id: null,
+          one_to_many_object2_many_to_one_id: null
         })
       })
     })
@@ -1801,11 +1735,11 @@ describe('isud', function() {
           column1: 'a',
           column2: 1,
           column3: date1,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(rows[1]).to.deep.equal({
@@ -1813,11 +1747,11 @@ describe('isud', function() {
           column1: 'b',
           column2: 2,
           column3: date2,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(rows[2]).to.deep.equal({
@@ -1825,11 +1759,11 @@ describe('isud', function() {
           column1: 'c',
           column2: 3,
           column3: date3,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
       })
 
@@ -1855,11 +1789,11 @@ describe('isud', function() {
           column1: 'c',
           column2: 3,
           column3: date3,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(rows[1]).to.deep.equal({
@@ -1867,11 +1801,11 @@ describe('isud', function() {
           column1: 'b',
           column2: 2,
           column3: date2,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(rows[2]).to.deep.equal({
@@ -1879,11 +1813,11 @@ describe('isud', function() {
           column1: 'a',
           column2: 1,
           column3: date1,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
       })
 
@@ -1906,11 +1840,11 @@ describe('isud', function() {
           column1: 'a',
           column2: 1,
           column3: date1,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
 
         expect(rows[1]).to.deep.equal({
@@ -1918,11 +1852,11 @@ describe('isud', function() {
           column1: 'b',
           column2: 2,
           column3: date2,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
       })
 
@@ -1945,22 +1879,22 @@ describe('isud', function() {
           column1: 'c',
           column2: 3,
           column3: date3,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
       })
 
       it('should regard criteria in a many-to-one relationship', async function() {
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 1 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          manyToOneRecursive: {
+          manyToOneObject1: {
             column2: 1
           }
         })
@@ -1972,21 +1906,21 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: 2,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: 2,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
       })
 
       it('should regard criteria in a many-to-one relationship regarding the id', async function() {
-        await store(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
-        await store(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
-        await store(schema, 'table1', 'postgres', pgQueryFn, { manyToOneRecursive: { } })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { manyToOneObject1: { } })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { manyToOneObject1: { } })
+        await store(schema, 'table1', 'postgres', pgQueryFn, { manyToOneObject1: { } })
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
-          manyToOneRecursive: {
+          manyToOneObject1: {
             id: 2
           }
         })
@@ -1998,22 +1932,22 @@ describe('isud', function() {
           column1: null,
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: 2,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: 2,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
       })
 
       it('should regard criteria in a many-to-one relationship and load it', async function() {
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 1 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          manyToOneRecursive: {
+          manyToOneObject1: {
             '@load': true,
             column2: 1
           }
@@ -2026,33 +1960,33 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: 2,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToOneRecursive: {
+          many_to_one_object1_id: 2,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToOneObject1: {
             id: 2,
             column1: null,
             column2: 1,
             column3: null,
-            many_to_one_id: null,
-            many_to_one_recursive_id: null,
-            one_to_one_id: null,
-            one_to_one_recursive_id: null,
-            one_to_many_recursive_id: null
+            many_to_one_object1_id: null,
+            many_to_one_object2_id: null,
+            one_to_one_object1_id: null,
+            one_to_one_object2_id: null,
+            one_to_many_object1_many_to_one_id: null
           }
         })
       })
 
       it('should load a many-to-one relationship separately', async function() {
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 1 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          manyToOneRecursive: {
+          manyToOneObject1: {
             '@loadSeparately': true,
             column2: 1
           }
@@ -2065,21 +1999,21 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: 2,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToOneRecursive: {
+          many_to_one_object1_id: 2,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToOneObject1: {
             id: 2,
             column1: null,
             column2: 1,
             column3: null,
-            many_to_one_id: null,
-            many_to_one_recursive_id: null,
-            one_to_one_id: null,
-            one_to_one_recursive_id: null,
-            one_to_many_recursive_id: null
+            many_to_one_object1_id: null,
+            many_to_one_object2_id: null,
+            one_to_one_object1_id: null,
+            one_to_one_object2_id: null,
+            one_to_many_object1_many_to_one_id: null
           }
         })
 
@@ -2088,12 +2022,12 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: 4,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToOneRecursive: null
+          many_to_one_object1_id: 4,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToOneObject1: null
         })
 
         expect(rows[2]).to.deep.equal({
@@ -2101,23 +2035,23 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: 6,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToOneRecursive: null
+          many_to_one_object1_id: 6,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToOneObject1: null
         })
       })
 
       it('should regard criteria in a one-to-many relationship', async function() {
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'd' }, { column1: 'e' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          oneToManyRecursive: {
+          oneToManyObject1: {
             column1: 'd'
           }
         })
@@ -2129,22 +2063,22 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         })
       })
 
       it('should regard criteria in a one-to-many relationship and load it', async function() {
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'd' }, { column1: 'e' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          oneToManyRecursive: {
+          oneToManyObject1: {
             '@load': true,
             column1: 'd'
           }
@@ -2157,35 +2091,35 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          oneToManyRecursive: [
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          oneToManyObject1: [
             {
               id: 2,
               column1: 'd',
               column2: null,
               column3: null,
-              many_to_one_id: null,
-              many_to_one_recursive_id: null,
-              one_to_one_id: null,
-              one_to_one_recursive_id: null,
-              one_to_many_recursive_id: 1
+              many_to_one_object1_id: null,
+              many_to_one_object2_id: null,
+              one_to_one_object1_id: null,
+              one_to_one_object2_id: null,
+              one_to_many_object1_many_to_one_id: 1
             }
           ]
         })
       })
 
       it('should load a one-to-many relationship separately', async function() {
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'd' }, { column1: 'e' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
           column1: 'a',
-          oneToManyRecursive: {
+          oneToManyObject1: {
             '@loadSeparately': true,
             column1: 'd'
           }
@@ -2198,22 +2132,22 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          oneToManyRecursive: [
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          oneToManyObject1: [
             {
               id: 2,
               column1: 'd',
               column2: null,
               column3: null,
-              many_to_one_id: null,
-              many_to_one_recursive_id: null,
-              one_to_one_id: null,
-              one_to_one_recursive_id: null,
-              one_to_many_recursive_id: 1
+              many_to_one_object1_id: null,
+              many_to_one_object2_id: null,
+              one_to_one_object1_id: null,
+              one_to_one_object2_id: null,
+              one_to_many_object1_many_to_one_id: 1
             }
           ]
         })
@@ -2223,12 +2157,12 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          oneToManyRecursive: []
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          oneToManyObject1: []
         })
 
         expect(rows[2]).to.deep.equal({
@@ -2236,24 +2170,24 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          oneToManyRecursive: []
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          oneToManyObject1: []
         })
       })
 
       it('should process criteria given as array', async function() {
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 1 }, oneToManyRecursive: [ { column1: 'd' }, { column1: 'e' } ]})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 2 }, oneToManyRecursive: [ { column1: 'f' }, { column1: 'g' } ]})
-        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneRecursive: { column2: 3 }, oneToManyRecursive: [ { column1: 'h' }, { column1: 'i' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 1 }, oneToManyObject1: [ { column1: 'd' }, { column1: 'e' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }, oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]})
+        await store(schema, 'table1', 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }, oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]})
 
         let rows = await select(schema, 'table1', 'postgres', pgQueryFn, [
           {
             column1: 'a',
-            manyToOneRecursive: {
+            manyToOneObject1: {
               '@load': true,
               column2: 1
             }
@@ -2261,7 +2195,7 @@ describe('isud', function() {
           'OR',
           {
             column1: 'a',
-            oneToManyRecursive: {
+            oneToManyObject1: {
               '@loadSeparately': true,
               column1: 'd'
             }
@@ -2274,33 +2208,33 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: 2,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToOneRecursive: {
+          many_to_one_object1_id: 2,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToOneObject1: {
             id: 2,
             column1: null,
             column2: 1,
             column3: null,
-            many_to_one_id: null,
-            many_to_one_recursive_id: null,
-            one_to_one_id: null,
-            one_to_one_recursive_id: null,
-            one_to_many_recursive_id: null
+            many_to_one_object1_id: null,
+            many_to_one_object2_id: null,
+            one_to_one_object1_id: null,
+            one_to_one_object2_id: null,
+            one_to_many_object1_many_to_one_id: null
           },
-          oneToManyRecursive: [
+          oneToManyObject1: [
             {
               id: 3,
               column1: 'd',
               column2: null,
               column3: null,
-              many_to_one_id: null,
-              many_to_one_recursive_id: null,
-              one_to_one_id: null,
-              one_to_one_recursive_id: null,
-              one_to_many_recursive_id: 1
+              many_to_one_object1_id: null,
+              many_to_one_object2_id: null,
+              one_to_one_object1_id: null,
+              one_to_one_object2_id: null,
+              one_to_many_object1_many_to_one_id: 1
             }
           ]
         })
@@ -2310,23 +2244,23 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: 6,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToOneRecursive: {
+          many_to_one_object1_id: 6,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToOneObject1: {
             id: 6,
             column1: null,
             column2: 2,
             column3: null,
-            many_to_one_id: null,
-            many_to_one_recursive_id: null,
-            one_to_one_id: null,
-            one_to_one_recursive_id: null,
-            one_to_many_recursive_id: null
+            many_to_one_object1_id: null,
+            many_to_one_object2_id: null,
+            one_to_one_object1_id: null,
+            one_to_one_object2_id: null,
+            one_to_many_object1_many_to_one_id: null
           },
-          oneToManyRecursive: []
+          oneToManyObject1: []
         })
 
         expect(rows[2]).to.deep.equal({
@@ -2334,32 +2268,32 @@ describe('isud', function() {
           column1: 'a',
           column2: null,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: 10,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null,
-          manyToOneRecursive: {
+          many_to_one_object1_id: 10,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null,
+          manyToOneObject1: {
             id: 10,
             column1: null,
             column2: 3,
             column3: null,
-            many_to_one_id: null,
-            many_to_one_recursive_id: null,
-            one_to_one_id: null,
-            one_to_one_recursive_id: null,
-            one_to_many_recursive_id: null
+            many_to_one_object1_id: null,
+            many_to_one_object2_id: null,
+            one_to_one_object1_id: null,
+            one_to_one_object2_id: null,
+            one_to_many_object1_many_to_one_id: null
           },
-          oneToManyRecursive: []
+          oneToManyObject1: []
         })
       })
 
       it('should not select rows which columns are null', async function() {
-        await store(schema, 'many_to_many', 'postgres', pgQueryFn, {})
-        await store(schema, 'many_to_many', 'postgres', pgQueryFn, {})
-        await store(schema, 'many_to_many', 'postgres', pgQueryFn, {})
+        await pgQueryFn('INSERT INTO table2 DEFAULT VALUES')
+        await pgQueryFn('INSERT INTO table2 DEFAULT VALUES')
+        await pgQueryFn('INSERT INTO table2 DEFAULT VALUES')
 
-        let rows = await select(schema, 'many_to_many', 'postgres', pgQueryFn, {})
+        let rows = await select(schema, 'table2', 'postgres', pgQueryFn, {})
 
         expect(rows.length).to.equal(0)
       })
@@ -2377,11 +2311,11 @@ describe('isud', function() {
           column1: 'a',
           column2: 1,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         }])
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
@@ -2392,11 +2326,11 @@ describe('isud', function() {
           column1: 'b',
           column2: 2,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         }])
       })
 
@@ -2411,11 +2345,11 @@ describe('isud', function() {
           column1: 'a',
           column2: 1,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         }])
 
         let table1Rows = await pgQueryFn('SELECT * FROM table1')
@@ -2426,11 +2360,11 @@ describe('isud', function() {
           column1: 'b',
           column2: 2,
           column3: null,
-          many_to_one_id: null,
-          many_to_one_recursive_id: null,
-          one_to_one_id: null,
-          one_to_one_recursive_id: null,
-          one_to_many_recursive_id: null
+          many_to_one_object1_id: null,
+          many_to_one_object2_id: null,
+          one_to_one_object1_id: null,
+          one_to_one_object2_id: null,
+          one_to_many_object1_many_to_one_id: null
         }])
       })
 
@@ -2449,22 +2383,22 @@ describe('isud', function() {
             column1: 'a',
             column2: 1,
             column3: null,
-            many_to_one_id: null,
-            many_to_one_recursive_id: null,
-            one_to_one_id: null,
-            one_to_one_recursive_id: null,
-            one_to_many_recursive_id: null
+            many_to_one_object1_id: null,
+            many_to_one_object2_id: null,
+            one_to_one_object1_id: null,
+            one_to_one_object2_id: null,
+            one_to_many_object1_many_to_one_id: null
             },
           {
             id: 2,
             column1: 'b',
             column2: 2,
             column3: null,
-            many_to_one_id: null,
-            many_to_one_recursive_id: null,
-            one_to_one_id: null,
-            one_to_one_recursive_id: null,
-            one_to_many_recursive_id: null
+            many_to_one_object1_id: null,
+            many_to_one_object2_id: null,
+            one_to_one_object1_id: null,
+            one_to_one_object2_id: null,
+            one_to_many_object1_many_to_one_id: null
             }
         ])
       })

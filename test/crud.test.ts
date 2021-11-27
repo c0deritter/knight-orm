@@ -3,7 +3,7 @@ import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
 import { create, delete_, read, update } from '../src/crud'
-import { ManyToMany, Object1, Object2, schema } from './testSchema'
+import { ManyToManyObject2, Object1, Object2, schema } from './testSchema'
 
 chai.use(chaiAsPromised)
 const expect = chai.expect

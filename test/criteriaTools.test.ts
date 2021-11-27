@@ -2,7 +2,7 @@ import { expect } from 'chai'
 import { CriteriaObject } from 'knight-criteria'
 import 'mocha'
 import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, instanceToUpdateCriteria, validateCriteria } from '../src/criteriaTools'
-import { ManyToMany, Object1, Object2, schema } from './testSchema'
+import { ManyToManyObject2, Object1, Object2, schema } from './testSchema'
 
 describe('criteriaTools', function() {
   describe('validateCriteria', function() {
@@ -14,7 +14,7 @@ describe('criteriaTools', function() {
       expect(validateCriteria(schema, 'table1', {
         id: 1,
         column1: 'a',
-        manyToOne: {
+        manyToOneObject2: {
           column2: 1,
           '@orderBy': 'id',
           '@limit': 5,
@@ -42,7 +42,7 @@ describe('criteriaTools', function() {
       expect(validateCriteria(schema, 'table1', [{
         id: 1,
         column1: 'a',
-        manyToOne: {
+        manyToOneObject2: {
           column2: 1,
           '@orderBy': 'id',
           '@limit': 5,
@@ -56,7 +56,7 @@ describe('criteriaTools', function() {
 
     it('should not find issues if the given relationship has an @load', function() {
       expect(validateCriteria(schema, 'table1', {
-        manyToOne: {
+        manyToOneObject2: {
           '@load': true
         }
       })).to.deep.equal([])
@@ -64,7 +64,7 @@ describe('criteriaTools', function() {
 
     it('should not find issues if the given relationship has an @loadSeparately', function() {
       expect(validateCriteria(schema, 'table1', {
-        manyToOne: {
+        manyToOneObject2: {
           '@loadSeparately': true
         }
       })).to.deep.equal([])
@@ -72,7 +72,7 @@ describe('criteriaTools', function() {
 
     it('should not find issues if the given relationship has an @not', function() {
       expect(validateCriteria(schema, 'table1', {
-        manyToOne: {
+        manyToOneObject2: {
           '@not': true
         }
       })).to.deep.equal([])
@@ -80,7 +80,7 @@ describe('criteriaTools', function() {
 
     it('should not find issues if the given relationship has an @count', function() {
       expect(validateCriteria(schema, 'table1', {
-        manyToOne: {
+        manyToOneObject2: {
           '@count': true
         }
       })).to.deep.equal([])
@@ -88,7 +88,7 @@ describe('criteriaTools', function() {
 
     it('should not find issues if the given relationship has an @max', function() {
       expect(validateCriteria(schema, 'table1', {
-        manyToOne: {
+        manyToOneObject2: {
           '@max': true
         }
       })).to.deep.equal([])
@@ -96,7 +96,7 @@ describe('criteriaTools', function() {
 
     it('should not find issues if the given relationship has an @min', function() {
       expect(validateCriteria(schema, 'table1', {
-        manyToOne: {
+        manyToOneObject2: {
           '@min': true
         }
       })).to.deep.equal([])
@@ -125,22 +125,22 @@ describe('criteriaTools', function() {
 
     it('should find an issue if a column, relationship or @property does not exist in a relationship', function() {
       expect(validateCriteria(schema, 'table1', {
-        manyToOne: {
+        manyToOneObject2: {
           column: 'a',
           object: {},
           '@invalid': true
         }
       })).to.deep.equal([
         {
-          location: 'manyToOne.column',
+          location: 'manyToOneObject2.column',
           message: 'Given column, relationship or @-property does not exist'
         },
         {
-          location: 'manyToOne.object',
+          location: 'manyToOneObject2.object',
           message: 'Given column, relationship or @-property does not exist'
         },
         {
-          location: 'manyToOne.@invalid',
+          location: 'manyToOneObject2.@invalid',
           message: 'Given column, relationship or @-property does not exist'
         }
       ])
@@ -148,22 +148,22 @@ describe('criteriaTools', function() {
 
     it('should find an issue if a column, relationship or @property does not exist in a relationship with criteria given as an array', function() {
       expect(validateCriteria(schema, 'table1', [{
-        manyToOne: {
+        manyToOneObject2: {
           column: 'a',
           object: {},
           '@invalid': true
         }
       }])).to.deep.equal([
         {
-          location: 'manyToOne.column',
+          location: 'manyToOneObject2.column',
           message: 'Given column, relationship or @-property does not exist'
         },
         {
-          location: 'manyToOne.object',
+          location: 'manyToOneObject2.object',
           message: 'Given column, relationship or @-property does not exist'
         },
         {
-          location: 'manyToOne.@invalid',
+          location: 'manyToOneObject2.@invalid',
           message: 'Given column, relationship or @-property does not exist'
         }
       ])
@@ -189,7 +189,7 @@ describe('criteriaTools', function() {
       let instanceCriteria = {
         property1: 'a',
         property2: { operator: '>', value: 1 },
-        manyToMany: {
+        manyToManyObject2: {
           property1: { operator: 'LIKE', value: '%b%' },
           object2: {
             property1: 'c'
@@ -202,7 +202,7 @@ describe('criteriaTools', function() {
       expect(rowCriteria).to.deep.equal({
         column1: 'a',
         column2: { operator: '>', value: 1 },
-        manyToMany: {
+        manyToManyObject2: {
           column1: { operator: 'LIKE', value: '%b%' },
           object2: {
             column1: 'c'
@@ -219,7 +219,7 @@ describe('criteriaTools', function() {
         },
         'OR',
         {
-          manyToMany: {
+          manyToManyObject2: {
             property1: { operator: 'LIKE', value: '%b%' },
             object2: {
               property1: 'c'
@@ -237,7 +237,7 @@ describe('criteriaTools', function() {
         },
         'OR',
         {
-          manyToMany: {
+          manyToManyObject2: {
             column1: { operator: 'LIKE', value: '%b%' },
             object2: {
               column1: 'c'
@@ -343,8 +343,8 @@ describe('criteriaTools', function() {
       let table1 = new Object1
       table1.id = 1
       table1.property1 = 'a'
-      table1.manyToMany = [ new ManyToMany ]
-      table1.manyToMany[0].property1 = 'b'
+      table1.manyToManyObject2 = [ new ManyToManyObject2 ]
+      table1.manyToManyObject2[0].property1 = 'b'
       
       let criteria = instanceToUpdateCriteria(schema, 'table1', table1)
 
@@ -360,16 +360,16 @@ describe('criteriaTools', function() {
 
   describe('instanceToDeleteCriteria', function() {
     it('should convert an instance to delete criteria', function() {
-      let manyToMany = new ManyToMany
+      let manyToMany = new ManyToManyObject2
       manyToMany.object1Id = 1
       manyToMany.object2Id = '2'
       manyToMany.object1 = new Object1
       manyToMany.object1.id = 1
       manyToMany.object1.property1 = 'a'
-      manyToMany.object1.manyToMany = [ manyToMany ]
+      manyToMany.object1.manyToManyObject2 = [ manyToMany ]
       manyToMany.object2 = new Object2
       
-      let criteria = instanceToDeleteCriteria(schema, 'many_to_many', manyToMany)
+      let criteria = instanceToDeleteCriteria(schema, 'many_to_many_object2', manyToMany)
 
       expect(criteria).to.deep.equal({
         table1_id: 1,

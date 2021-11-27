@@ -331,7 +331,7 @@ export async function store(
 
     for (let column of Object.keys(table.columns)) {
       if (isPrimaryKeyColumn(table, column)) {
-        query.where(column, '=', value(row[column]))
+        query.where(column, '=', value(row[column]), 'AND')
       }
       else if (row[column] !== undefined) {
         query.value(column, row[column])
@@ -442,7 +442,7 @@ export async function store(
       let otherRelationship: Relationship|undefined = undefined
       if (relationship.otherRelationship != undefined) {
         if (otherTable.relationships == undefined || otherTable.relationships[relationship.otherRelationship] == undefined) {
-          throw new Error(`Relationship '${relationship.otherRelationship}' not contained in table '${relationship.otherTable}'`)
+          throw new Error(`Other relationship '${relationship.otherRelationship}' referenced in '${tableName}.${relationshipName}' not contained in table '${relationship.otherTable}'`)
         }
 
         otherRelationship = otherTable.relationships[relationship.otherRelationship]
