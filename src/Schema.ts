@@ -57,6 +57,15 @@ export function getNotGeneratedPrimaryKeyColumns(table: Table): string[] {
   return notGenerated
 }
 
+export function getGeneratedPrimaryKeyColumn(table: Table): string|undefined {
+  // TODO: add caching
+  for (let column of Object.keys(table.columns)) {
+    if (isGeneratedPrimaryKeyColumn(table, column)) {
+      return column
+    }
+  }
+}
+
 export function isPrimaryKeyColumn(table: Table, columnName: string): boolean {
   // TODO: add caching
   let column = table.columns[columnName]

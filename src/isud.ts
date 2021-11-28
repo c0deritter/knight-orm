@@ -1,22 +1,158 @@
 import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
-import sql, { Query, value } from 'knight-sql'
-import { getNotGeneratedPrimaryKeyColumns, getPrimaryKey, isGeneratedPrimaryKeyColumn, isPrimaryKeyColumn } from '.'
-import { rowToUpdateCriteria, UpdateCriteria } from './criteriaTools'
+import sql, { comparison, Query } from 'knight-sql'
+import { getGeneratedPrimaryKeyColumn, getNotGeneratedPrimaryKeyColumns, getPrimaryKey, isGeneratedPrimaryKeyColumn, isPrimaryKeyColumn } from '.'
+import { UpdateCriteria } from './criteriaTools'
 import { addCriteria, buildSelectQuery } from './queryTools'
-import { determineRelationshipsToLoad, areAllNotGeneratedPrimaryKeyColumnsSet, reduceToPrimaryKeys, unjoinRows } from './rowTools'
+import { areAllNotGeneratedPrimaryKeyColumnsSet, determineRelationshipsToLoad, unjoinRows } from './rowTools'
 import { getCorrespondingManyToOne, isForeignKey, Relationship, Schema } from './Schema'
-import { FiddledRows } from './util'
+import { StoredRows } from './util'
 
-let log = new Log('knight-orm/isud.ts')
+let log = new Log('knight-orm/isud.ts', 'lib')
+
+type InsertUpdateDeleteResult = {
+  affectedRows: number
+  insertId?: number
+}
+
+type SelectResult = any[]
+
+export async function databaseIndependentQuery(
+  db: string,
+  queryFn: (sqlString: string, values?: any[]) => Promise<any>,
+  sqlString: string,
+  values?: any[],
+  insertIdColumnName?: string
+): Promise<InsertUpdateDeleteResult | SelectResult> {
+
+  let l = log.fn('databaseIndependentQuery')
+  l.param('db', db)
+  l.param('sqlString', sqlString)
+  l.param('values', values)
+  l.param('insertIdColumnName', insertIdColumnName)
+
+  let isInsert = sqlString.substring(0, 6).toUpperCase() == 'INSERT'
+
+  if (isInsert && db == 'postgres') {
+    if (insertIdColumnName) {
+      l.lib('Given query is INSERT, database is PostgreSQL and there is an primary key column which is created. Appending RETURNING statement.')
+      sqlString += ' RETURNING ' + insertIdColumnName
+      l.lib('Resulting SQL string', sqlString)
+    }
+    else {
+      l.lib('Given query is INSERT, database is PostgreSQL but there is no primary key column which is created. Will not return any generated id.')
+    }
+  }
+
+  let dbResult
+  try {
+    dbResult = await queryFn(sqlString, values)
+  }
+  catch (e) {
+    throw new Error(e as any)
+  }
+
+  l.dev(`Result of database '${db}'`, dbResult)
+
+  if (sqlString.substring(0, 6).toUpperCase() == 'SELECT') {
+    if (db == 'postgres') {
+      if (! ('rows' in dbResult) || ! (dbResult.rows instanceof Array)) {
+        throw new Error('Result returned by PostgeSQL did not contain a valid \'rows\'. Expected an array. Enable logging for more information.')
+      }
+  
+      l.lib('Returning rows of SELECT', dbResult.rows)
+      return dbResult.rows as SelectResult
+    }
+  
+    if (db == 'mysql' || db == 'maria') {
+      if (! (dbResult instanceof Array)) {
+        throw new Error('Result returned by MySQL was not any array. Enable logging for more information.')
+      }
+  
+      l.lib('Returning rows of SELECT', dbResult)
+      return dbResult
+    }
+
+    throw new Error(`Database '${db}' not supported.`)
+  }
+
+  else {
+    let affectedRows
+
+    if (db == 'postgres') {
+      if (! ('rowCount' in dbResult) || typeof dbResult.rowCount != 'number' || isNaN(dbResult.rowCount)) {
+        throw new Error('Result returned by PostgeSQL did not contain a valid \'rowCount\'. Expected a number. Enable logging for more information.')
+      }
+  
+      affectedRows = dbResult.rowCount
+    }
+  
+    if (db == 'mysql' || db == 'maria') {
+      if (! ('affectedRows' in dbResult) || typeof dbResult.rowCount != 'number' || isNaN(dbResult.rowCount)) {
+        throw new Error('Result returned by MySQL did not contain a valid \'affectedRows\'. Expected a number. Enable logging for more information.')
+      }
+  
+      affectedRows = dbResult.affectedRows
+    }
+
+    let result = {
+      affectedRows: affectedRows
+    } as InsertUpdateDeleteResult
+
+    if (! isInsert) {
+      l.returning('Returning UPDATE or DELETE result', result)
+      return result
+    }
+
+    if (db == 'postgres') {
+      if (insertIdColumnName) {
+        if (! ('rows' in dbResult) || ! (dbResult.rows instanceof Array) || dbResult.rows.length != 1) {
+          throw new Error('Result returned by PostgreSQL did not contain valid \'rows\'. Expected an array with exactly one row. Enable logging for more information.')
+        }
+  
+        let insertId = dbResult.rows[0][insertIdColumnName]
+  
+        if (insertId == undefined) {
+          throw new Error('Could not determine \'insertId\' for PostgreSQL INSERT query. The given insert id column name was not contained in the returned row. Enable logging for more information.')
+        }
+  
+        result.insertId = insertId
+      }
+
+      l.lib('Returning INSERT result', result)
+      return result
+    }
+
+    if (db == 'mysql' || db == 'maria') {
+      if (dbResult.insertId != undefined) {
+        let result = {
+          affectedRows: affectedRows,
+          insertId: dbResult.insertId
+        } as InsertUpdateDeleteResult
+
+        l.lib('Returning INSERT result', result)
+        return result
+      }
+  
+      let result = {
+        affectedRows: affectedRows
+      } as InsertUpdateDeleteResult
+
+      l.lib('Returning INSERT result', result)
+      return result
+    }
+
+    throw new Error(`Database '${db}' not supported.`)
+  }
+}
 
 export async function isUpdate(
-      schema: Schema,
-      tableName: string,
-      db: string,
-      queryFn: (sqlString: string, values?: any[]) => Promise<any[]>,
-      row: any
-    ): Promise<boolean> {
+  schema: Schema,
+  tableName: string,
+  db: string,
+  queryFn: (sqlString: string, values?: any[]) => Promise<any>,
+  row: any
+): Promise<boolean> {
   
   let l = log.fn('isUpdate')
   l.param('tableName', tableName)
@@ -29,23 +165,23 @@ export async function isUpdate(
   }
 
   if (! areAllNotGeneratedPrimaryKeyColumnsSet(table, row)) {
-    throw new Error(`At least one not generated primary key column (${getNotGeneratedPrimaryKeyColumns(table).join(', ')}) is not set. Please enable logging for more details.`)
+    throw new Error(`At least one not generated primary key column (${getNotGeneratedPrimaryKeyColumns(table).join(', ')}) is not set. Enable logging for more details.`)
   }
 
-  let hasGeneratedPrimaryKeys = false
   let hasNotGeneratedPrimaryKeys = false
-  let allGeneratedPrimaryKeysAreNull = true
-  let allGeneratedPrimaryKeysAreNotNull = true
+  let generatedPrimaryKeyCount = 0
+  let generatedPrimaryKeyIsNull = true
+  let generatedPrimaryKeyIsNotNull = true
 
   for (let column of getPrimaryKey(table)) {
     if (isGeneratedPrimaryKeyColumn(table, column)) {
-      hasGeneratedPrimaryKeys = true
+      generatedPrimaryKeyCount++
 
       if (row[column] == null) {
-        allGeneratedPrimaryKeysAreNotNull = false
+        generatedPrimaryKeyIsNotNull = false
       }
       else {
-        allGeneratedPrimaryKeysAreNull = false
+        generatedPrimaryKeyIsNull = false
       }
     }
     else {
@@ -53,25 +189,26 @@ export async function isUpdate(
     }
   }
 
-  if (hasGeneratedPrimaryKeys && ! allGeneratedPrimaryKeysAreNull && ! allGeneratedPrimaryKeysAreNotNull) {
-    throw new Error('There are generated primary keys which are null and generated primary keys which are not null. This is an inconsistent set of column values. Cannot determine if row is to be inserted or to be updated. Please enable logging for more details.')
+  if (generatedPrimaryKeyCount > 1) {
+    throw new Error(`The table ${tableName} has more than one generated primary key which is not valid.`)
   }
 
-  if ((hasGeneratedPrimaryKeys && allGeneratedPrimaryKeysAreNotNull || ! hasGeneratedPrimaryKeys) && hasNotGeneratedPrimaryKeys) {
+  if (generatedPrimaryKeyCount == 1 && ! generatedPrimaryKeyIsNull && ! generatedPrimaryKeyIsNotNull) {
+    throw new Error('There is a generated primary key which are null and generated primary keys which are not null. This is an inconsistent set of column values. Cannot determine if row is to be inserted or to be updated. Please enable logging for more details.')
+  }
+
+  if ((generatedPrimaryKeyCount == 1 && generatedPrimaryKeyIsNotNull || ! generatedPrimaryKeyCount) && hasNotGeneratedPrimaryKeys) {
     l.lib('The row has not generated primary key columns. Determining if the row was already inserted.')
     
     let query = sql.select('*').from(tableName)
 
     for (let column of getPrimaryKey(table)) {
-      query.where(column, '=', value(row[column]), 'AND')
+      query.where(comparison(column, row[column]), 'AND')
     }
 
-    let sqlString = query.sql(db)
-    let values = query.values()
     let rows
-
     try {
-      rows = await queryFn(sqlString, values)
+      rows = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as SelectResult
     }
     catch (e) {
       throw new Error(e as any)
@@ -89,40 +226,40 @@ export async function isUpdate(
     return alreadyInserted
   }
 
-  if (hasGeneratedPrimaryKeys && allGeneratedPrimaryKeysAreNotNull) {
+  if (generatedPrimaryKeyCount == 1 && generatedPrimaryKeyIsNotNull) {
     l.returning('The row does not have not generated primary key columns and all generated primary key columns are not null. Returning true...')
   }
   else {
     l.returning('The row does not have not generated primary key columns and all generated primary key columns are null. Returning false...')
   }
 
-  return hasGeneratedPrimaryKeys && allGeneratedPrimaryKeysAreNotNull
+  return generatedPrimaryKeyCount == 1 && generatedPrimaryKeyIsNotNull
 }
 
 /**
  * At first it goes through all columns which contain an id of a many-to-one relationship
- * and it tries to insert the rows of that relationships at first if a relationship row object is set.
+ * and it tries to store the rows of that relationships at first if a relationship row object is set.
  * 1. If the relationship is part of the id of that row it postpones the creation to the point in time
- *    when the corresponding row was inserted.
+ *    when the corresponding row was stored.
  * 
  * @param schema 
  * @param tableName 
  * @param db 
  * @param queryFn 
  * @param row 
- * @param alreadyInsertedRows 
+ * @param storedRows 
  */
 export async function store(
       schema: Schema, 
       tableName: string,
       db: string,
-      queryFn: (sqlString: string, values?: any[]) => Promise<any[]>,
+      queryFn: (sqlString: string, values?: any[]) => Promise<any>,
       row: any,
-      alreadyInsertedRows: FiddledRows = new FiddledRows(schema),
+      storedRows: StoredRows = new StoredRows(schema),
       relationshipPath: string = 'root'
     ): Promise<any> {
 
-  let l = log.fn('insert')
+  let l = log.fn('store')
   l.locationSeparator = ' > '
 
   if (relationshipPath != undefined) {
@@ -135,15 +272,15 @@ export async function store(
   l.param('tableName', tableName)
   l.param('db', db)
   l.param('row', row)
-  l.param('alreadyInsertedRows', alreadyInsertedRows.fiddledRows)
+  l.dev('alreadyStoredRows', storedRows.rows)
 
-  let alreadyInsertedRow = alreadyInsertedRows.getResultByRow(tableName, row)
-  if (alreadyInsertedRow != undefined) {
-    l.lib('Row already inserted. Returning already inserted row...', alreadyInsertedRow)
-    return alreadyInsertedRow
+  let storedRow = storedRows.getStoredRowByOriginalRow(tableName, row)
+  if (storedRow != undefined) {
+    l.lib('Row already stored. Returning already stored row...', storedRow)
+    return storedRow
   }
 
-  alreadyInsertedRows.add(tableName, row)
+  storedRows.add(tableName, row)
 
   let table = schema[tableName]
   if (table == undefined) {
@@ -151,177 +288,193 @@ export async function store(
   }
 
   // check if the row has all the id's it could have and try to do something about it if not
-  // 1. it will insert any many-to-one and any one-to-one relationship first if the id is missing and if the relationship has a row object
-  // 2. if the relationship points to the same table as the object which is about to be inserted then it will insert that relationship later so that
-  //    the id of the row to be inserted is lower than the id of the relationship row
-  // 3. if the id the relationship refers to is not generated then it will insert the that relationship later so that we can set the id after we 
-  //    inserted the row that is to be inserted which will then provide the missing id on the relationship
-  l.lib('Inserting missing many-to-one relationships first to be able to assign their id\'s before inserting the actual row...')
+  // 1. it will store any many-to-one and any one-to-one relationship first if the id is missing and if the relationship has a row object
+  // 2. if the relationship points to the same table as the object which is about to be stored then it will store that relationship later so that
+  //    the id of the row to be storeed is lower than the id of the relationship row
+  // 3. if the id the relationship refers to is not generated then it will store the that relationship later so that we can set the id after we 
+  //    stored the row that is to be stored which will then provide the missing id on the relationship
+
+  l.lib('Storing missing many-to-one or one-to-one relationships first to be able to assign their id\'s before storing the actual row')
   for (let columnName of Object.keys(table.columns)) {
     l.location.push(columnName)
+
     let relationshipName = getCorrespondingManyToOne(table, columnName)
 
-    // the column is part of a relationship and its id is missing
-    if (table.relationships != undefined && relationshipName != undefined && row[columnName] == undefined) {
-      l.lib('Column is part of a relationship and its id is not set', columnName)
-      l.lib('Relationship name', relationshipName)
+    if (relationshipName == undefined) {
+      l.lib('The column is not part of a many-to-many or one-to-one relationship. Skipping...')
+      continue
+    }
 
-      let relationship = table.relationships[relationshipName]
-      if (relationship == undefined) {
-        throw new Error(`Relationship '${relationshipName}' not contained table '${tableName}'`)
+    if (row[columnName] != undefined) {
+      l.lib('The column already has a value which means that the relationship id is already set. Skipping...')
+      continue
+    }
+
+    l.lib('Column is part of a relationship and its id is not set', columnName)
+    l.lib('Relationship name', relationshipName)
+
+    let relationship = table.relationships![relationshipName]
+    if (relationship == undefined) {
+      throw new Error(`Relationship '${relationshipName}' not contained table '${tableName}'`)
+    }
+
+    let otherTable = schema[relationship.otherTable]
+    if (otherTable == undefined) {
+      throw new Error('Table not contained in schema: ' + relationship.otherTable)
+    }
+
+    if (otherTable.columns[relationship.otherId] == undefined) {
+      throw new Error(`Column '${relationship.otherId} not contained table '${relationship.otherTable}'`)
+    }
+
+    let relationshipRow = row[relationshipName]
+    
+    // check if there is a row object set for the relationship. if so store that one
+    // first and then take the id from there
+    if (typeof relationshipRow != 'object' || relationshipRow !== null) {
+      l.lib('There is no relationship row. Skipping...')
+      continue
+    }
+
+    l.lib('Trying to determine id by using relationship row', relationshipRow)
+
+    // check if we already stored the relationship row or if it is about to be stored up the recursion chain
+    if (storedRows.containsOriginalRow(relationship.otherTable, relationshipRow)) {
+      let storedRelationshipRow = storedRows.getStoredRowByOriginalRow(relationship.otherTable, relationshipRow)
+
+      // relationship row was already stored. use its id.
+      if (storedRelationshipRow != undefined) {
+        l.lib('Using id from already stored row', storedRelationshipRow)
+        row[columnName] = storedRelationshipRow[relationship.otherId]
       }
 
-      let otherTable = schema[relationship.otherTable]
-      if (otherTable == undefined) {
-        throw new Error('Table not contained in schema: ' + relationship.otherTable)
+      // if the relationship is an id for that row, attempt to store the whole row after the missing relationship
+      // row which is about to be stored up the recursion chain
+      else if (isForeignKey(table, relationship.thisId)) {
+        l.lib('Row is about to be stored somewhere up the recursion chain and the relationship is an id. Adding handler after result is known. Returning...')
+
+        storedRows.addAfterStoredRowHandler(relationshipRow, async () => {
+          let l = log.fn('afterStoredRowHandler')
+          l.lib('Storing row which was missing an id which came from a relationship which was just created...')
+
+          let storedRow = await store(
+            schema, 
+            tableName, 
+            db, 
+            queryFn, 
+            row, 
+            storedRows, 
+            relationshipPath != undefined ? relationshipPath + '.' + relationshipName : relationshipName
+          )
+
+          l.lib('Stored row', storedRow)
+  
+          if (storedRow == undefined) {
+            throw new Error('Expected result to be not undefined')
+          }
+        })
+
+        return // TODO: is this really good and working? It returns undefined. This is possible but not expected
       }
 
-      let relationshipRow = row[relationshipName]
-      
-      // check if there is a row object set for the relationship. if so insert that one
-      // first and then take the id from there
-      if (typeof relationshipRow == 'object' && relationshipRow !== null) {
-        l.lib('Trying to determine id by using relationship row', relationshipRow)
-
-        // check if we already inserted the relationship row or if it is about to be inserted up the recursion chain
-        if (alreadyInsertedRows.containsRow(relationship.otherTable, relationshipRow)) {
-          let alreadyInsertedRow = alreadyInsertedRows.getResultByRow(relationship.otherTable, relationshipRow)
-
-          // relationship row was already inserted. use its id.
-          if (alreadyInsertedRow != undefined) {
-            l.lib('Using id from already inserted row', alreadyInsertedRow)
-            row[columnName] = alreadyInsertedRow[relationship.otherId]
-          }
-          // if the relationship is an id for that row, attempt to insert the whole row after the missing relationship
-          // row which is about to be inserted up the recursion chain
-          else if (isForeignKey(table, relationship.thisId)) {
-            l.lib('Row is about to be inserted somewhere up the recursion chain and the relationship is an id. Adding handler after result is known. Returning...')
-            alreadyInsertedRows.addAfterSettingResultHandler(relationshipRow, async () => {
-              let l = log.fn('afterSettingResultHandler')
-              l.lib('Inserting row which was missing an id which came from a relationship which was just created...')
-
-              let insertedRow = await store(
-                schema, 
-                tableName, 
-                db, 
-                queryFn, 
-                row, 
-                alreadyInsertedRows, 
-                relationshipPath != undefined ? relationshipPath + '.' + relationshipName : relationshipName
-              )
-
-              l.lib('insertedRow', insertedRow)
-      
-              if (insertedRow == undefined) {
-                throw new Error('Expected result to be not undefined')
-              }
-            })
-
-            return
-          }
-          // the relationship is about to be inserted up the recursion chain. update the row that is to be inserted after
-          // the row of the relationship was inserted up in the recursion chain.
-          else {
-            l.lib('Row is about to be inserted somewhere up the recursion chain. Adding handler after result is known...')
-            alreadyInsertedRows.addAfterSettingResultHandler(row[relationshipName], async (insertedRelationshipRow: any) => {
-              let l = log.fn('afterSettingResultHandler')
-              l.param('insertedRelationshipRow', insertedRelationshipRow)
-              l.param('columnName', columnName)
-              l.param('relationship', relationship)
-
-              let insertedRow = alreadyInsertedRows.getResultByRow(tableName, row)
-              l.lib('insertedRow', insertedRow)
-
-              if (insertedRow == undefined) {
-                throw new Error('Could not set many-to-one relationship id')
-              }
-
-              let updateRow = reduceToPrimaryKeys(table, insertedRow)
-              l.lib('updateRow', updateRow)
-
-              let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
-              updateCriteria[columnName] = insertedRelationshipRow[relationship.otherId]
-              l.lib('updateCriteria', updateCriteria)
-      
-              let updatedRelationshipRows
-              try {
-                updatedRelationshipRows = await update(schema, tableName, db, queryFn, updateCriteria)
-              }
-              catch (e) {
-                throw new Error(e as any)
-              }
-              
-              l.lib('updatedRelationshipRows', updatedRelationshipRows)
-      
-              if (updatedRelationshipRows.length != 1) {
-                throw new Error('Expected row count does not equal 1')
-              }
-
-              insertedRow[columnName] = updatedRelationshipRows[0][columnName]
-              insertedRow[relationshipName!] = insertedRelationshipRow
-            })
-          }
-        }
-        // the relationship row was neither already inserted before nor is it about to be inserted up the recursion chain.
-        // attempt to insert it now.
-        // 1. it will insert any many-to-one relationship if it is not referencing the same table and if its id is generated
-        // 2. if the relationship points to the same table as the object which is about to be inserted then it will insert that relationship later so that
-        //    the id of the row to be inserted is lower than the id of the relationship row
-        // 3. if the id the relationship refers to is not generated then it will insert the that relationship later so that we can set the id after we 
-        //    inserted the row that is to be inserted which will then provide the missing id on the relationship
-        else {
-          if (otherTable.columns[relationship.otherId] == undefined) {
-            throw new Error(`Column '${relationship.otherId} not contained table '${relationship.otherTable}'`)
-          }
-
-          // the id of the row the relationship is referencing is generated. attempt to insert it now
-          if (isForeignKey(otherTable, relationship.otherId)) {
-            // if the relationship refers to the same table as the row that is to be inserted, insert the relationship row after
-            // we inserted the row that is to be inserted.
-            if (relationship.otherTable == tableName) {
-              l.lib('Table of relationship is the same as the table of the relationship owning row. Inserting relationship after inserting the relationship owning row...')
-            }
-            // the relationship row refers a different table and its id is generated. insert it now.
-            else {
-              l.lib('Inserting the row object of the relationship. Going into recursion...')
-              
-              let relationshipRow = await store(
-                schema, 
-                relationship.otherTable, 
-                db, 
-                queryFn, 
-                row[relationshipName], 
-                alreadyInsertedRows, 
-                relationshipPath != undefined ? relationshipPath + '.' + relationshipName : relationshipName
-              )
-
-              l.lib('Returning from recursion...')
-              l.lib('Setting relationship id from just inserted relationship... ' + columnName + ' = ' + relationshipRow[relationship.otherId])
-              row[columnName] = relationshipRow[relationship.otherId]    
-            }
-          }
-          // if the id the relationship is referencing is not generated we have to insert the row that is to be inserted first.
-          // afterwards we can set the id on the row object.
-          else {
-            l.lib('Other id column is not generated. Inserting relationship row after inserting the relationhip owning row...')
-          }
-        }
-      }
-      // there is no row object set for the relationship. thus this relationship will be null.
+      // the relationship is about to be stored up the recursion chain. update the row that is to be stored after
+      // the row of the relationship was stored up in the recursion chain.
       else {
-        l.lib('Did not found a corresponding relationship row. Continuing...')
+        l.lib('Row is about to be stored somewhere up the recursion chain. Adding handler after result is known...')
+
+        storedRows.addAfterStoredRowHandler(relationshipRow, async (storedRelationshipRow: any) => {
+          let l = log.fn('afterStoredRowHandler')
+          l.param('storedRelationshipRow', storedRelationshipRow)
+          l.param('columnName', columnName)
+          l.param('relationship', relationship)
+
+          let storedRow = storedRows.getStoredRowByOriginalRow(tableName, row)
+          l.lib('Stored row', storedRow)
+
+          if (storedRow == undefined) {
+            throw new Error('Could not set many-to-one relationship id')
+          }
+
+          let query = sql.update(tableName)
+
+          for (let column of getPrimaryKey(table)) {
+            if (storedRow[column] == undefined) {
+              throw new Error('Some columns of primary are not set.')
+            }
+
+            query.where(comparison(column, storedRow[column]))
+          }
+
+          query.set(columnName, storedRelationshipRow[relationship.otherId])
+
+          l.calling('Calling update...')
+  
+          let result
+          try {
+            result = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as InsertUpdateDeleteResult
+          }
+          catch (e) {
+            throw new Error(e as any)
+          }
+
+          l.called('Called update...')
+      
+          if (result.affectedRows != 1) {
+            throw new Error('Expected row count does not equal 1')
+          }
+
+          // storedRow[columnName] = storedRelationshipRow[relationship.otherId]
+          // storedRow[relationshipName!] = storedRelationshipRow
+        })
       }
     }
+
+    // the relationship row was neither already stored before nor is it about to be stored up the recursion chain.
+    // attempting to store it now.
+    // 1. it will store any many-to-one relationship if it is not referencing the same table and if its id is generated
+    // 2. if the relationship points to the same table as the object which is about to be stored then it will store that relationship later so that
+    //    the id of the row to be stored is lower than the id of the relationship row
+    // 3. if the id the relationship refers to is not generated then it will store the relationship row later so that we can set the id after we 
+    //    stored the relationship owning row which will then provide the missing id on the relationship
     else {
-      l.dev('Column is not part of a many-to-one relationship or its value is already set. Skipping...', columnName)
+      // the id of the row the relationship is referencing is generated. attempt to store it now.
+      if (isForeignKey(otherTable, relationship.otherId)) {
+        // if the relationship refers to the same table as the row that is to be stored, store the relationship row after
+        // we stored the row that is to be stored.
+        if (relationship.otherTable == tableName) {
+          l.lib('Table of relationship is the same as the table of the relationship owning row. Storing relationship after storing the relationship owning row. Skipping for now..')
+          continue
+        }
+
+        // the relationship row refers a different table and its id is generated. Store it now.
+        l.lib('Storing the row object of the relationship. Going into recursion...')
+        
+        let storedRelationshipRow = await store(
+          schema, 
+          relationship.otherTable, 
+          db, 
+          queryFn, 
+          row[relationshipName], 
+          storedRows, 
+          relationshipPath != undefined ? relationshipPath + '.' + relationshipName : relationshipName
+        )
+
+        l.lib('Returning from recursion...')
+        l.lib('Setting relationship id from just stored relationship... ' + columnName + ' = ' + storedRelationshipRow[relationship.otherId])
+        row[columnName] = storedRelationshipRow[relationship.otherId] 
+      }
+      // if the id the relationship is referencing is not generated we have to store the row that is to be stored first.
+      // afterwards we can set the id on the row object.
+      else {
+        l.lib('Other id column is not generated. Storing relationship row after storing the relationhip owning row...')
+      }
     }
 
     l.location.pop()
   }
 
-  l.lib('Determining if to insert or to update the given row...')
+  l.lib('Determining if to store or to update the given row...')
   
-  let fiddledRow: any
   let doUpdate = await isUpdate(schema, tableName, db, queryFn, row)
 
   if (doUpdate) {
@@ -331,38 +484,32 @@ export async function store(
 
     for (let column of Object.keys(table.columns)) {
       if (isPrimaryKeyColumn(table, column)) {
-        query.where(column, '=', value(row[column]), 'AND')
+        query.where(comparison(column, row[column]), 'AND')
       }
       else if (row[column] !== undefined) {
         query.value(column, row[column])
       }
     }
 
-    if (db == 'postgres') {
-      query.returning('*')
-    }
-  
-    let sqlString = query.sql(db)
-    let values = query.values()
-    
-    l.lib('SQL string', sqlString)
-    l.lib('Values', values)
-  
-    let updatedRows
+    let result
     try {
-      updatedRows = await queryFn(sqlString, values)
+      result = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as InsertUpdateDeleteResult
     }
     catch (e) {
       throw new Error(e as any)
     }
   
-    l.lib('Updated rows', updatedRows)
-  
-    if (updatedRows.length != 1) {
-      throw new Error(`Created ${updatedRows.length} rows while inserting ${relationshipPath}. Should have been exactly one row.`)
+    if (result.affectedRows != 1) {
+      throw new Error(`Updated ${result.affectedRows} rows for ${relationshipPath}. Should have been exactly one row. Please enable logging for more information.`)
     }
 
-    fiddledRow = updatedRows[0]
+    storedRow = {
+      '@update': true
+    }
+
+    for (let column of getPrimaryKey(table)) {
+      storedRow[column] = row[column]
+    }
   }
 
   else {
@@ -376,50 +523,51 @@ export async function store(
       }
     }
 
-    if (db == 'postgres') {
-      query.returning('*')
-    }
-  
-    let sqlString = query.sql(db)
-    let values = query.values()
-    
-    l.lib('Sql String', sqlString)
-    l.lib('Values', values)
-  
-    let insertedRows
+    let generatedPrimaryKey = getGeneratedPrimaryKeyColumn(table)
+
+    let result
     try {
-      insertedRows = await queryFn(sqlString, values)
+      result = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values(), generatedPrimaryKey) as InsertUpdateDeleteResult
     }
     catch (e) {
       throw new Error(e as any)
     }
-  
-    l.lib('Inserted rows', insertedRows)
-  
-    if (insertedRows.length != 1) {
-      throw new Error(`Created ${insertedRows.length} rows while inserting ${relationshipPath}. Should have been exactly one row.`)
+
+    if (result.affectedRows != 1) {
+      throw new Error(`Inserted ${result.affectedRows} rows for ${relationshipPath}. Should have been exactly one row.`)
     }
 
-    fiddledRow = insertedRows[0]
+    storedRow = {
+      '@update': false
+    }
+
+    for (let column of getPrimaryKey(table)) {
+      storedRow[column] = row[column]
+    }
+
+    if (generatedPrimaryKey) {
+      storedRow[generatedPrimaryKey] = result.insertId
+    }
   }
   
-  l.calling('Setting result on fiddled row so that it is known that this row object was already inserted...')
+  l.lib('Stored row', storedRow)
+  l.calling('Triggering actions that can be down now after this row was stored...')
 
   try {
-    await alreadyInsertedRows.setResult(row, fiddledRow)
+    await storedRows.setStoredRow(row, storedRow)
   }
   catch (e) {
     throw new Error(e as any)
   }
 
-  l.called('Set result on fiddled row')
+  l.called('Triggered actions after row was stored')
 
   if (table.relationships != undefined) {
-    l.lib('Insert remaining relationships...')
+    l.lib('Store remaining relationships...')
 
     for (let relationshipName of Object.keys(table.relationships)) {     
       l.location.push(relationshipName)
-      l.lib('Trying to insert relationship', relationshipName)
+      l.lib('Trying to store relationship', relationshipName)
       
       let relationship = table.relationships[relationshipName]
       let column = table.columns[relationship.thisId]
@@ -453,7 +601,7 @@ export async function store(
       if (relationship.manyToOne && typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
         l.lib('Relationship is a many-to-one relationship with a given relationship row', row[relationshipName])
 
-        let insertedRelationshipRow = alreadyInsertedRows.getResultByRow(relationship.otherTable, row[relationshipName])
+        let storedRelationshipRow = storedRows.getStoredRowByOriginalRow(relationship.otherTable, row[relationshipName])
 
         // if the id of this relationship is still not set, try to set it
         if (row[relationship.thisId] === undefined) {
@@ -461,58 +609,71 @@ export async function store(
 
           let relationshipId: any = undefined
 
-          // at first check if we already inserted the relationship row
-          if (insertedRelationshipRow) {
-            l.lib('Relationship was already inserted. Using id from it...', insertedRelationshipRow)
+          // at first check if we already stored the relationship row
+          if (storedRelationshipRow) {
+            l.lib('Relationship was already stored. Using id from it...', storedRelationshipRow)
   
-            if (insertedRelationshipRow[relationship.otherId] == undefined) {
-              throw new Error('Already inserted relationship row does not contain id which the relationship owning row wants to refer to')
+            if (storedRelationshipRow[relationship.otherId] == undefined) {
+              throw new Error('Already stored relationship row does not contain id which the relationship owning row wants to refer to')
             }
   
-            relationshipId = insertedRelationshipRow[relationship.otherId]
+            relationshipId = storedRelationshipRow[relationship.otherId]
           }
-          else if (alreadyInsertedRows.containsRow(relationship.otherTable, row[relationshipName])) {
-            l.lib('Row of relationship is about to be inserted up the recursion chain. Continuing...')
+
+          else if (storedRows.containsOriginalRow(relationship.otherTable, row[relationshipName])) {
+            l.lib('Row of relationship is about to be stored up the recursion chain. Continuing...')
             continue
           }
+          
           else {
             if (otherRelationship != undefined) {
-              row[relationshipName][otherRelationship.thisId] = fiddledRow[otherRelationship.otherId]
+              row[relationshipName][otherRelationship.thisId] = storedRow[otherRelationship.otherId]
             }
   
-            l.calling('Inserting the row object of the relationship. Going into recursion...', row[relationshipName])
+            l.calling('Storing the row object of the relationship. Going into recursion...', row[relationshipName])
             
-            insertedRelationshipRow = await store(
+            storedRelationshipRow = await store(
               schema, 
               relationship.otherTable, 
               db, 
               queryFn, 
               row[relationshipName], 
-              alreadyInsertedRows, 
+              storedRows, 
               relationshipPath != undefined ? relationshipPath + '.' + relationshipName : relationshipName
             )
 
             l.called('Returning from recursion...')
-            l.lib('Setting relationship id from just inserted relationship... ' + relationship.thisId + ' = ' + insertedRelationshipRow[relationship.otherId])
+            l.lib('Setting relationship id from just stored relationship... ' + relationship.thisId + ' = ' + storedRelationshipRow[relationship.otherId])
   
-            if (insertedRelationshipRow[relationship.otherId] == undefined) {
-              throw new Error('Already inserted relationship row does not contain id which the relationship owning row wants to refer to')
+            if (storedRelationshipRow[relationship.otherId] == undefined) {
+              throw new Error('Already stored relationship row does not contain id which the relationship owning row wants to refer to')
             }
   
-            relationshipId = insertedRelationshipRow[relationship.otherId]
+            relationshipId = storedRelationshipRow[relationship.otherId]
+
+            l.lib('Setting relationship row on relationship owning row...', storedRelationshipRow)
+            storedRow[relationshipName] = storedRelationshipRow
           }
   
           l.lib('Update the relationship owning row setting new newly obtained id', `${relationship.thisId} = ${relationshipId}`)
 
-          let updateRow = reduceToPrimaryKeys(table, fiddledRow)
-          let updateCriteria = rowToUpdateCriteria(schema, tableName, updateRow)
-          updateCriteria[relationship.thisId] = relationshipId
+          let query = sql.update(tableName)
+
+          for (let column of getPrimaryKey(table)) {
+            if (storedRow[column] == undefined) {
+              throw new Error('Some columns of primary are not set.')
+            }
+
+            query.where(comparison(column, storedRow[column]))
+          }
+
+          query.set(relationship.thisId, relationshipId)
 
           l.calling('Calling update...')
   
-          let updatedRows
+          let result
           try {
-            updatedRows = await update(schema, tableName, db, queryFn, updateCriteria)
+            result = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as InsertUpdateDeleteResult
           }
           catch (e) {
             throw new Error(e as any)
@@ -520,44 +681,49 @@ export async function store(
 
           l.called('Called update...')
   
-          if (updatedRows.length != 1) {
-            throw new Error(`Updated row to set the id of a many-to-one relationship and expected to update exactly one row, but updated ${updatedRows.length} rows instead. Please enable logging output for more details.`)
+          if (result.affectedRows != 1) {
+            throw new Error(`Updated row to set the id of a many-to-one relationship and expected to update exactly one row, but updated ${result.affectedRows} rows instead. Please enable logging output for more details.`)
           }
     
-          l.dev('Setting relationship id on inserted row', `${relationship.thisId} = ${relationshipId}`)
-          fiddledRow[relationship.thisId] = relationshipId
+          // l.dev('Setting relationship id on stored row', `${relationship.thisId} = ${relationshipId}`)
+          // storedRow[relationship.thisId] = relationshipId
         }
         else {
           if (row[relationship.thisId] !== undefined) {
-            l.lib('Relationship id is not empty. Work is already done...')
+            l.lib('Relationship id is not empty. Work was already done...')
           }
           else {
             l.lib('Relationship does not have a row object. Skipping...')
           }
         }
 
-        // if we got a relationship row until now, set it on the inserted row
-        if (insertedRelationshipRow != undefined && fiddledRow[relationshipName] == undefined) {
-          l.lib('Setting relationship row on relationship owning row...', insertedRelationshipRow)
-          fiddledRow[relationshipName] = insertedRelationshipRow
-        }
+        // // if we got a relationship row until now, set it on the stored row
+        // if (storedRelationshipRow != undefined && storedRow[relationshipName] == undefined) {
+        //   l.lib('Setting relationship row on relationship owning row...', storedRelationshipRow)
+        //   storedRow[relationshipName] = storedRelationshipRow
+        // }
 
         // if the relationship is one-to-one then we also need to update the id on the relationship row
-        if (otherRelationship != undefined && insertedRelationshipRow != undefined && insertedRelationshipRow[otherRelationship.thisId] == undefined) {
-          l.lib('Relationship is one-to-one. Setting id on already inserted relationship row...', insertedRelationshipRow)
+        if (otherRelationship != undefined && storedRelationshipRow != undefined && storedRelationshipRow[otherRelationship.thisId] == undefined) {
+          l.lib('Relationship is one-to-one. Setting id on already stored relationship row...', storedRelationshipRow)
           
-          let updateRow = reduceToPrimaryKeys(relationshipTable, insertedRelationshipRow)
-          updateRow[otherRelationship.thisId] = fiddledRow[otherRelationship.otherId]
-          l.dev('Update row', updateRow)
-  
-          let updateCriteria = rowToUpdateCriteria(schema, relationship.otherTable, updateRow)
-          l.dev('Update criteria', updateCriteria)
+          let query = sql.update(relationship.otherTable)
+
+          for (let column of getPrimaryKey(otherTable)) {
+            if (storedRelationshipRow[column] == undefined) {
+              throw new Error('Some columns of primary are not set.')
+            }
+
+            query.where(comparison(column, storedRelationshipRow[column]))
+          }
+
+          query.set(otherRelationship.thisId, storedRow[otherRelationship.otherId])
   
           l.calling('Calling update...')
 
-          let updatedOtherRelationshipRows
+          let result
           try {
-            updatedOtherRelationshipRows = await update(schema, relationship.otherTable, db, queryFn, updateCriteria)
+            result = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as InsertUpdateDeleteResult
           }
           catch (e) {
             throw new Error(e as any)
@@ -565,69 +731,68 @@ export async function store(
 
           l.called('Called update...')
 
-          l.lib('Updated other relationship rows', updatedOtherRelationshipRows)
-  
-          if (updatedOtherRelationshipRows.length != 1) {
-            throw new Error(`The updated row count while setting the id of a one-to-one relationship was not exactly 1 but ${updatedOtherRelationshipRows.length}. Please enable logging for more details.`)
+          if (result.affectedRows != 1) {
+            throw new Error(`The updated row count while setting the id of a one-to-one relationship was not exactly 1 but ${result.affectedRows}. Please enable logging for more details.`)
           }
     
-          fiddledRow[relationshipName][otherRelationship.thisId] = updatedOtherRelationshipRows[0][otherRelationship.thisId]
+          // l.dev('Setting relationship id on stored row', `${relationship.thisId} = ${relationshipId}`)
+          // storedRow[relationshipName][otherRelationship.thisId] = storedRow[otherRelationship.otherId]
         }
       }
   
-      // otherwise we just insert the relationship
+      // otherwise we just store the relationship
       else if (relationship.oneToMany == true && row[relationshipName] instanceof Array) {
-        l.lib('One-to-many relationship. Inserting all rows...')
+        l.lib('One-to-many relationship. Storing all rows...')
         
         for (let relationshipRow of row[relationshipName]) {
-          l.lib('Insert next relationship row...', relationshipRow)
+          l.lib('Store next relationship row...', relationshipRow)
 
-          if (! alreadyInsertedRows.containsRow(relationship.otherTable, relationshipRow)) {
+          if (! storedRows.containsOriginalRow(relationship.otherTable, relationshipRow)) {
             let otherTable = schema[relationship.otherTable]
             if (otherTable == undefined) {
               throw new Error('Table not contained in schema: ' + relationship.otherTable)
             }
 
-            l.lib('Setting id on relationship row... ' + relationship.otherId + ' = ' + fiddledRow[relationship.thisId])
-            relationshipRow[relationship.otherId] = fiddledRow[relationship.thisId]
+            l.lib('Setting id on relationship row... ' + relationship.otherId + ' = ' + storedRow[relationship.thisId])
+            relationshipRow[relationship.otherId] = storedRow[relationship.thisId]
 
             l.lib('Going into Recursion...')
 
-            let insertedRelationshipRow = await store(
+            let storedRelationshipRow = await store(
               schema, 
               relationship.otherTable, 
               db, 
               queryFn, 
               relationshipRow, 
-              alreadyInsertedRows,
+              storedRows,
               relationshipPath != undefined ? relationshipPath + '.' + relationshipName : relationshipName
             )
 
-            l.lib('Returning from recursion...', insertedRelationshipRow)
+            l.lib('Returning from recursion...', storedRelationshipRow)
 
-            if (fiddledRow[relationshipName] == undefined) {
-              fiddledRow[relationshipName] = []
+            if (storedRow[relationshipName] == undefined) {
+              storedRow[relationshipName] = []
             }
             
-            if (insertedRelationshipRow != undefined) {  
-              l.lib('Pushing inserted relationship row into array on relationship owning row...')
-              fiddledRow[relationshipName].push(insertedRelationshipRow)
+            if (storedRelationshipRow != undefined) {  
+              l.lib('Pushing stored relationship row into array on relationship owning row...')
+              storedRow[relationshipName].push(storedRelationshipRow)
             }
-            // if the result is undefined that means we could not insert that row now because it depends on rows
-            // which are being inserted up the recursion chain. in this case we set a handler which triggers after
-            // the row was inserted. We do this to be able to add this particular one-to-many relationhip row to the
+            // if the result is undefined that means we could not store that row now because it depends on rows
+            // which are being stored up the recursion chain. in this case we set a handler which triggers after
+            // the row was stored. We do this to be able to add this particular one-to-many relationhip row to the
             // result row.
             else {
-              l.lib('Row could not be inserted because it is missing an id which is given through a relationship. Adding handler to push it into the inserted row after it has been inserted...')
-              alreadyInsertedRows.addAfterSettingResultHandler(relationshipRow, async (insertedRelationshipRow: any) => {
+              l.lib('Row could not be stored because it is missing an id which is given through a relationship. Adding handler to push it into the stored row after it has been stored...')
+              storedRows.addAfterStoredRowHandler(relationshipRow, async (storedRelationshipRow: any) => {
                 let l = log.fn('afterSettingResultHandler')
-                l.lib('Pushing inserted relationship row into array on inserted row...')
-                fiddledRow[relationshipName].push(insertedRelationshipRow)
+                l.lib('Pushing stored relationship row into array on stored row...')
+                storedRow[relationshipName].push(storedRelationshipRow)
               })
             }
           }
           else {
-            l.lib('That particular row object is already being inserted up the recursion chain. Continuing...')
+            l.lib('That particular row object is already being stored up the recursion chain. Continuing...')
           }
         }
       }
@@ -639,8 +804,8 @@ export async function store(
     }
   }
 
-  l.returning('Returning fiddledRow...', fiddledRow)
-  return fiddledRow
+  l.returning('Returning stored row...', storedRow)
+  return storedRow
 }
 
 export async function select(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {

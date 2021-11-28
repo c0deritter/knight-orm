@@ -1,12 +1,12 @@
 import { Criteria } from 'knight-criteria'
-import { Log } from 'knight-log'
+import { Log } from 'knight-log'
 import sql from 'knight-sql'
 import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
-import { delete_ as isudDelete, store, select } from './isud'
+import { delete_ as isudDelete, select, store } from './isud'
 import { buildCountQuery } from './queryTools'
 import { idsNotSet, instanceToRow, rowToInstance } from './rowTools'
 import { Schema } from './Schema'
-import { FiddledRows } from './util'
+import { StoredRows } from './util'
 
 let log = new Log('knight-orm/crud.ts')
 
@@ -74,11 +74,11 @@ export async function count(schema: Schema, tableName: string, db: string, query
   return rowCount
 }
 
-export async function update<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: Partial<T>, alreadyUpdatedRows: FiddledRows = new FiddledRows(schema)): Promise<T> {
+export async function update<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: Partial<T>, alreadyUpdatedRows: StoredRows = new StoredRows(schema)): Promise<T> {
   let l = log.fn('update')
   l.param('db', db)
   l.param('instance', instance)
-  l.param('alreadyUpdatedRows', alreadyUpdatedRows.fiddledRows)
+  l.param('alreadyUpdatedRows', alreadyUpdatedRows.rows)
 
   let table = schema[tableName]
   if (table == undefined) {
@@ -92,8 +92,8 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     throw new Error('Could not convert the given instance into a row')
   }
 
-  if (alreadyUpdatedRows.containsRow(tableName, row)) {
-    let alreadyUpdatedRow = alreadyUpdatedRows.getResultByRow(tableName, row)
+  if (alreadyUpdatedRows.containsOriginalRow(tableName, row)) {
+    let alreadyUpdatedRow = alreadyUpdatedRows.getStoredRowByOriginalRow(tableName, row)
     l.dev('Row object was already inserted. Returning already updated row...', alreadyUpdatedRow)
     return alreadyUpdatedRow
   }
