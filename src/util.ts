@@ -1,77 +1,54 @@
 import { Log } from 'knight-log'
-import { rowsRepresentSameEntity } from './rowTools'
 import { Schema } from './Schema'
 
-let l = new Log('util.tsx')
+let log = new Log('util.tsx')
+let storedRowsLog = log.cls('StoredRows')
 
-let storedRowsLog = l.cls('StoredRows')
+export interface RowEntry {
+  stored: boolean,
+  row: any,
+  afterSettingResultHandlers: ((result: any) => Promise<void>)[]
+}
 
 export class StoredRows {
   schema: Schema
-  rows: {
-    tableName: string,
-    originalRow: any,
-    storedRow?: any,
-    afterSettingResultHandlers: ((result: any) => Promise<void>)[]
-  }[] = []
+  rowEntries: RowEntry[] = []
 
   constructor(schema: Schema) {
     this.schema = schema
   }
 
-  add(tableName: string, originalRow: any, storedRow?: any) {
-    if (! this.containsOriginalRow(tableName, originalRow)) {
-      this.rows.push({
-        tableName: tableName,
-        originalRow: originalRow,
-        storedRow: storedRow,
+  setRowAboutToBeStored(row: any) {
+    if (! this.containsRow(row)) {
+      this.rowEntries.push({
+        stored: false,
+        row: row,
         afterSettingResultHandlers: []
-      })
+      } as RowEntry)
     }
   }
 
-  remove(row: any) {
-    let index = -1
-
-    for (let i = 0; i < this.rows.length; i++) {
-      if (this.rows[i].originalRow === row) {
-        index = i
-        break
-      }
-    }
-
-    if (index > -1) {
-      this.rows.splice(index, 1)
-    }
+  isRowAboutToBeStored(row: any): boolean {
+    let rowEntry = this.getRowEntry(row)
+    return rowEntry != undefined && ! rowEntry.stored
   }
 
-  async setStoredRow(originalRow: any, storedRow: any): Promise<void> {
-    let l = storedRowsLog.mt('setResult')
-    l.param('originalRow', originalRow)
-    l.param('storedRow', storedRow)
+  async setRowStored(row: any): Promise<void> {
+    let l = storedRowsLog.mt('setRowStored')
+    let rowEntry = this.getRowEntry(row)
 
-    l.dev('Trying to determine the fiddled row object which must exist at this point in time')
-
-    let existingRow = undefined
-    for (let row of this.rows) {
-      if (row.originalRow === originalRow) {
-        existingRow = row
-      }
-    }
-
-    if (existingRow == undefined) {
+    if (rowEntry == undefined) {
       throw new Error('Could not set result because the row object was not already fiddled with')
     }
 
-    existingRow.storedRow = storedRow
-    l.dev('Setting given result on the existing fiddled row', existingRow)
+    rowEntry.stored = true
 
-    if (existingRow.afterSettingResultHandlers.length > 0) {
+    if (rowEntry.afterSettingResultHandlers.length > 0) {
       l.lib('Calling every registered handler after the result was set')
   
-      for (let fn of existingRow.afterSettingResultHandlers) {
+      for (let fn of rowEntry.afterSettingResultHandlers) {
         l.calling('Calling next result handler...')
-        await fn(storedRow)
+        await fn(rowEntry.row)
         l.called('Called result handler')
       }
     }
@@ -82,76 +59,46 @@ export class StoredRows {
     l.returning('Finished setting result. Returning...')
   }
 
-  addAfterStoredRowHandler(row: any, handler: (result: any) => Promise<void>) {
-    let existingRow = undefined
-    for (let row of this.rows) {
-      if (row.originalRow === row) {
-        existingRow = row
+  isRowStored(row: any): boolean {
+    let rowEntry = this.getRowEntry(row)
+    return rowEntry != undefined && rowEntry.stored
+  }
+
+  getRowEntry(row: any): RowEntry|undefined {
+    for (let rowEntry of this.rowEntries) {
+      if (rowEntry.row === row) {
+        return rowEntry
+      }
+    }
+  }
+
+  containsRow(row: any): boolean {
+    return this.getRowEntry(row) != undefined
+  }
+
+  remove(row: any) {
+    let index = -1
+
+    for (let i = 0; i < this.rowEntries.length; i++) {
+      if (this.rowEntries[i].row === row) {
+        index = i
+        break
       }
     }
 
-    if (existingRow == undefined) {
+    if (index > -1) {
+      this.rowEntries.splice(index, 1)
+    }
+  }
+
+  addAfterStoredRowHandler(row: any, handler: (result: any) => Promise<void>) {
+    let rowEntry = this.getRowEntry(row)
+
+    if (rowEntry == undefined) {
       throw new Error('Could not addAfterStoredRowHandler because the row object was not already fiddled with')
     }
 
-    existingRow.afterSettingResultHandlers.push(handler)
-  }
-
-  containsTableName(tableName: string): boolean {
-    for (let row of this.rows) {
-      if (row.tableName === tableName) {
-        return true
-      }
-    }
-    return false
-  }
-
-  containsOriginalRow(tableName: string, originalRow: any): boolean {
-    let table = this.schema[tableName]
-
-    if (table == undefined) {
-      throw new Error('Table not contained in schema: ' + tableName)
-    }
-
-    for (let row of this.rows) {
-      if (row.originalRow === originalRow) {
-        return true
-      }
-
-      if (rowsRepresentSameEntity(table, originalRow, row.originalRow)) {
-        return true
-      }
-    }
-
-    return false
-  }
-
-  getStoredRowByOriginalRow(tableName: string, originalRow: any): any | undefined {
-    let table = this.schema[tableName]
-
-    if (table == undefined) {
-      throw new Error('Table not contained in schema: ' + tableName)
-    }
-
-    for (let row of this.rows) {
-      if (row.originalRow === originalRow) {
-        return row.storedRow
-      }
-
-      if (rowsRepresentSameEntity(table, originalRow, row.originalRow)) {
-        return row.storedRow
-      }
-    }
-  }
-
-  getStoredRowByTableNameAndId(tableName: string, idColumnName: string, idColumnValue: any): any | undefined {
-    for (let row of this.rows) {
-      if (row.tableName == tableName && row.storedRow != undefined) {
-        if (row.storedRow[idColumnName] == idColumnValue) {
-          return row.storedRow
-        }
-      }
-    }
+    rowEntry.afterSettingResultHandlers.push(handler)
   }
 }
 

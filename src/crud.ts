@@ -78,7 +78,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   let l = log.fn('update')
   l.param('db', db)
   l.param('instance', instance)
-  l.param('alreadyUpdatedRows', alreadyUpdatedRows.rows)
+  l.param('alreadyUpdatedRows', alreadyUpdatedRows.rowEntries)
 
   let table = schema[tableName]
   if (table == undefined) {
@@ -92,11 +92,11 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     throw new Error('Could not convert the given instance into a row')
   }
 
-  if (alreadyUpdatedRows.containsOriginalRow(tableName, row)) {
-    let alreadyUpdatedRow = alreadyUpdatedRows.getStoredRowByOriginalRow(tableName, row)
-    l.dev('Row object was already inserted. Returning already updated row...', alreadyUpdatedRow)
-    return alreadyUpdatedRow
-  }
+  // if (alreadyUpdatedRows.containsOriginalRow(tableName, row)) {
+  //   let alreadyUpdatedRow = alreadyUpdatedRows.getStoredRowByOriginalRow(tableName, row)
+  //   l.dev('Row object was already inserted. Returning already updated row...', alreadyUpdatedRow)
+  //   return alreadyUpdatedRow
+  // }
 
   let criteria: any = rowToUpdateCriteria(schema, tableName, row) // TODO: Remove :any
   l.lib('criteria', criteria)
@@ -164,7 +164,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   }
 
   let updatedInstance: any = {} //table.rowToInstance(updatedRow) TODO: !!!
-  alreadyUpdatedRows.add(tableName, row, updatedInstance)
+  // alreadyUpdatedRows.add(tableName, row, updatedInstance)
 
   l.lib('Update relationships...')
 
