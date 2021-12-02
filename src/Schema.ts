@@ -200,3 +200,98 @@ export function getColumnName(table: Table, propertyName: string): string|undefi
     }
   }
 }
+
+export function checkSchema(schema: Schema, tableName?: string) {
+  if (typeof schema != 'object') {
+    throw new Error('Given schema is not of type object. Declare interface \'Schema\' to prevent this error.')
+  }
+
+  let tableNames
+  
+  if (tableName) {
+    tableNames = [ tableName ]
+  }
+  else {
+    tableNames = Object.keys(schema)
+  }
+
+  for (let tableName of tableNames) {
+    let table = schema[tableName]
+
+    if (typeof table != 'object') {
+      throw new Error(`Table '${tableName}'' was not assigned an object. Declare interface \'Table\' to prevent this error.`)
+    }
+
+    if (typeof table.columns != 'object' || table.columns === null) {
+      throw new Error(`Columns of table '${tableName}' are either not present or null. Declare interface \'Table\' to prevent this error.`)
+    }
+
+    for (let columnName of Object.keys(table.columns)) {
+      let column = table.columns[columnName]
+
+      if (column == undefined) {
+        throw new Error(`Value of column '${columnName}' of table '${tableName}' is undefined or null. Should be string or an object of type 'Column'.`)
+      }
+
+      let typeOf = typeof column
+
+      if (typeOf != 'string' && typeOf != 'object') {
+        throw new Error(`Value of column '${columnName}' of table '${tableName}' is neither of type string nor of type object. Should be string or an object of type 'Column'.`)
+      }
+    }
+
+    if (table.relationships) {
+      for (let relationshipName of Object.keys(table.relationships)) {
+        let relationship = table.relationships[relationshipName]
+
+        if (relationship == undefined) {
+          throw new Error(`Value of relationship '${relationshipName}' of table '${tableName}' is undefined or null. Should be an object of type 'Relationship'.`)
+        }
+  
+        let typeOf = typeof relationship
+  
+        if (typeOf != 'object') {
+          throw new Error(`Value of relationship '${relationshipName}' of table '${tableName}' is not of type object. Should be an object of type 'Relationship'.`)
+        }
+  
+        if (relationship.oneToMany !== true && relationship.manyToOne !== true) {
+          throw new Error(`Relationship '${relationshipName}' of table '${tableName}' is defined to be both one-to-many and many-to-one. Only one type is possible.`)
+        }
+
+        if (! relationship.oneToMany && ! relationship.manyToOne) {
+          throw new Error(`Relationship '${relationshipName}' of table '${tableName}' is neither defined to be one-to-many nor many-to-one. You need to define to be one of the two.`)
+        }
+
+        if (table.columns[relationship.thisId] == undefined) {
+          throw new Error(`The column '${relationship.thisId}' referenced in '${tableName}.${relationshipName}.thisId' does not exist. It needs to exist.`)
+        }
+
+        let otherTable = schema[relationship.otherTable]
+
+        if (otherTable == undefined) {
+          throw new Error(`The table '${schema[relationship.otherTable]}' referenced in '${tableName}.${relationshipName}.otherTable' does not exist. It needs to exist.`)
+        }
+
+        if (otherTable.columns[relationship.otherId] == undefined) {
+          throw new Error(`The column '${relationship.otherId}' referenced in '${tableName}.${relationshipName}.otherId' does not exist in table '${schema[relationship.otherTable]}'. It needs to exist.`)
+        }
+
+        if (relationship.otherRelationship) {
+          if (otherTable.relationships == undefined || otherTable.relationships[relationship.otherRelationship] == undefined) {
+            throw new Error(`The relationship '${relationship.otherRelationship}' referenced in '${tableName}.${relationshipName}.otherRelationship' does not exist in table '${schema[relationship.otherTable]}'. It needs to exist.`)
+          }
+
+          let otherRelationship = otherTable.relationships[relationship.otherRelationship]
+
+          if (otherRelationship.otherRelationship == undefined) {
+            throw new Error(`The relationship '${relationship.otherTable}.${relationship.otherRelationship}' referenced in '${tableName}.${relationshipName}.otherRelationship' does not define the property 'otherRelationship'. Since the defined relation is a one-to-one it needs to define this property.`)
+          }
+
+          if (otherRelationship.otherRelationship != relationshipName) {
+            throw new Error(`The relationship '${relationship.otherTable}.${relationship.otherRelationship}' referenced in '${tableName}.${relationshipName}.otherRelationship' does not reference the correct relationship '${relationshipName}'. Since the defined relation is a one-to-one it needs to define back to the correct relation.`)
+          }
+        }
+      }
+    }
+  }
+}

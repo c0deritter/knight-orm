@@ -19,7 +19,7 @@ export class StoredRows {
   }
 
   setRowAboutToBeStored(row: any) {
-    if (! this.containsRow(row)) {
+    if (! this.isRowContained(row)) {
       this.rowEntries.push({
         stored: false,
         row: row,
@@ -72,7 +72,7 @@ export class StoredRows {
     }
   }
 
-  containsRow(row: any): boolean {
+  isRowContained(row: any): boolean {
     return this.getRowEntry(row) != undefined
   }
 
@@ -91,11 +91,11 @@ export class StoredRows {
     }
   }
 
-  addAfterStoredRowHandler(row: any, handler: (result: any) => Promise<void>) {
+  addAfterStoredRowHandler(row: any, handler: (justStoredRow: any) => Promise<void>) {
     let rowEntry = this.getRowEntry(row)
 
     if (rowEntry == undefined) {
-      throw new Error('Could not addAfterStoredRowHandler because the row object was not already fiddled with')
+      throw new Error('Could not addAfterStoredRowHandler because the given row object is was not added yet. Use \'setRowAboutToBeStored\' to do so.')
     }
 
     rowEntry.afterSettingResultHandlers.push(handler)

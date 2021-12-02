@@ -146,7 +146,7 @@ export const schema = {
         thisId: 'one_to_one_object1_id',
         otherTable: 'table1',
         otherId: 'id',
-        otherRelationship: 'oneToOneObject1'
+        otherRelationship: 'oneToOneObject2'
       },
       oneToManyObject2ManyToOne: {
         manyToOne: true,

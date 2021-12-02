@@ -19,7 +19,7 @@ function pgQueryFn(sqlString: string, values?: any[]): Promise<any> {
   return pool.query(sqlString, values)
 }
 
-describe.only('isud', function() {
+describe('isud', function() {
   after(async function() {
     await pool.end()
   })
@@ -194,16 +194,15 @@ describe.only('isud', function() {
     })
   })
   
-  describe.only('store', function() {
+  describe('store', function() {
     it('should insert a simple row', async function() {
       let row = {
         column1: 'a'
       }
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.be.not.undefined
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false
       })
@@ -233,10 +232,9 @@ describe.only('isud', function() {
         }
       }
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.be.not.undefined
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false,
         manyToOneObject2: {
@@ -281,14 +279,13 @@ describe.only('isud', function() {
         }
       }
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.be.not.undefined
-      expect(insertedRow).to.deep.equal({
-        id: 1,
+      expect(storeInfo).to.deep.equal({
+        id: 2,
         '@update': false,
         manyToOneObject1: {
-          id: 2,
+          id: 1,
           '@update': false
         }
       })
@@ -298,10 +295,10 @@ describe.only('isud', function() {
       expect(table1Result.rows.length).to.equal(2)
       expect(table1Result.rows[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
-        many_to_one_object1_id: 2,
+        many_to_one_object1_id: null,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
@@ -310,10 +307,10 @@ describe.only('isud', function() {
 
       expect(table1Result.rows[1]).to.deep.equal({
         id: 2,
-        column1: 'b',
+        column1: 'a',
         column2: null,
         column3: null,
-        many_to_one_object1_id: null,
+        many_to_one_object1_id: 1,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
@@ -330,10 +327,9 @@ describe.only('isud', function() {
         }
       }
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.be.not.undefined
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false,
         oneToOneObject2: {
@@ -382,9 +378,9 @@ describe.only('isud', function() {
 
       row.oneToOneObject2.oneToOneObject1 = row
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false,
         oneToOneObject2: {
@@ -429,13 +425,13 @@ describe.only('isud', function() {
         }
       }
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.deep.equal({
-        id: 1,
+      expect(storeInfo).to.deep.equal({
+        id: 2,
         '@update': false,
         oneToOneObject1: {
-          id: 2,
+          id: 1,
           '@update': false
         }
       })
@@ -445,7 +441,7 @@ describe.only('isud', function() {
       expect(table1Result.rows.length).to.equal(2)
       expect(table1Result.rows[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -457,7 +453,7 @@ describe.only('isud', function() {
 
       expect(table1Result.rows[1]).to.deep.equal({
         id: 2,
-        column1: 'b',
+        column1: 'a',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -479,13 +475,13 @@ describe.only('isud', function() {
 
       row.oneToOneObject1.oneToOneObject1 = row
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.deep.equal({
-        id: 1,
+      expect(storeInfo).to.deep.equal({
+        id: 2,
         '@update': false,
         oneToOneObject1: {
-          id: 2,
+          id: 1,
           '@update': false
         }
       })
@@ -495,7 +491,7 @@ describe.only('isud', function() {
       expect(table1Result.rows.length).to.equal(2)
       expect(table1Result.rows[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -507,7 +503,7 @@ describe.only('isud', function() {
 
       expect(table1Result.rows[1]).to.deep.equal({
         id: 2,
-        column1: 'b',
+        column1: 'a',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -526,9 +522,9 @@ describe.only('isud', function() {
 
       row.oneToOneObject1 = row
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
       
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false
       })
@@ -564,9 +560,9 @@ describe.only('isud', function() {
         ]
       }
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false,
         oneToManyObject2: [
@@ -639,9 +635,9 @@ describe.only('isud', function() {
       row.oneToManyObject2[0].oneToManyObject2ManyToOne = row
       row.oneToManyObject2[1].oneToManyObject2ManyToOne = row
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false,
         oneToManyObject2: [
@@ -707,9 +703,9 @@ describe.only('isud', function() {
         ]
       }
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false,
         oneToManyObject1: [
@@ -783,9 +779,9 @@ describe.only('isud', function() {
       row.oneToManyObject1[0].oneToManyObject1ManyToOne = row
       row.oneToManyObject1[1].oneToManyObject1ManyToOne = row
       
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false,
         oneToManyObject1: [
@@ -862,9 +858,9 @@ describe.only('isud', function() {
         ]
       }
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false,
         manyToManyObject2: [
@@ -977,9 +973,9 @@ describe.only('isud', function() {
       row.manyToManyObject2[1].object1 = row
       row.manyToManyObject2[1].object2.manyToManyObject2.push(row.manyToManyObject2[1])
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false,
         manyToManyObject2: [
@@ -1081,9 +1077,9 @@ describe.only('isud', function() {
         ]
       }
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false,
         manyToManyObject1: [
@@ -1197,9 +1193,9 @@ describe.only('isud', function() {
       row.manyToManyObject1[1].object11 = row
       row.manyToManyObject1[1].object12.manyToManyObject1.push(row.manyToManyObject1[1])
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
         '@update': false,
         manyToManyObject1: [
@@ -1292,73 +1288,25 @@ describe.only('isud', function() {
           {
             column1: 'b',
             object12: {}
-          },
-          {
-            column1: 'c',
-            object12: {}
           }
         ]
       }
 
       row.manyToManyObject1[0].object12 = row
-      row.manyToManyObject1[1].object12 = row
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      let expected = {
+      expect(storeInfo).to.deep.equal({
         id: 1,
-        column1: 'a',
-        column2: null,
-        column3: null,
-        many_to_one_object1_id: null,
-        many_to_one_object2_id: null,
-        one_to_one_object1_id: null,
-        one_to_one_object2_id: null,
-        one_to_many_object1_many_to_one_id: null,
+        '@update': false,
         manyToManyObject1: [
           {
             table1_id1: 1,
             table1_id2: 1,
-            column1: 'b',
-            column2: null,
-            column3: null,
-            object12: {
-              id: 1,
-              column1: 'a',
-              column2: null,
-              column3: null,
-              many_to_one_object1_id: null,
-              many_to_one_object2_id: null,
-              one_to_one_object1_id: null,
-              one_to_one_object2_id: null,
-              one_to_many_object1_many_to_one_id: null
-            }
-          },
-          {
-            table1_id1: 1,
-            table1_id2: 1,
-            column1: 'c',
-            column2: null,
-            column3: null,
-            object12: {
-              id: 1,
-              column1: 'a',
-              column2: null,
-              column3: null,
-              many_to_one_object1_id: null,
-              many_to_one_object2_id: null,
-              one_to_one_object1_id: null,
-              one_to_one_object2_id: null,
-              one_to_many_object1_many_to_one_id: null
-            }
+            '@update': false
           }
         ]
-      }
-
-      expected.manyToManyObject1[0].object12 = expected
-      expected.manyToManyObject1[1].object12 = expected
-
-      expect(insertedRow).to.deep.equal(expected)
+      })
 
       let table1Result = await pgQueryFn('SELECT * FROM table1 ORDER BY id')
 
@@ -1378,20 +1326,12 @@ describe.only('isud', function() {
 
       let tableManyResult = await pgQueryFn('SELECT * FROM many_to_many_table1 ORDER BY column1')
 
-      expect(tableManyResult.rows.length).to.equal(2)
+      expect(tableManyResult.rows.length).to.equal(1)
 
       expect(tableManyResult.rows[0]).to.deep.equal({
         table1_id1: 1,
         table1_id2: 1,
         column1: 'b',
-        column2: null,
-        column3: null
-      })
-
-      expect(tableManyResult.rows[1]).to.deep.equal({
-        table1_id1: 1,
-        table1_id2: 1,
-        column1: 'c',
         column2: null,
         column3: null
       })
@@ -1405,25 +1345,17 @@ describe.only('isud', function() {
         column1: 'b'
       }
 
-      let updatedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(updatedRow).to.be.not.undefined
-      expect(updatedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
-        column1: 'b',
-        column2: null,
-        column3: null,
-        many_to_one_object1_id: null,
-        many_to_one_object2_id: null,
-        one_to_one_object1_id: null,
-        one_to_one_object2_id: null,
-        one_to_many_object1_many_to_one_id: null
+        '@update': true
       })
 
-      let rows = await pgQueryFn('SELECT * FROM table1')
+      let table1Result = await pgQueryFn('SELECT * FROM table1')
 
-      expect(rows.length).to.equal(1)
-      expect(rows[0]).to.deep.equal({
+      expect(table1Result.rows.length).to.equal(1)
+      expect(table1Result.rows[0]).to.deep.equal({
         id: 1,
         column1: 'b',
         column2: null,
@@ -1449,26 +1381,14 @@ describe.only('isud', function() {
         }
       }
 
-      let insertedRow = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
 
-      expect(insertedRow).to.be.not.undefined
-      expect(insertedRow).to.deep.equal({
+      expect(storeInfo).to.deep.equal({
         id: 1,
-        column1: 'b',
-        column2: null,
-        column3: null,
-        many_to_one_object1_id: null,
-        many_to_one_object2_id: 'x',
-        one_to_one_object1_id: null,
-        one_to_one_object2_id: null,
-        one_to_many_object1_many_to_one_id: null,
+        '@update': true,
         manyToOneObject2: {
           id: 'x',
-          column1: 'c',
-          column2: null,
-          column3: null,
-          one_to_one_object1_id: null,
-          one_to_many_object2_many_to_one_id: null
+          '@update': true
         }
       })
 
