@@ -1606,11 +1606,11 @@ describe('isud', function() {
       expect(rows.length).to.equal(1)
 
       expect(rows[0]).to.deep.equal({
-        id: 1,
+        id: 2,
         column1: 'a',
         column2: null,
         column3: null,
-        many_to_one_object1_id: 2,
+        many_to_one_object1_id: 1,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
@@ -1625,18 +1625,18 @@ describe('isud', function() {
 
       let rows = await select(schema, 'table1', 'postgres', pgQueryFn, {
         manyToOneObject1: {
-          id: 2
+          id: 1
         }
       })
 
       expect(rows.length).to.equal(1)
 
       expect(rows[0]).to.deep.equal({
-        id: 1,
+        id: 2,
         column1: null,
         column2: null,
         column3: null,
-        many_to_one_object1_id: 2,
+        many_to_one_object1_id: 1,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
@@ -1660,17 +1660,17 @@ describe('isud', function() {
       expect(rows.length).to.equal(1)
 
       expect(rows[0]).to.deep.equal({
-        id: 1,
+        id: 2,
         column1: 'a',
         column2: null,
         column3: null,
-        many_to_one_object1_id: 2,
+        many_to_one_object1_id: 1,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
         one_to_many_object1_many_to_one_id: null,
         manyToOneObject1: {
-          id: 2,
+          id: 1,
           column1: null,
           column2: 1,
           column3: null,
@@ -1699,17 +1699,17 @@ describe('isud', function() {
       expect(rows.length).to.equal(3)
 
       expect(rows[0]).to.deep.equal({
-        id: 1,
+        id: 2,
         column1: 'a',
         column2: null,
         column3: null,
-        many_to_one_object1_id: 2,
+        many_to_one_object1_id: 1,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
         one_to_many_object1_many_to_one_id: null,
         manyToOneObject1: {
-          id: 2,
+          id: 1,
           column1: null,
           column2: 1,
           column3: null,
@@ -1722,11 +1722,11 @@ describe('isud', function() {
       })
 
       expect(rows[1]).to.deep.equal({
-        id: 3,
+        id: 4,
         column1: 'a',
         column2: null,
         column3: null,
-        many_to_one_object1_id: 4,
+        many_to_one_object1_id: 3,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
@@ -1735,11 +1735,11 @@ describe('isud', function() {
       })
 
       expect(rows[2]).to.deep.equal({
-        id: 5,
+        id: 6,
         column1: 'a',
         column2: null,
         column3: null,
-        many_to_one_object1_id: 6,
+        many_to_one_object1_id: 5,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
@@ -1908,17 +1908,17 @@ describe('isud', function() {
 
       expect(rows.length).to.equal(3)
       expect(rows[0]).to.deep.equal({
-        id: 1,
+        id: 2,
         column1: 'a',
         column2: null,
         column3: null,
-        many_to_one_object1_id: 2,
+        many_to_one_object1_id: 1,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
         one_to_many_object1_many_to_one_id: null,
         manyToOneObject1: {
-          id: 2,
+          id: 1,
           column1: null,
           column2: 1,
           column3: null,
@@ -1938,23 +1938,23 @@ describe('isud', function() {
             many_to_one_object2_id: null,
             one_to_one_object1_id: null,
             one_to_one_object2_id: null,
-            one_to_many_object1_many_to_one_id: 1
+            one_to_many_object1_many_to_one_id: 2
           }
         ]
       })
 
       expect(rows[1]).to.deep.equal({
-        id: 5,
+        id: 6,
         column1: 'a',
         column2: null,
         column3: null,
-        many_to_one_object1_id: 6,
+        many_to_one_object1_id: 5,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
         one_to_many_object1_many_to_one_id: null,
         manyToOneObject1: {
-          id: 6,
+          id: 5,
           column1: null,
           column2: 2,
           column3: null,
@@ -1968,17 +1968,17 @@ describe('isud', function() {
       })
 
       expect(rows[2]).to.deep.equal({
-        id: 9,
+        id: 10,
         column1: 'a',
         column2: null,
         column3: null,
-        many_to_one_object1_id: 10,
+        many_to_one_object1_id: 9,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
         one_to_many_object1_many_to_one_id: null,
         manyToOneObject1: {
-          id: 10,
+          id: 9,
           column1: null,
           column2: 3,
           column3: null,

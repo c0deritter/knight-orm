@@ -677,14 +677,16 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   let query = buildSelectQuery(schema, tableName, criteria)
   l.dev('Built SELECT query', query)
 
-  let sqlString = query.sql(db)
-  let values = query.values()
-
-  l.lib('SQL string', sqlString)
-  l.lib('Values', values)
-
   l.lib('Querying database with given SQL string and values...')
-  let joinedRows = await queryFn(sqlString, values)
+  let joinedRows
+
+  try {
+    joinedRows = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as SelectResult
+  }
+  catch (e) {
+    throw new Error(e as any)
+  }
+
   l.dev('Received rows', joinedRows)
 
   l.calling('Unjoining rows for criteria...')
