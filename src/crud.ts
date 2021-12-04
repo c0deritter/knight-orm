@@ -1,12 +1,10 @@
 import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql from 'knight-sql'
-import { instanceCriteriaToRowCriteria, instanceToDeleteCriteria, rowToUpdateCriteria } from './criteriaTools'
-import { delete_ as isudDelete, select, store } from './isud'
-import { buildCountQuery } from './queryTools'
-import { idsNotSet, instanceToRow, rowToInstance } from './rowTools'
+import { buildCountQuery, delete_ as criteriaDelete, instanceCriteriaToRowCriteria, select } from './criteria'
+import { store, StoredRows } from './orm'
+import { idsNotSet, instanceToRow, rowToInstance } from './row'
 import { Schema } from './Schema'
-import { StoredRows } from './util'
 
 let log = new Log('knight-orm/crud.ts')
 
@@ -98,7 +96,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   //   return alreadyUpdatedRow
   // }
 
-  let criteria: any = rowToUpdateCriteria(schema, tableName, row) // TODO: Remove :any
+  let criteria: any = {}//rowToUpdateCriteria(schema, tableName, row) // TODO: Remove :any
   l.lib('criteria', criteria)
 
   let missingIdValues = idsNotSet(table, criteria)
@@ -217,7 +215,7 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
     throw new Error('Table not contained in schema: ' + tableName)
   }
 
-  let criteria = instanceToDeleteCriteria(schema, tableName, instance)
+  let criteria = {} //instanceToDeleteCriteria(schema, tableName, instance)
   l.lib('Converted instance to delete criteria', criteria)
 
   let missingIdValues = idsNotSet(table, criteria)
@@ -227,7 +225,7 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
     throw new Error('Not all id\'s are set. ' + JSON.stringify(missingIdValues))
   }
 
-  let deletedRows = await isudDelete(schema, tableName, db, queryFn, criteria)
+  let deletedRows = await criteriaDelete(schema, tableName, db, queryFn, criteria)
   l.lib('deletedRows', deletedRows)
 
   if (deletedRows.length != 1) {

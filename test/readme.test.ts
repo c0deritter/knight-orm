@@ -3,7 +3,7 @@ import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
 import { Schema } from '../src'
-import { store } from '../src/isud'
+import { store } from '../src/orm'
 
 chai.use(chaiAsPromised)
 const expect = chai.expect

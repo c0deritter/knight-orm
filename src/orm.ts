@@ -1,240 +1,13 @@
-import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
-import sql, { comparison, Query } from 'knight-sql'
-import { checkSchema, getGeneratedPrimaryKeyColumn, getNotGeneratedPrimaryKeyColumns, getPrimaryKey, isGeneratedPrimaryKeyColumn, isPrimaryKeyColumn } from '.'
-import { UpdateCriteria } from './criteriaTools'
-import { addCriteria, buildSelectQuery } from './queryTools'
-import { areAllNotGeneratedPrimaryKeyColumnsSet, determineRelationshipsToLoad, unjoinRows } from './rowTools'
-import { Schema } from './Schema'
-import { StoredRows } from './util'
+import sql, { comparison } from 'knight-sql'
+import { isUpdate } from '.'
+import { databaseIndependentQuery, InsertUpdateDeleteResult } from './query'
+import { checkSchema, getGeneratedPrimaryKeyColumn, getPrimaryKey, isPrimaryKeyColumn, Schema } from './Schema'
 
-let log = new Log('knight-orm/isud.ts')
+let log = new Log('knight-orm/orm.ts')
 
-type InsertUpdateDeleteResult = {
-  affectedRows: number
-  insertId?: number
-}
-
-type SelectResult = any[]
-
-export async function databaseIndependentQuery(
-  db: string,
-  queryFn: (sqlString: string, values?: any[]) => Promise<any>,
-  sqlString: string,
-  values?: any[],
-  insertIdColumnName?: string
-): Promise<InsertUpdateDeleteResult | SelectResult> {
-
-  let l = log.fn('databaseIndependentQuery')
-  l.param('db', db)
-  l.param('sqlString', sqlString)
-  l.param('values', values)
-  l.param('insertIdColumnName', insertIdColumnName)
-
-  let isInsert = sqlString.substring(0, 6).toUpperCase() == 'INSERT'
-
-  if (isInsert && db == 'postgres') {
-    if (insertIdColumnName) {
-      l.lib('Given query is INSERT, database is PostgreSQL and there is an primary key column which is created. Appending RETURNING statement.')
-      sqlString += ' RETURNING ' + insertIdColumnName
-      l.lib('Resulting SQL string', sqlString)
-    }
-    else {
-      l.lib('Given query is INSERT, database is PostgreSQL but there is no primary key column which is created. Will not return any generated id.')
-    }
-  }
-
-  let dbResult
-  try {
-    dbResult = await queryFn(sqlString, values)
-  }
-  catch (e) {
-    throw new Error(e as any)
-  }
-
-  l.dev(`Result of database '${db}'`, dbResult)
-
-  if (sqlString.substring(0, 6).toUpperCase() == 'SELECT') {
-    if (db == 'postgres') {
-      if (! ('rows' in dbResult) || ! (dbResult.rows instanceof Array)) {
-        throw new Error('Result returned by PostgeSQL did not contain a valid \'rows\'. Expected an array. Enable logging for more information.')
-      }
-  
-      l.returning('Returning rows of SELECT', dbResult.rows)
-      return dbResult.rows as SelectResult
-    }
-  
-    if (db == 'mysql' || db == 'maria') {
-      if (! (dbResult instanceof Array)) {
-        throw new Error('Result returned by MySQL was not any array. Enable logging for more information.')
-      }
-  
-      l.returning('Returning rows of SELECT', dbResult)
-      return dbResult
-    }
-
-    throw new Error(`Database '${db}' not supported.`)
-  }
-
-  else {
-    let affectedRows
-
-    if (db == 'postgres') {
-      if (! ('rowCount' in dbResult) || typeof dbResult.rowCount != 'number' || isNaN(dbResult.rowCount)) {
-        throw new Error('Result returned by PostgeSQL did not contain a valid \'rowCount\'. Expected a number. Enable logging for more information.')
-      }
-  
-      affectedRows = dbResult.rowCount
-    }
-  
-    if (db == 'mysql' || db == 'maria') {
-      if (! ('affectedRows' in dbResult) || typeof dbResult.rowCount != 'number' || isNaN(dbResult.rowCount)) {
-        throw new Error('Result returned by MySQL did not contain a valid \'affectedRows\'. Expected a number. Enable logging for more information.')
-      }
-  
-      affectedRows = dbResult.affectedRows
-    }
-
-    let result = {
-      affectedRows: affectedRows
-    } as InsertUpdateDeleteResult
-
-    if (! isInsert) {
-      l.returning('Returning UPDATE or DELETE result', result)
-      return result
-    }
-
-    if (db == 'postgres') {
-      if (insertIdColumnName) {
-        if (! ('rows' in dbResult) || ! (dbResult.rows instanceof Array) || dbResult.rows.length != 1) {
-          throw new Error('Result returned by PostgreSQL did not contain valid \'rows\'. Expected an array with exactly one row. Enable logging for more information.')
-        }
-  
-        let insertId = dbResult.rows[0][insertIdColumnName]
-  
-        if (insertId == undefined) {
-          throw new Error('Could not determine \'insertId\' for PostgreSQL INSERT query. The given insert id column name was not contained in the returned row. Enable logging for more information.')
-        }
-  
-        result.insertId = insertId
-      }
-
-      l.lib('Returning INSERT result', result)
-      return result
-    }
-
-    if (db == 'mysql' || db == 'maria') {
-      if (dbResult.insertId != undefined) {
-        let result = {
-          affectedRows: affectedRows,
-          insertId: dbResult.insertId
-        } as InsertUpdateDeleteResult
-
-        l.lib('Returning INSERT result', result)
-        return result
-      }
-  
-      let result = {
-        affectedRows: affectedRows
-      } as InsertUpdateDeleteResult
-
-      l.lib('Returning INSERT result', result)
-      return result
-    }
-
-    throw new Error(`Database '${db}' not supported.`)
-  }
-}
-
-export async function isUpdate(
-  schema: Schema,
-  tableName: string,
-  db: string,
-  queryFn: (sqlString: string, values?: any[]) => Promise<any>,
-  row: any
-): Promise<boolean> {
-  
-  let l = log.fn('isUpdate')
-  l.param('tableName', tableName)
-  l.param('db', db)
-  l.param('row', row)
-
-  checkSchema(schema, tableName)
-  let table = schema[tableName]
-
-  if (! areAllNotGeneratedPrimaryKeyColumnsSet(table, row)) {
-    throw new Error(`At least one not generated primary key column (${getNotGeneratedPrimaryKeyColumns(table).join(', ')}) is not set. Enable logging for more details.`)
-  }
-
-  let hasNotGeneratedPrimaryKeys = false
-  let generatedPrimaryKeyCount = 0
-  let generatedPrimaryKeyIsNull = true
-  let generatedPrimaryKeyIsNotNull = true
-
-  for (let column of getPrimaryKey(table)) {
-    if (isGeneratedPrimaryKeyColumn(table, column)) {
-      generatedPrimaryKeyCount++
-
-      if (row[column] == null) {
-        generatedPrimaryKeyIsNotNull = false
-      }
-      else {
-        generatedPrimaryKeyIsNull = false
-      }
-    }
-    else {
-      hasNotGeneratedPrimaryKeys = true
-    }
-  }
-
-  if (generatedPrimaryKeyCount > 1) {
-    throw new Error(`The table ${tableName} has more than one generated primary key which is not valid.`)
-  }
-
-  if (generatedPrimaryKeyCount == 1 && ! generatedPrimaryKeyIsNull && ! generatedPrimaryKeyIsNotNull) {
-    throw new Error('There is a generated primary key which are null and generated primary keys which are not null. This is an inconsistent set of column values. Cannot determine if row is to be inserted or to be updated. Please enable logging for more details.')
-  }
-
-  if ((generatedPrimaryKeyCount == 1 && generatedPrimaryKeyIsNotNull || ! generatedPrimaryKeyCount) && hasNotGeneratedPrimaryKeys) {
-    l.lib('The row has not generated primary key columns. Determining if the row was already inserted.')
-    
-    let query = sql.select('*').from(tableName)
-
-    for (let column of getPrimaryKey(table)) {
-      query.where(comparison(column, row[column]), 'AND')
-    }
-
-    let rows
-    try {
-      rows = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as SelectResult
-    }
-    catch (e) {
-      throw new Error(e as any)
-    }
-
-    let alreadyInserted = rows.length == 1
-
-    if (alreadyInserted) {
-      l.lib('The row was already inserted')
-    }
-    else {
-      l.lib('The row was not already inserted')
-    }
-
-    l.returning('Returning', alreadyInserted)
-    return alreadyInserted
-  }
-
-  if (generatedPrimaryKeyCount == 1 && generatedPrimaryKeyIsNotNull) {
-    l.lib('The row does not have not generated primary key columns and all generated primary key columns are not null.')
-    l.returning('Returning true...')
-  }
-  else {
-    l.lib('The row does not have not generated primary key columns and all generated primary key columns are null.')
-    l.returning('Returning false...')
-  }
-
-  return generatedPrimaryKeyCount == 1 && generatedPrimaryKeyIsNotNull
+export interface StoreOptions {
+  asDatabaseRow?: boolean
 }
 
 /**
@@ -664,177 +437,102 @@ export async function store(
   return storeInfo
 }
 
-export async function select(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
-  let l = log.fn('select')
-  l.location = [ tableName ]
-  l.param('criteria', criteria)
-
-  let table = schema[tableName]
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
-  let query = buildSelectQuery(schema, tableName, criteria)
-  l.dev('Built SELECT query', query)
-
-  l.lib('Querying database with given SQL string and values...')
-  let joinedRows
-
-  try {
-    joinedRows = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as SelectResult
-  }
-  catch (e) {
-    throw new Error(e as any)
-  }
-
-  l.dev('Received rows', joinedRows)
-
-  l.calling('Unjoining rows for criteria...')
-  let rows = unjoinRows(schema, tableName, joinedRows, criteria, tableName + '__')
-  l.called('Unjoined rows for criteria...', criteria)
-  l.dev('Unjoined rows', rows)
-
-  l.calling('Determing relationships to load...')
-  let relationshipsToLoad = determineRelationshipsToLoad(schema, tableName, rows, criteria)
-  l.called('Determined relationships to load for criteria...', criteria)
-
-  l.lib('Loading all relationships that need to be loaded in a seperate query...', Object.keys(relationshipsToLoad))
-
-  for (let relationshipPath of Object.keys(relationshipsToLoad)) {
-    l.lib('Loading relationships for path', relationshipPath)
-
-    let relationshipToLoad = relationshipsToLoad[relationshipPath]
-    
-    let relationshipTable = schema[relationshipToLoad.tableName]
-    l.lib('Relationship table', relationshipTable)
-    l.lib('Relationship name', relationshipToLoad.relationshipName)
-
-    if (relationshipTable == undefined) {
-      throw new Error('Table not contained in schema: ' + relationshipToLoad.tableName)
-    }
-
-    let relationship = relationshipTable.relationships ? relationshipTable.relationships[relationshipToLoad.relationshipName] : undefined
-    if (relationship == undefined) {
-      throw new Error(`Relationship '${relationshipToLoad.relationshipName}' not contained table '${relationshipToLoad.tableName}'`)
-    }
-
-    let idsToLoad: any[] = []
-    for (let row of relationshipToLoad.rows) {
-      if (row[relationship.thisId] !== undefined) {
-        if (idsToLoad.indexOf(row[relationship.thisId]) == -1) {
-          idsToLoad.push(row[relationship.thisId])
-        }
-      }
-    }
-
-    let criteria = {
-      ...relationshipToLoad.relationshipCriteria
-    }
-
-    criteria[relationship.otherId] = idsToLoad
-
-    l.calling('Loading relationship rows with the following criteria', criteria)
-    let loadedRelationships = await select(schema, relationship.otherTable, db, queryFn, criteria)
-    l.called('Loaded relationship rows for criteria', criteria)
-    l.dev('Loaded relationship rows', loadedRelationships)
-
-    l.lib('Attaching relationship rows...')
-
-    for (let row of relationshipToLoad.rows) {
-      l.dev('Attaching relationship row', row)
-
-      if (relationship.oneToMany === true) {
-        row[relationshipToLoad.relationshipName] = []
-      }
-      else {
-        row[relationshipToLoad.relationshipName] = null
-      }
-
-      for (let loadedRelationship of loadedRelationships) {
-        if (row[relationship.thisId] == loadedRelationship[relationship.otherId]) {
-          if (relationship.oneToMany === true) {
-            l.dev('Pushing into array of one-to-many...', loadedRelationship)
-            row[relationshipToLoad.relationshipName].push(loadedRelationship)
-          }
-          else {
-            l.dev('Setting property of many-to-one..', loadedRelationship)
-            row[relationshipToLoad.relationshipName] = loadedRelationship
-          }
-        }
-      }
-    }
-  }
-
-  l.returning('Returning rows...', rows)
-  return rows
+export interface RowEntry {
+  stored: boolean,
+  row: any,
+  afterSettingResultHandlers: ((result: any) => Promise<void>)[]
 }
 
-export async function update(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria): Promise<any[]> {
-  let l = log.fn('update')
-  l.param('tableName', tableName)
-  l.param('criteria', criteria)
+let storedRowsLog = log.cls('StoredRows')
 
-  let table = schema[tableName]
+export class StoredRows {
+  schema: Schema
+  rowEntries: RowEntry[] = []
 
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
+  constructor(schema: Schema) {
+    this.schema = schema
   }
 
-  let query = new Query
-  query.update(tableName)
-
-  for (let column of Object.keys(table.columns)) {
-    if (criteria[column] !== undefined) {
-      let value = criteria[column]
-      query.set(column, value)
+  setRowAboutToBeStored(row: any) {
+    if (! this.isRowContained(row)) {
+      this.rowEntries.push({
+        stored: false,
+        row: row,
+        afterSettingResultHandlers: []
+      } as RowEntry)
     }
   }
 
-  addCriteria(schema, tableName, query, criteria['@criteria'])
-
-  if (db == 'postgres') {
-    query.returning('*')
+  isRowAboutToBeStored(row: any): boolean {
+    let rowEntry = this.getRowEntry(row)
+    return rowEntry != undefined && ! rowEntry.stored
   }
 
-  let sqlString = query.sql(db)
-  let values = query.values()
+  async setRowStored(row: any): Promise<void> {
+    let l = storedRowsLog.mt('setRowStored')
+    let rowEntry = this.getRowEntry(row)
 
-  l.lib('SQL string', sqlString)
-  l.lib('Values', values)
+    if (rowEntry == undefined) {
+      throw new Error('Could not set result because the row object was not already fiddled with')
+    }
 
-  let updatedRows = await queryFn(sqlString, values)
+    rowEntry.stored = true
+
+    if (rowEntry.afterSettingResultHandlers.length > 0) {
+      l.lib('Calling every registered handler after the result was set')
   
-  l.returning('Returning updated rows...', updatedRows)
-  return updatedRows
-}
+      for (let fn of rowEntry.afterSettingResultHandlers) {
+        l.calling('Calling next result handler...')
+        await fn(rowEntry.row)
+        l.called('Called result handler')
+      }
+    }
+    else {
+      l.lib('There are no handler to be called after the result was set')
+    }
 
-export async function delete_(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
-  let l = log.fn('delete_')
-  l.param('tableName', tableName)
-  l.param('criteria', criteria)
-
-  let table = schema[tableName]
-
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
+    l.returning('Finished setting result. Returning...')
   }
 
-  let query = new Query
-  query.deleteFrom(tableName)
-  addCriteria(schema, tableName, query, criteria)
-
-  if (db == 'postgres') {
-    query.returning('*')
+  isRowStored(row: any): boolean {
+    let rowEntry = this.getRowEntry(row)
+    return rowEntry != undefined && rowEntry.stored
   }
 
-  let sqlString = query.sql(db)
-  let values = query.values()
+  getRowEntry(row: any): RowEntry|undefined {
+    for (let rowEntry of this.rowEntries) {
+      if (rowEntry.row === row) {
+        return rowEntry
+      }
+    }
+  }
 
-  l.lib('SQL string', sqlString)
-  l.lib('Values', values)
+  isRowContained(row: any): boolean {
+    return this.getRowEntry(row) != undefined
+  }
 
-  let deletedRows = await queryFn(sqlString, values)
-  
-  l.returning('Returning deleted rows...', deletedRows)
-  return deletedRows
+  remove(row: any) {
+    let index = -1
+
+    for (let i = 0; i < this.rowEntries.length; i++) {
+      if (this.rowEntries[i].row === row) {
+        index = i
+        break
+      }
+    }
+
+    if (index > -1) {
+      this.rowEntries.splice(index, 1)
+    }
+  }
+
+  addAfterStoredRowHandler(row: any, handler: (justStoredRow: any) => Promise<void>) {
+    let rowEntry = this.getRowEntry(row)
+
+    if (rowEntry == undefined) {
+      throw new Error('Could not addAfterStoredRowHandler because the given row object is was not added yet. Use \'setRowAboutToBeStored\' to do so.')
+    }
+
+    rowEntry.afterSettingResultHandlers.push(handler)
+  }
 }

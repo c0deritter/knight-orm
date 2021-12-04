@@ -1,9 +1,39 @@
 import { expect } from 'chai'
 import 'mocha'
-import { determineRelationshipsToLoad, instanceToRow, rowsRepresentSameEntity, rowToInstance, unjoinRows } from '../src/rowTools'
+import { Pool, PoolConfig } from 'pg'
+import { instanceToRow, isUpdate, rowsRepresentSameEntity, rowToInstance, unjoinRows } from '../src/row'
 import { ManyToManyObject2, Object1, Object2, schema } from './testSchema'
 
-describe('rowTools', function() {
+let pool: Pool = new Pool({
+  host: 'postgres',
+  database: 'sqlorm_test',
+  user: 'sqlorm_test',
+  password: 'sqlorm_test'
+} as PoolConfig)
+
+function pgQueryFn(sqlString: string, values?: any[]): Promise<any> {
+  return pool.query(sqlString, values)
+}
+
+describe('row', function() {
+  after(async function() {
+    await pool.end()
+  })
+
+  beforeEach(async function() {
+    await pool.query('CREATE TABLE table1 (id SERIAL, column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP, many_to_one_object1_id INTEGER, many_to_one_object2_id VARCHAR(20), one_to_one_object1_id INTEGER, one_to_one_object2_id VARCHAR(20), one_to_many_object1_many_to_one_id INTEGER)')
+    await pool.query('CREATE TABLE table2 (id VARCHAR(20), column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP, one_to_one_object1_id INTEGER, one_to_many_object2_many_to_one_id INTEGER)')
+    await pool.query('CREATE TABLE many_to_many_table1 (table1_id1 INTEGER, table1_id2 INTEGER, column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP)')
+    await pool.query('CREATE TABLE many_to_many_table2 (table1_id INTEGER, table2_id VARCHAR(20), column1 VARCHAR(20), column2 INTEGER, column3 TIMESTAMP)')
+  })
+
+  afterEach(async function() {
+    await pool.query('DROP TABLE IF EXISTS table1 CASCADE')
+    await pool.query('DROP TABLE IF EXISTS table2 CASCADE')
+    await pool.query('DROP TABLE IF EXISTS many_to_many_table1 CASCADE')
+    await pool.query('DROP TABLE IF EXISTS many_to_many_table2 CASCADE')
+  })
+
   describe('instanceToRow', function() {
     it('should convert an instance to a row', function() {
       let object1 = new Object1
@@ -220,6 +250,73 @@ describe('rowTools', function() {
         manyToOneObject1Id: 2,
         oneToOneObject1Id: 3
       })
+    })
+  })
+
+  describe('isUpdate', function() {
+    it('should return false if the generated primary key is not set', async function() {
+      let row = {
+      }
+
+      let result = await isUpdate(schema, 'table1', 'postgres', pgQueryFn, row)
+
+      expect(result).to.be.false
+    })
+
+    it('should return true if the generated primary key is already set', async function() {
+      let row = {
+        id: 1
+      }
+
+      let result = await isUpdate(schema, 'table1', 'postgres', pgQueryFn, row)
+
+      expect(result).to.be.true
+    })
+
+    it('should return false if a row with the not generated primary does not exist', async function() {
+      let row = {
+        id: 'x'
+      }
+
+      let result = await isUpdate(schema, 'table2', 'postgres', pgQueryFn, row)
+
+      expect(result).to.be.false
+    })
+
+    it('should return true if a row with the not generated primary does already exist', async function() {
+      await pgQueryFn('INSERT INTO table2 (id) VALUES (\'x\')')
+
+      let row = {
+        id: 'x'
+      }
+
+      let result = await isUpdate(schema, 'table2', 'postgres', pgQueryFn, row)
+
+      expect(result).to.be.true
+    })
+
+    it('should return false if a row with the composite primary key does not exist', async function() {
+      let row = {
+        table1_id: 1,
+        table2_id: 'x'
+      }
+
+      let result = await isUpdate(schema, 'many_to_many_table2', 'postgres', pgQueryFn, row)
+
+      expect(result).to.be.false
+    })
+
+    it('should return true if a row with the composite primary key does already exist', async function() {
+      await pgQueryFn('INSERT INTO many_to_many_table2 (table1_id, table2_id) VALUES (1, \'x\')')
+
+      let row = {
+        table1_id: 1,
+        table2_id: 'x'
+      }
+
+      let result = await isUpdate(schema, 'many_to_many_table2', 'postgres', pgQueryFn, row)
+
+      expect(result).to.be.true
     })
   })
 
@@ -835,177 +932,6 @@ describe('rowTools', function() {
 
       expect(rowsRepresentSameEntity(schema['many_to_many_table2'], row3, row4)).to.be.false
       expect(rowsRepresentSameEntity(schema['many_to_many_table2'], row3, row4)).to.be.false
-    })
-  })
-
-  describe('determineRelationshipsToLoad', function() {
-    it('should not load a relationship which does not have any criteria', function() {
-      let criteria = {}
-      let rows = [
-        { column1: 'a', column2: 1 },
-        { column1: 'b', column2: 2 },
-        { column1: 'c', column2: 3 },
-      ]
-
-      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
-
-      expect(Object.keys(toLoad).length).to.equal(0)
-    })
-
-    it('should load a relationship which should be loaded separately', function() {
-      let criteria = { manyToManyObject2: { '@loadSeparately': true }}
-      let rows = [
-        { column1: 'a', column2: 1 },
-        { column1: 'b', column2: 2 },
-        { column1: 'c', column2: 3 },
-      ]
-
-      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
-
-      expect(Object.keys(toLoad).length).to.equal(1)
-      expect(toLoad['.manyToManyObject2']).to.deep.equal({
-        tableName: 'table1',
-        relationshipName: 'manyToManyObject2',
-        relationshipCriteria: { '@loadSeparately': true },
-        rows: [
-          { column1: 'a', column2: 1 },
-          { column1: 'b', column2: 2 },
-          { column1: 'c', column2: 3 },
-        ]
-      })
-    })
-
-    it('should not load a relationship which should be not loaded separately', function() {
-      let criteria = { manyToManyObject2: { '@loadSeparately': false }}
-      let rows = [
-        { column1: 'a', column2: 1 },
-        { column1: 'b', column2: 2 },
-        { column1: 'c', column2: 3 },
-      ]
-
-      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
-
-      expect(Object.keys(toLoad).length).to.equal(0)
-    })
-
-    it('should determine the relationships to load of an already JOIN loaded relationship', function() {
-      let criteria = { manyToManyObject2: { '@load': true, object1: { '@load': true }, object2: { '@loadSeparately': true }}}
-      let rows = [
-        { column1: 'a', column2: 1, manyToManyObject2: [ { column1: 'a1' }, { column1: 'a2' } ] },
-        { column1: 'b', column2: 2, manyToManyObject2: [ { column1: 'b1' } ] },
-        { column1: 'c', column2: 3, manyToManyObject2: [] },
-      ]
-
-      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
-
-      expect(Object.keys(toLoad).length).to.equal(1)
-      expect(toLoad['.manyToManyObject2.object2']).to.deep.equal({
-        tableName: 'many_to_many_table2',
-        relationshipName: 'object2',
-        relationshipCriteria: { '@loadSeparately': true },
-        rows: [
-          { column1: 'a1' },
-          { column1: 'a2' },
-          { column1: 'b1' },
-        ]
-      })
-    })
-
-    it('should not determine the relationships to load of relationship that is not to load', function() {
-      let criteria = { manyToManyObject2: { object1: { '@load': true }, object2: { '@loadSeparately': true }}}
-      let rows = [
-        { column1: 'a', column2: 1, manyToManyObject2: [ { column1: 'a1' }, { column1: 'a2' } ] },
-        { column1: 'b', column2: 2, manyToManyObject2: [ { column1: 'b1' } ] },
-        { column1: 'c', column2: 3, manyToManyObject2: [] },
-      ]
-
-      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
-
-      expect(Object.keys(toLoad).length).to.equal(0)
-    })
-
-    it('should determine the relationships to load if inside an array', function() {
-      let criteria = [
-        { manyToManyObject2: { '@loadSeparately': true }},
-        'XOR',
-        {}
-      ]
-
-      let rows = [
-        { column1: 'a', column2: 1 },
-        { column1: 'b', column2: 2 },
-        { column1: 'c', column2: 3 },
-      ]
-
-      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
-
-      expect(Object.keys(toLoad).length).to.equal(1)
-      expect(toLoad['.manyToManyObject2']).to.deep.equal({
-        tableName: 'table1',
-        relationshipName: 'manyToManyObject2',
-        relationshipCriteria: { '@loadSeparately': true },
-        rows: [
-          { column1: 'a', column2: 1 },
-          { column1: 'b', column2: 2 },
-          { column1: 'c', column2: 3 },
-        ]
-      })
-    })
-
-    it('should determine the relationships to load if inside an array of an array', function() {
-      let criteria = [
-        [ { manyToManyObject2: { '@loadSeparately': true }} ],
-        'XOR',
-        {}
-      ]
-
-      let rows = [
-        { column1: 'a', column2: 1 },
-        { column1: 'b', column2: 2 },
-        { column1: 'c', column2: 3 },
-      ]
-
-      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
-
-      expect(Object.keys(toLoad).length).to.equal(1)
-      expect(toLoad['.manyToManyObject2']).to.deep.equal({
-        tableName: 'table1',
-        relationshipName: 'manyToManyObject2',
-        relationshipCriteria: { '@loadSeparately': true },
-        rows: [
-          { column1: 'a', column2: 1 },
-          { column1: 'b', column2: 2 },
-          { column1: 'c', column2: 3 },
-        ]
-      })
-    })
-
-    it('should use the criteria of first occuring relationship if there is not just one criteria for that relationship', function() {
-      let criteria = [
-        { manyToManyObject2: { '@loadSeparately': true, column1: 'a' }},
-        'XOR',
-        { manyToManyObject2: { '@loadSeparately': true, column1: 'b' }}
-      ]
-
-      let rows = [
-        { column1: 'a', column2: 1 },
-        { column1: 'b', column2: 2 },
-        { column1: 'c', column2: 3 },
-      ]
-
-      let toLoad = determineRelationshipsToLoad(schema, 'table1', rows, criteria)
-
-      expect(Object.keys(toLoad).length).to.equal(1)
-      expect(toLoad['.manyToManyObject2']).to.deep.equal({
-        tableName: 'table1',
-        relationshipName: 'manyToManyObject2',
-        relationshipCriteria: { '@loadSeparately': true, column1: 'a' },
-        rows: [
-          { column1: 'a', column2: 1 },
-          { column1: 'b', column2: 2 },
-          { column1: 'c', column2: 3 },
-        ]
-      })
     })
   })
 })

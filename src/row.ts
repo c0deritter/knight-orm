@@ -1,6 +1,7 @@
-import { Criteria, CriteriaObject, summarizeCriteria } from 'knight-criteria'
+import { Criteria, summarizeCriteria } from 'knight-criteria'
 import { Log } from 'knight-log'
-import { getNotGeneratedPrimaryKeyColumns } from '.'
+import sql, { comparison } from 'knight-sql'
+import { checkSchema, databaseIndependentQuery, getNotGeneratedPrimaryKeyColumns, isGeneratedPrimaryKeyColumn, SelectResult } from '.'
 import { getPrimaryKey, getPropertyName, isPrimaryKeyColumn, Schema, Table } from './Schema'
 
 let log = new Log('knight-orm/rowTools.ts')
@@ -222,6 +223,97 @@ export function rowToInstance(schema: Schema, tableName: string, row: any, alrea
 
   l.returning('Returning instance...' ,instance)
   return instance
+}
+
+export async function isUpdate(
+  schema: Schema,
+  tableName: string,
+  db: string,
+  queryFn: (sqlString: string, values?: any[]) => Promise<any>,
+  row: any
+): Promise<boolean> {
+  
+  let l = log.fn('isUpdate')
+  l.param('tableName', tableName)
+  l.param('db', db)
+  l.param('row', row)
+
+  checkSchema(schema, tableName)
+  let table = schema[tableName]
+
+  if (! areAllNotGeneratedPrimaryKeyColumnsSet(table, row)) {
+    throw new Error(`At least one not generated primary key column (${getNotGeneratedPrimaryKeyColumns(table).join(', ')}) is not set. Enable logging for more details.`)
+  }
+
+  let hasNotGeneratedPrimaryKeys = false
+  let generatedPrimaryKeyCount = 0
+  let generatedPrimaryKeyIsNull = true
+  let generatedPrimaryKeyIsNotNull = true
+
+  for (let column of getPrimaryKey(table)) {
+    if (isGeneratedPrimaryKeyColumn(table, column)) {
+      generatedPrimaryKeyCount++
+
+      if (row[column] == null) {
+        generatedPrimaryKeyIsNotNull = false
+      }
+      else {
+        generatedPrimaryKeyIsNull = false
+      }
+    }
+    else {
+      hasNotGeneratedPrimaryKeys = true
+    }
+  }
+
+  if (generatedPrimaryKeyCount > 1) {
+    throw new Error(`The table ${tableName} has more than one generated primary key which is not valid.`)
+  }
+
+  if (generatedPrimaryKeyCount == 1 && ! generatedPrimaryKeyIsNull && ! generatedPrimaryKeyIsNotNull) {
+    throw new Error('There is a generated primary key which are null and generated primary keys which are not null. This is an inconsistent set of column values. Cannot determine if row is to be inserted or to be updated. Please enable logging for more details.')
+  }
+
+  if ((generatedPrimaryKeyCount == 1 && generatedPrimaryKeyIsNotNull || ! generatedPrimaryKeyCount) && hasNotGeneratedPrimaryKeys) {
+    l.lib('The row has not generated primary key columns. Determining if the row was already inserted.')
+    
+    let query = sql.select('*').from(tableName)
+
+    for (let column of getPrimaryKey(table)) {
+      query.where(comparison(column, row[column]), 'AND')
+    }
+
+    let rows
+    try {
+      rows = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as SelectResult
+    }
+    catch (e) {
+      throw new Error(e as any)
+    }
+
+    let alreadyInserted = rows.length == 1
+
+    if (alreadyInserted) {
+      l.lib('The row was already inserted')
+    }
+    else {
+      l.lib('The row was not already inserted')
+    }
+
+    l.returning('Returning', alreadyInserted)
+    return alreadyInserted
+  }
+
+  if (generatedPrimaryKeyCount == 1 && generatedPrimaryKeyIsNotNull) {
+    l.lib('The row does not have not generated primary key columns and all generated primary key columns are not null.')
+    l.returning('Returning true...')
+  }
+  else {
+    l.lib('The row does not have not generated primary key columns and all generated primary key columns are null.')
+    l.returning('Returning false...')
+  }
+
+  return generatedPrimaryKeyCount == 1 && generatedPrimaryKeyIsNotNull
 }
 
 /**
@@ -545,143 +637,4 @@ export function idsNotSet(table: Table, row: any): string[] {
   }
 
   return idsNotSet
-}
-
-export interface RelationshipsToLoad {
-  [ relationshipPath: string ]: RelationshipToLoad
-}
-
-export interface RelationshipToLoad {
-  tableName: string
-  relationshipName: string
-  relationshipCriteria: CriteriaObject
-  rows: any[]
-}
-
-export function determineRelationshipsToLoad(schema: Schema, tableName: string, rows: any[], criteria: Criteria, relationshipPath: string = '', relationshipsToLoad: RelationshipsToLoad = {}): RelationshipsToLoad {
-  let l = log.fn('determineRelationshipsToLoad')
-  
-  if (relationshipPath.length > 0) {
-    l.location = [ relationshipPath ]
-  }
-  else {
-    l.location = [ '.' ]
-  }
-
-  l.param('tableName', tableName)
-  l.param('rows', rows)
-  l.param('criteria', criteria)
-  l.param('relationshipPath', relationshipPath)
-  l.param('relationshipsToLoad', relationshipsToLoad)
-
-  let table = schema[tableName]
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
-  if (table.relationships == undefined) {
-    l.returning('There are not any relationships. Returning...')
-    return {}
-  }
-
-  if (criteria instanceof Array) {
-    l.lib('Criteria is an array')
-
-    for (let criterium of criteria) {
-      if (criterium instanceof Array || typeof criterium == 'object') {
-        l.lib('Determining relationships to load of', criterium)
-        determineRelationshipsToLoad(schema, tableName, rows, criterium, relationshipPath, relationshipsToLoad)
-        l.lib('Determined relationships to load of', criterium)
-      }
-    }
-  }
-  else if (typeof criteria == 'object') {
-    l.lib('Criteria is an object')
-    l.lib('Iterating through all possible relationships', Object.keys(table.relationships))
-    
-    l.location.push('->')
-
-    for (let relationshipName of Object.keys(table.relationships)) {
-      l.location[2] = relationshipName
-  
-      let relationshipCriteria = criteria[relationshipName]
-      if (relationshipCriteria == undefined) {
-        l.lib('There are no criteria. Processing next relationship...')
-        continue
-      }
-  
-      l.lib('Found criteria', relationshipCriteria)
-  
-      let subRelationshipPath = relationshipPath + '.' + relationshipName
-      l.lib('Creating relationship path', subRelationshipPath)
-  
-      if (relationshipCriteria['@loadSeparately'] === true) {
-        l.lib('Relationship should be loaded separately')
-  
-        if (relationshipsToLoad[subRelationshipPath] == undefined) {
-          relationshipsToLoad[subRelationshipPath] = {
-            tableName: tableName,
-            relationshipName: relationshipName,
-            relationshipCriteria: relationshipCriteria,
-            rows: rows
-          }
-        }
-      }
-      else if (relationshipCriteria['@load'] === true) {
-        let relationship = table.relationships ? table.relationships[relationshipName] : undefined
-        if (relationship == undefined) {
-          throw new Error(`Relationship '${relationshipName}' not contained table '${tableName}'`)
-        }
-  
-        let otherTable = schema[relationship.otherTable]
-        if (otherTable == undefined) {
-          throw new Error('Table not contained in schema: ' + relationship.otherTable)
-        }
-  
-        let relationshipRows = []
-        
-        for (let row of rows) {
-          if (relationship.manyToOne && row[relationshipName] != undefined || 
-              relationship.oneToMany && row[relationshipName] instanceof Array && row[relationshipName].length > 0) {
-            
-            if (relationship.manyToOne) {
-              relationshipRows.push(row[relationshipName])
-            }
-            else {
-              relationshipRows.push(...row[relationshipName])
-            }
-          }
-        }
-  
-        l.lib('Relationship was already loaded through a JOIN. Determining relationships of the relationship. Going into recursion...')
-  
-        determineRelationshipsToLoad(
-          schema, 
-          relationship.otherTable, 
-          relationshipRows, 
-          relationshipCriteria, 
-          subRelationshipPath,
-          relationshipsToLoad
-        )
-  
-        l.lib('Returning from recursion...')
-      }
-      else {
-        l.lib('Relationship should not be loaded')
-      }
-    }  
-  }
-  else {
-    l.lib('Criteria has an invalid type. Needs to be either an array or an object.', typeof criteria)
-  }
-
-  if (relationshipPath.length > 0) {
-    l.location = [ relationshipPath ]
-  }
-  else {
-    l.location = undefined
-  }
-
-  l.returning('Returning relationships to load...', relationshipsToLoad)
-  return relationshipsToLoad
 }
