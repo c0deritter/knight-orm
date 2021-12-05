@@ -3,40 +3,40 @@ import { Log } from 'knight-log'
 import sql from 'knight-sql'
 import { buildCountQuery, delete_ as criteriaDelete, instanceCriteriaToRowCriteria, select } from './criteria'
 import { store, StoredRows } from './orm'
-import { idsNotSet, instanceToRow, rowToInstance } from './row'
-import { Schema } from './Schema'
+import { idsNotSet } from './row'
+import { Table } from './schema'
 
 let log = new Log('knight-orm/crud.ts')
 
-export async function create<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
+export async function create<T>(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
   let l = log.fn('create')
   l.param('db', db)
   l.param('instance', instance)
 
-  let row = instanceToRow(schema, tableName, instance)
+  let row = table.instanceToRow(instance)
   l.lib('row', row)
-  let insertedRow = await store(schema, tableName, db, queryFn, row)
+  let insertedRow = await store(table, db, queryFn, row)
   l.lib('insertedRow', insertedRow)
-  let insertedInstance = rowToInstance(schema, tableName, insertedRow)
+  let insertedInstance = table.rowToInstance(insertedRow)
   l.returning('Returning insertedInstance...', insertedInstance)
   return insertedInstance
 }
 
-export async function read<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<T[]> {
+export async function read<T>(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<T[]> {
   let l = log.fn('read')
-  l.param('tableName', tableName)
+  l.param('table.name', table.name)
   l.param('criteria', criteria)
 
-  let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
+  let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
   l.lib('rowCriteria', rowCriteria)
 
-  let rows = await select(schema, tableName, db, queryFn, rowCriteria)
+  let rows = await select(table, db, queryFn, rowCriteria)
   l.lib('rows', rows)
 
   let instances: T[] = []
 
   for (let row of rows) {
-    let instance = rowToInstance(schema, tableName, row)
+    let instance = table.rowToInstance(row)
     instances.push(instance)
   }
   
@@ -44,20 +44,15 @@ export async function read<T>(schema: Schema, tableName: string, db: string, que
   return instances
 }
 
-export async function count(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<number> {
+export async function count(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<number> {
   let l = log.fn('count')
   l.param('db', db)
   l.param('criteria', criteria)
 
-  let table = schema[tableName]
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
-  let rowCriteria = instanceCriteriaToRowCriteria(schema, tableName, criteria)
+  let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
   l.lib('rowCriteria', rowCriteria)
 
-  let query = buildCountQuery(schema, tableName, rowCriteria)
+  let query = buildCountQuery(table, rowCriteria)
 
   let sqlString = query.sql(db)
   let values = query.values()
@@ -72,16 +67,11 @@ export async function count(schema: Schema, tableName: string, db: string, query
   return rowCount
 }
 
-export async function update<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: Partial<T>, alreadyUpdatedRows: StoredRows = new StoredRows(schema)): Promise<T> {
+export async function update<T>(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: Partial<T>, alreadyUpdatedRows: StoredRows = new StoredRows): Promise<T> {
   let l = log.fn('update')
   l.param('db', db)
   l.param('instance', instance)
   l.param('alreadyUpdatedRows', alreadyUpdatedRows.rowEntries)
-
-  let table = schema[tableName]
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
 
   let row = {} //table.instanceToRow(instance) TODO: !!!
   l.lib('row', row)
@@ -116,7 +106,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
 
   if (hasValuesToSet) {
     l.lib('There is something to set. Updating...')
-    let query = sql.update(tableName)
+    let query = sql.update(table.name)
     // fillUpdateCriteria(query, criteria, Object.keys(table.columns))
 
     // if (query._where && query._where.pieces && query._where.pieces.length > 0)
@@ -146,7 +136,7 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
     // remove the set property from the criteria to only have left the ids for selecting
     delete (criteria as any).set
 
-    let query = sql.select('*').from(tableName)
+    let query = sql.select('*').from(table.name)
     // fillReadCriteria(query, criteria, Object.keys(table.columns))
 
     let sqlString = query.sql(db)
@@ -167,28 +157,26 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   l.lib('Update relationships...')
 
   if (table.relationships != undefined) {
-    for (let relationshipName of Object.keys(table.relationships)) {
-      l.lib('relationshipName', relationshipName)
+    for (let relationship of table.relationships) {
+      l.lib('relationshipName', relationship.name)
   
-      if (typeof (instance as any)[relationshipName] == 'object' && (instance as any)[relationshipName] !== null) {
-        let relationship = table.relationships[relationshipName]
-  
+      if (typeof (instance as any)[relationship.name] == 'object' && (instance as any)[relationship.name] !== null) {
         if (relationship.manyToOne) {
           l.lib('Many-to-one relationship')
           l.lib('Updating. Going into recursion...')
-          let updatedRelationshipInstance = await update(schema, relationship.otherTable, db, queryFn, (instance as any)[relationshipName], alreadyUpdatedRows)
+          let updatedRelationshipInstance = await update(relationship.otherTable, db, queryFn, (instance as any)[relationship.name], alreadyUpdatedRows)
           l.returning('Returning from recursion...')
-          updatedInstance[relationshipName] = updatedRelationshipInstance
+          updatedInstance[relationship.name] = updatedRelationshipInstance
         }
-        else if ((instance as any)[relationshipName] instanceof Array) {
+        else if ((instance as any)[relationship.name] instanceof Array) {
           l.lib('One-to-many relationship. Iterating through all relationhip rows...')
-          updatedInstance[relationshipName] = []
+          updatedInstance[relationship.name] = []
   
-          for (let relationshipInstance of (instance as any)[relationshipName]) {
+          for (let relationshipInstance of (instance as any)[relationship.name]) {
             l.lib('Updating. Going into recursion...')
-            let updatedRelationshipInstance = await update(schema, relationship.otherTable, db, queryFn, relationshipInstance, alreadyUpdatedRows)
+            let updatedRelationshipInstance = await update(relationship.otherTable, db, queryFn, relationshipInstance, alreadyUpdatedRows)
             l.returning('Returning from recursion...')            
-            updatedInstance[relationshipName].push(updatedRelationshipInstance)
+            updatedInstance[relationship.name].push(updatedRelationshipInstance)
           }
         }
         else {
@@ -205,15 +193,9 @@ export async function update<T>(schema: Schema, tableName: string, db: string, q
   return updatedInstance
 }
 
-export async function delete_<T>(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
+export async function delete_<T>(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: T): Promise<T> {
   let l = log.fn('delete_')
   l.param('instance', instance)
-
-  let table = schema[tableName]
-
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
 
   let criteria = {} //instanceToDeleteCriteria(schema, tableName, instance)
   l.lib('Converted instance to delete criteria', criteria)
@@ -225,7 +207,7 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
     throw new Error('Not all id\'s are set. ' + JSON.stringify(missingIdValues))
   }
 
-  let deletedRows = await criteriaDelete(schema, tableName, db, queryFn, criteria)
+  let deletedRows = await criteriaDelete(table, db, queryFn, criteria)
   l.lib('deletedRows', deletedRows)
 
   if (deletedRows.length != 1) {
@@ -233,7 +215,7 @@ export async function delete_<T>(schema: Schema, tableName: string, db: string, 
   }
 
   let deletedRow = deletedRows[0]
-  let deletedInstance = rowToInstance(schema, tableName, deletedRow)
+  let deletedInstance = table.rowToInstance(deletedRow)
   l.returning('Returning deleted instance...', deletedInstance)
   return deletedInstance
 }

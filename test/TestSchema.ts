@@ -1,4 +1,4 @@
-import { Schema } from '../src/Schema'
+import { Schema } from '../src/schema'
 
 export class Object1 {
   id?: number
@@ -57,8 +57,10 @@ export class ManyToManyObject2 {
   object2?: Object2
 }
 
-export const schema = {
-  'table1': {
+export const schema = new Schema
+
+schema.addTable('table1',
+  {
     columns: {
       'id': { property: 'id', primaryKey: true, generated: true },
       'column1': 'property1',
@@ -129,88 +131,90 @@ export const schema = {
       }
     },
     newInstance: () => new Object1
-  },
-  
-  'table2': {
-    columns: {
-      'id': { property: 'id', primaryKey: true },
-      'column1': 'property1',
-      'column2': 'property2',
-      'column3': 'property3',
-      'one_to_one_object1_id': 'oneToOneObject1Id',
-      'one_to_many_object2_many_to_one_id': 'oneToManyObject2ManyToOneId'
-    },
-    relationships: {
-      oneToOneObject1: {
-        manyToOne: true,
-        thisId: 'one_to_one_object1_id',
-        otherTable: 'table1',
-        otherId: 'id',
-        otherRelationship: 'oneToOneObject2'
-      },
-      oneToManyObject2ManyToOne: {
-        manyToOne: true,
-        thisId: 'one_to_many_object2_many_to_one_id',
-        otherTable: 'table1',
-        otherId: 'id'
-      },
-      manyToManyObject2: {
-        oneToMany: true,
-        thisId: 'id',
-        otherTable: 'many_to_many_table2',
-        otherId: 'table2_id'
-      }
-    },
-    newInstance: () => new Object2
-  },
-
-  'many_to_many_table1': {
-    columns: {
-      'table1_id1': { property: 'object11Id', primaryKey: true },
-      'table1_id2': { property: 'object12Id', primaryKey: true },
-      'column1': 'property1',
-      'column2': 'property2',
-      'column3': 'property3'
-    },
-    relationships: {
-      object11: {
-        manyToOne: true,
-        thisId: 'table1_id1',
-        otherTable: 'table1',
-        otherId: 'id'
-      },
-      object12: {
-        manyToOne: true,
-        thisId: 'table1_id2',
-        otherTable: 'table1',
-        otherId: 'id'
-      }
-    },
-    newInstance: () => new ManyToManyObject1
-  },
-
-  'many_to_many_table2': {
-    columns: {
-      'table1_id': { property: 'object1Id', primaryKey: true },
-      'table2_id': { property: 'object2Id', primaryKey: true },
-      'column1': 'property1',
-      'column2': 'property2',
-      'column3': 'property3'
-    },
-    relationships: {
-      object1: {
-        manyToOne: true,
-        thisId: 'table1_id',
-        otherTable: 'table1',
-        otherId: 'id'
-      },
-      object2: {
-        manyToOne: true,
-        thisId: 'table2_id',
-        otherTable: 'table2',
-        otherId: 'id'
-      }
-    },
-    newInstance: () => new ManyToManyObject2
   }
-} as Schema
+)
+
+schema.addTable('table2', {
+  columns: {
+    'id': { property: 'id', primaryKey: true },
+    'column1': 'property1',
+    'column2': 'property2',
+    'column3': 'property3',
+    'one_to_one_object1_id': 'oneToOneObject1Id',
+    'one_to_many_object2_many_to_one_id': 'oneToManyObject2ManyToOneId'
+  },
+  relationships: {
+    oneToOneObject1: {
+      manyToOne: true,
+      thisId: 'one_to_one_object1_id',
+      otherTable: 'table1',
+      otherId: 'id',
+      otherRelationship: 'oneToOneObject2'
+    },
+    oneToManyObject2ManyToOne: {
+      manyToOne: true,
+      thisId: 'one_to_many_object2_many_to_one_id',
+      otherTable: 'table1',
+      otherId: 'id'
+    },
+    manyToManyObject2: {
+      oneToMany: true,
+      thisId: 'id',
+      otherTable: 'many_to_many_table2',
+      otherId: 'table2_id'
+    }
+  },
+  newInstance: () => new Object2
+})
+
+schema.addTable('many_to_many_table1', {
+  columns: {
+    'table1_id1': { property: 'object11Id', primaryKey: true },
+    'table1_id2': { property: 'object12Id', primaryKey: true },
+    'column1': 'property1',
+    'column2': 'property2',
+    'column3': 'property3'
+  },
+  relationships: {
+    object11: {
+      manyToOne: true,
+      thisId: 'table1_id1',
+      otherTable: 'table1',
+      otherId: 'id'
+    },
+    object12: {
+      manyToOne: true,
+      thisId: 'table1_id2',
+      otherTable: 'table1',
+      otherId: 'id'
+    }
+  },
+  newInstance: () => new ManyToManyObject1
+})
+
+schema.addTable('many_to_many_table2', {
+  columns: {
+    'table1_id': { property: 'object1Id', primaryKey: true },
+    'table2_id': { property: 'object2Id', primaryKey: true },
+    'column1': 'property1',
+    'column2': 'property2',
+    'column3': 'property3'
+  },
+  relationships: {
+    object1: {
+      manyToOne: true,
+      thisId: 'table1_id',
+      otherTable: 'table1',
+      otherId: 'id'
+    },
+    object2: {
+      manyToOne: true,
+      thisId: 'table2_id',
+      otherTable: 'table2',
+      otherId: 'id'
+    }
+  },
+  newInstance: () => new ManyToManyObject2
+})
+
+schema.check()

@@ -44,7 +44,7 @@ describe('orm', function() {
         column1: 'a'
       }
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -76,7 +76,7 @@ describe('orm', function() {
         }
       }
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -123,7 +123,7 @@ describe('orm', function() {
         }
       }
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 2,
@@ -171,7 +171,7 @@ describe('orm', function() {
         }
       }
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -222,7 +222,7 @@ describe('orm', function() {
 
       row.oneToOneObject2.oneToOneObject1 = row
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -269,7 +269,7 @@ describe('orm', function() {
         }
       }
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 2,
@@ -319,7 +319,7 @@ describe('orm', function() {
 
       row.oneToOneObject1.oneToOneObject1 = row
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 2,
@@ -366,7 +366,7 @@ describe('orm', function() {
 
       row.oneToOneObject1 = row
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
       
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -404,7 +404,7 @@ describe('orm', function() {
         ]
       }
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -479,7 +479,7 @@ describe('orm', function() {
       row.oneToManyObject2[0].oneToManyObject2ManyToOne = row
       row.oneToManyObject2[1].oneToManyObject2ManyToOne = row
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -547,7 +547,7 @@ describe('orm', function() {
         ]
       }
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -623,7 +623,7 @@ describe('orm', function() {
       row.oneToManyObject1[0].oneToManyObject1ManyToOne = row
       row.oneToManyObject1[1].oneToManyObject1ManyToOne = row
       
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -702,7 +702,7 @@ describe('orm', function() {
         ]
       }
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -817,7 +817,7 @@ describe('orm', function() {
       row.manyToManyObject2[1].object1 = row
       row.manyToManyObject2[1].object2.manyToManyObject2.push(row.manyToManyObject2[1])
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -921,7 +921,7 @@ describe('orm', function() {
         ]
       }
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -1037,7 +1037,7 @@ describe('orm', function() {
       row.manyToManyObject1[1].object11 = row
       row.manyToManyObject1[1].object12.manyToManyObject1.push(row.manyToManyObject1[1])
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -1138,7 +1138,7 @@ describe('orm', function() {
 
       row.manyToManyObject1[0].object12 = row
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -1189,7 +1189,7 @@ describe('orm', function() {
         column1: 'b'
       }
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,
@@ -1225,7 +1225,7 @@ describe('orm', function() {
         }
       }
 
-      let storeInfo = await store(schema, 'table1', 'postgres', pgQueryFn, row)
+      let storeInfo = await store(schema.getTable('table1'), 'postgres', pgQueryFn, row, { asDatabaseRow: true })
 
       expect(storeInfo).to.deep.equal({
         id: 1,

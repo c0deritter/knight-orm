@@ -3,21 +3,11 @@ import { Log } from 'knight-log'
 import { comparison, Condition, Query } from 'knight-sql'
 import { databaseIndependentQuery, selectAllColumnsExplicitly, SelectResult } from './query'
 import { unjoinRows } from './row'
-import { getColumnName, getPropertyName, Schema } from './Schema'
+import { Relationship, Table } from './schema'
 
 let log = new Log('knight-orm/criteria.ts')
 
-export function validateCriteria(schema: Schema, tableName: string, criteria: Criteria, path: string = ''): CriteriaIssue[] {
-  let table = schema[tableName]
-
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
-  if (table.columns == undefined) {
-    throw new Error('Table does not define any columns: ' + tableName)
-  }
-
+export function validateCriteria(table: Table, criteria: Criteria, path: string = ''): CriteriaIssue[] {
   let issues: CriteriaIssue[] = []
 
   if (criteria == undefined) {
@@ -27,29 +17,19 @@ export function validateCriteria(schema: Schema, tableName: string, criteria: Cr
   if (criteria instanceof Array) {
     for (let criterium of criteria) {
       if (typeof criterium == 'object') {
-        let criteriumIssues = validateCriteria(schema, tableName, criterium)
+        let criteriumIssues = validateCriteria(table, criterium)
         issues.push(...criteriumIssues)
       }
     }
   }
 
   else if (typeof criteria == 'object' && criteria !== null) {
-    let columnNames = Object.keys(table.columns)
-    
-    let relationshipNames: string[]
-    if (table.relationships != undefined) {
-      relationshipNames = Object.keys(table.relationships)
-    }
-    else {
-      relationshipNames = []
-    }
-
     for (let key of Object.keys(criteria)) {
-      if (columnNames.indexOf(key) > -1) {
+      if (table.columnNames.indexOf(key) > -1) {
         continue
       }
 
-      if (relationshipNames.indexOf(key) > -1) {
+      if (table.relationshipNames.indexOf(key) > -1) {
         continue
       }
 
@@ -64,10 +44,9 @@ export function validateCriteria(schema: Schema, tableName: string, criteria: Cr
       })
     }
 
-    for (let relationshipName of relationshipNames) {
-      if (criteria[relationshipName] != undefined) {
-        let relationship = table.relationships![relationshipName]
-        let relationshipIssues = validateCriteria(schema, relationship.otherTable, criteria[relationshipName], path + relationshipName + '.')
+    for (let relationship of table.relationships) {
+      if (criteria[relationship.name] != undefined) {
+        let relationshipIssues = validateCriteria(relationship.otherTable, criteria[relationship.name], path + relationship.name + '.')
         issues.push(...relationshipIssues)
       }
     }
@@ -85,16 +64,11 @@ export function validateCriteria(schema: Schema, tableName: string, criteria: Cr
  * @param instanceCriteria The criteria referring properties from the object world
  * @returns Criteria referring columns of the database world
  */
-export function instanceCriteriaToRowCriteria(schema: Schema, tableName: string, instanceCriteria: Criteria): Criteria {
+export function instanceCriteriaToRowCriteria(table: Table, instanceCriteria: Criteria): Criteria {
   let l = log.fn('instanceCriteriaToRowCriteria')
-  l.param('tableName', tableName)
+  l.param('table.name', table.name)
   l.param('instanceCriteria', instanceCriteria)
   
-  let table = schema[tableName]
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
   if (instanceCriteria instanceof Array) {
     l.lib('Given instance criteria are of type array')
     let rowCriteria = []
@@ -102,7 +76,7 @@ export function instanceCriteriaToRowCriteria(schema: Schema, tableName: string,
     for (let instanceCriterium of instanceCriteria) {
       if (typeof instanceCriterium == 'object' && instanceCriterium !== null) {
         l.calling('Converting criteria object to refer database columns')
-        let rowCriterium = instanceCriteriaToRowCriteria(schema, tableName, instanceCriterium)
+        let rowCriterium = instanceCriteriaToRowCriteria(table, instanceCriterium)
         l.called('Converted criteria object to refer database columns')
         l.lib('Adding converted criteria')
         rowCriteria.push(rowCriterium)
@@ -123,13 +97,12 @@ export function instanceCriteriaToRowCriteria(schema: Schema, tableName: string,
     l.lib('Given instance criteria are of type object')
     let rowCriteria: CriteriaObject = {}
 
-    for (let columnName of Object.keys(table.columns)) {
-      let propertyName = getPropertyName(table, columnName)
-      l.dev('Trying to add property as column', propertyName, columnName)
+    for (let column of table.columns) {
+      l.dev('Trying to add property as column', column.propertyName, column.name)
 
-      if (propertyName != undefined && propertyName in instanceCriteria) {
-        l.dev('Property contained. Adding.', instanceCriteria[propertyName])
-        rowCriteria[columnName] = instanceCriteria[propertyName]
+      if (column.propertyName in instanceCriteria) {
+        l.dev('Property contained. Adding.', instanceCriteria[column.propertyName])
+        rowCriteria[column.name] = instanceCriteria[column.propertyName]
       }
       else {
         l.dev('Property not contained. Not adding.')
@@ -138,31 +111,26 @@ export function instanceCriteriaToRowCriteria(schema: Schema, tableName: string,
 
     l.lib('Converted instance properties to database columns and set them on the result', rowCriteria)
   
-    if (table.relationships != undefined) {
-      let relationshipNames = Object.keys(table.relationships)
+    if (table.relationships.length > 0) {
+      l.lib('Convert relationships...')
+      l.location = []
 
-      if (relationshipNames.length > 0) {
-        l.lib('Convert relationships', relationshipNames)
-        l.location = []
+      for (let relationship of table.relationships) {
+        l.location[0] = relationship.name
+        l.lib('Converting next relationship', relationship.name)
 
-        for (let relationshipName of relationshipNames) {
-          l.location[0] = relationshipName
-          l.lib('Converting next relationship', relationshipName)
-
-          if (typeof instanceCriteria[relationshipName] == 'object' && instanceCriteria[relationshipName] !== null) {
-            let relationship = table.relationships[relationshipName]
-            l.calling('Converting relationship criteria to refer database columns')
-            let relationshipRowCriteria = instanceCriteriaToRowCriteria(schema, relationship.otherTable, instanceCriteria[relationshipName])
-            l.calling('Converted relationship criteria to refer database columns')
-            rowCriteria[relationshipName] = relationshipRowCriteria
-          }
-          else {
-            l.lib('Invalid relationship criteria found. Not adding.', instanceCriteria[relationshipName])
-          }
+        if (typeof instanceCriteria[relationship.name] == 'object' && instanceCriteria[relationship.name] !== null) {
+          l.calling('Converting relationship criteria to refer database columns')
+          let relationshipRowCriteria = instanceCriteriaToRowCriteria(relationship.otherTable, instanceCriteria[relationship.name])
+          l.calling('Converted relationship criteria to refer database columns')
+          rowCriteria[relationship.name] = relationshipRowCriteria
         }
-
-        l.location = undefined
+        else {
+          l.lib('Invalid relationship criteria found. Not adding.', instanceCriteria[relationship.name])
+        }
       }
+
+      l.location = undefined
     }
   
     for (let propertyName of Object.keys(instanceCriteria)) {
@@ -177,10 +145,10 @@ export function instanceCriteriaToRowCriteria(schema: Schema, tableName: string,
         let orderBy = instanceCriteria['@orderBy']
 
         if (typeof orderBy == 'string') {
-          let columnName = getColumnName(table, orderBy)
+          let column = table.getColumnByPropertyName(orderBy)
 
-          if (columnName != undefined) {
-            rowCriteria['@orderBy'] = columnName
+          if (column != undefined) {
+            rowCriteria['@orderBy'] = column.name
           }
         }
 
@@ -189,19 +157,19 @@ export function instanceCriteriaToRowCriteria(schema: Schema, tableName: string,
 
           for (let orderByElement of orderBy) {
             if (typeof orderByElement == 'string') {
-              let columnName = getColumnName(table, orderByElement)
+              let column = table.getColumnByPropertyName(orderByElement)
     
-              if (columnName != undefined) {
-                rowCriteria['@orderBy'].push(columnName)
+              if (column != undefined) {
+                rowCriteria['@orderBy'].push(column.name)
               }
             }
 
             else if (typeof orderByElement == 'object' && orderByElement !== null && 'field' in orderByElement) {
-              let columnName = getColumnName(table, orderByElement.field)
+              let column = table.getColumnByPropertyName(orderByElement.field)
 
-              if (columnName != undefined) {
+              if (column != undefined) {
                 let orderByObject: OrderBy = {
-                  field: columnName
+                  field: column.name
                 }
 
                 rowCriteria['@orderBy'].push(orderByObject)
@@ -215,11 +183,11 @@ export function instanceCriteriaToRowCriteria(schema: Schema, tableName: string,
         }
 
         else if (typeof orderBy == 'object' && orderBy !== null && 'field' in orderBy) {
-          let columnName = getColumnName(table, orderBy.field)
+          let column = table.getColumnByPropertyName(orderBy.field)
 
-          if (columnName != undefined) {
+          if (column != undefined) {
             let orderByObject: OrderBy = {
-              field: columnName
+              field: column.name
             }
 
             rowCriteria['@orderBy'] = orderByObject
@@ -240,9 +208,9 @@ export function instanceCriteriaToRowCriteria(schema: Schema, tableName: string,
   return instanceCriteria
 }
 
-export function addCriteria(schema: Schema, tableName: string, query: Query, criteria: Criteria | undefined, alias?: string, condition?: Condition) {
+export function addCriteria(table: Table, query: Query, criteria: Criteria | undefined, alias?: string, condition?: Condition) {
   let l = log.fn('addCriteria')
-  l.param('tableName', tableName)
+  l.param('table.name', table.name)
   l.param('query', query)
   l.param('criteria', criteria)
   l.param('alias', alias)
@@ -251,12 +219,6 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
   if (criteria == undefined) {
     l.returning('Criteria are undefined or null. Returning...')
     return
-  }
-
-  let table = schema[tableName]
-
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
   }
 
   if (condition == undefined) {
@@ -297,7 +259,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
       condition.push(subCondition)
 
       l.calling('Add sub criteria through recursion', arrayValue)
-      addCriteria(schema, tableName, query, arrayValue as any, alias, subCondition)
+      addCriteria(table, query, arrayValue as any, alias, subCondition)
       l.called('Added sub criteria through recursion')
     }
   }
@@ -306,7 +268,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
     if (criteria['@orderBy'] != undefined) {
       if (typeof criteria['@orderBy'] == 'string') {
-        if (table.columns[criteria['@orderBy']] != undefined) {
+        if (table.hasColumn(criteria['@orderBy'])) {
           l.lib('Adding order by', criteria['@orderBy'])
           query.orderBy(aliasPrefix + criteria['@orderBy'])
         }
@@ -319,7 +281,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
         for (let orderBy of criteria['@orderBy']) {
           if (typeof orderBy == 'string') {
-            if (table.columns[orderBy] != undefined) {
+            if (table.hasColumn(orderBy)) {
               l.lib('Adding order by', orderBy)
               query.orderBy(aliasPrefix + orderBy)
             }
@@ -329,7 +291,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
           }
           else if (typeof orderBy == 'object') {
             if (typeof orderBy.field == 'string') {
-              if (table.columns[orderBy.field] == undefined) {
+              if (! table.hasColumn(orderBy.field)) {
                 l.lib('Not adding order by because the given column is not contained in the table', orderBy)
                 continue
               }
@@ -364,7 +326,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
       }
       else if (typeof criteria['@orderBy'] == 'object') {
         if (typeof criteria['@orderBy'].field == 'string') {
-          if (table.columns[criteria['@orderBy'].field] != undefined) {
+          if (table.hasColumn(criteria['@orderBy'].field)) {
             let direction: string|undefined = undefined
 
             if (typeof criteria['@orderBy'].direction == 'string') {
@@ -418,19 +380,17 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
       condition = negatedCondition
     }
 
-    let columns = Object.keys(table.columns)
+    l.lib('Iterating over all columns')
 
-    l.lib('Iterating over all columns', columns)
+    for (let column of table.columns) {
+      l.location = [column.name]
 
-    for (let column of columns) {
-      l.location = [column]
-
-      if (criteria[column] === undefined) {
+      if (criteria[column.name] === undefined) {
         l.lib('Skipping column because it is not contained in the given criteria')
         continue
       }
 
-      let value: any = criteria[column]
+      let value: any = criteria[column.name]
       l.lib('Processing column using criterium', value)
 
       l.lib('Adding logical operator AND')
@@ -447,7 +407,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
         }
 
         if (value['@value'] !== undefined) {
-          let comp = comparison(aliasPrefix + column, operator, value['@value'])
+          let comp = comparison(aliasPrefix + column.name, operator, value['@value'])
           
           if (value['@not'] === true) {
             l.lib('Adding comparison with NOT', comp)
@@ -476,7 +436,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
         }
 
         if (!atLeastOneComparison) {
-          let comp = comparison(aliasPrefix + column, value)
+          let comp = comparison(aliasPrefix + column.name, value)
           l.lib('Adding comparison', comp)
           condition.push(comp)
         }
@@ -519,7 +479,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
               l.lib('Adding logical operator', logical)
               subCondition.push(logical)
 
-              let comp = comparison(aliasPrefix + column, operator, arrayValue['@value'])
+              let comp = comparison(aliasPrefix + column.name, operator, arrayValue['@value'])
               
               if (arrayValue['@not'] === true) {
                 l.lib('Adding comparison with NOT', comp)
@@ -539,7 +499,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
         }
       }
       else {
-        let comp = comparison(aliasPrefix + column, value)
+        let comp = comparison(aliasPrefix + column.name, value)
         l.lib('Adding comparison with default operator =', comp)
         condition.push(comp)
       }
@@ -547,63 +507,34 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 
     l.location = undefined
 
-    if (table.relationships != undefined) {
-      let relationships = Object.keys(table.relationships)
-      l.lib('Iterating over all relationships', relationships)
+    if (table.relationships.length > 0) {
+      l.lib('Iterating over all relationships...')
 
-      for (let relationshipName of relationships) {
-        l.location = [ relationshipName ]
+      for (let relationship of table.relationships) {
+        l.location = [ relationship.name ]
 
-        if (!(relationshipName in criteria)) {
+        if (! (relationship.name in criteria)) {
           l.lib('Skipping relationship because it is not contained in the given criteria')
           continue
         }
 
-        let relationship = table.relationships[relationshipName]
-        let relationshipCriteria = criteria[relationshipName]
-        let otherTable = schema[relationship.otherTable]
-
-        if (otherTable == undefined) {
-          throw new Error('Table not contained in schema: ' + relationship.otherTable)
-        }
+        let relationshipCriteria = criteria[relationship.name]
+        let otherTable = relationship.otherTable
 
         l.lib('Processing given criterium', relationshipCriteria)
 
         if (relationshipCriteria['@loadSeparately'] !== true) {
           let thisId = relationship.thisId
-          let otherTableName = relationship.otherTable
           let otherId = relationship.otherId
 
-          if (typeof thisId != 'string' || thisId.length == 0) {
-            throw new Error('Given relationship object does not contain property \'thisId\'')
-          }
-
-          if (typeof otherTableName != 'string' || otherTableName.length == 0) {
-            throw new Error('Given relationship object do not contain property \'otherTable\'')
-          }
-
-          if (typeof otherId != 'string' || otherId.length == 0) {
-            throw new Error('Given relationship object does not contain property \'otherId\'')
-          }
-
-          l.dev('thisId', thisId)
-          l.dev('otherTableName', otherTableName)
-          l.dev('otherId', otherId)
-
-          let joinAlias = alias != undefined && alias.length > 0 ? alias + '__' + relationshipName : relationshipName
+          let joinAlias = alias != undefined && alias.length > 0 ? alias + '__' + relationship.name : relationship.name
           l.dev('joinAlias', joinAlias)
 
-          query.join('LEFT', otherTableName, joinAlias, (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId + ' = ' + joinAlias + '.' + otherId)
-          l.lib('Adding LEFT JOIN to query', query._join!.pieces![query._join!.pieces!.length - 1])
-
-          let otherTable = schema[otherTableName]
-
-          if (otherTable == undefined) {
-            throw new Error('Table not contained in schema: ' + otherTable)
-          }
+          query.join('LEFT', otherTable.name, joinAlias, (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId.name + ' = ' + joinAlias + '.' + otherId.name)
+          l.lib('Added LEFT JOIN to query', query._join!.pieces![query._join!.pieces!.length - 1])
 
           l.calling('Filling query with the relationship criteria', relationshipCriteria)
-          addCriteria(schema, otherTableName, query, relationshipCriteria, joinAlias, condition)
+          addCriteria(otherTable, query, relationshipCriteria, joinAlias, condition)
           l.called('Filled query with the relationship criteria', relationshipCriteria)
         }
         else {
@@ -618,8 +549,7 @@ export function addCriteria(schema: Schema, tableName: string, query: Query, cri
 }
 
 export interface RelationshipToLoad {
-  tableName: string
-  relationshipName: string
+  relationship: Relationship
   relationshipCriteria: CriteriaObject
   rows: any[]
 }
@@ -628,7 +558,14 @@ export interface RelationshipsToLoad {
   [ relationshipPath: string ]: RelationshipToLoad
 }
 
-export function determineRelationshipsToLoad(schema: Schema, tableName: string, rows: any[], criteria: Criteria, relationshipPath: string = '', relationshipsToLoad: RelationshipsToLoad = {}): RelationshipsToLoad {
+export function determineRelationshipsToLoad(
+  table: Table, 
+  rows: any[], 
+  criteria: Criteria, 
+  relationshipPath: string = '', 
+  relationshipsToLoad: RelationshipsToLoad = {}
+): RelationshipsToLoad {
+
   let l = log.fn('determineRelationshipsToLoad')
   
   if (relationshipPath.length > 0) {
@@ -638,16 +575,11 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
     l.location = [ '.' ]
   }
 
-  l.param('tableName', tableName)
+  l.param('table.name', table.name)
   l.param('rows', rows)
   l.param('criteria', criteria)
   l.param('relationshipPath', relationshipPath)
   l.param('relationshipsToLoad', relationshipsToLoad)
-
-  let table = schema[tableName]
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
 
   if (table.relationships == undefined) {
     l.returning('There are not any relationships. Returning...')
@@ -660,7 +592,7 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
     for (let criterium of criteria) {
       if (criterium instanceof Array || typeof criterium == 'object') {
         l.lib('Determining relationships to load of', criterium)
-        determineRelationshipsToLoad(schema, tableName, rows, criterium, relationshipPath, relationshipsToLoad)
+        determineRelationshipsToLoad(table, rows, criterium, relationshipPath, relationshipsToLoad)
         l.lib('Determined relationships to load of', criterium)
       }
     }
@@ -671,10 +603,10 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
     
     l.location.push('->')
 
-    for (let relationshipName of Object.keys(table.relationships)) {
-      l.location[2] = relationshipName
+    for (let relationship of table.relationships) {
+      l.location[2] = relationship.name
   
-      let relationshipCriteria = criteria[relationshipName]
+      let relationshipCriteria = criteria[relationship.name]
       if (relationshipCriteria == undefined) {
         l.lib('There are no criteria. Processing next relationship...')
         continue
@@ -682,7 +614,7 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
   
       l.lib('Found criteria', relationshipCriteria)
   
-      let subRelationshipPath = relationshipPath + '.' + relationshipName
+      let subRelationshipPath = relationshipPath + '.' + relationship.name
       l.lib('Creating relationship path', subRelationshipPath)
   
       if (relationshipCriteria['@loadSeparately'] === true) {
@@ -690,35 +622,24 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
   
         if (relationshipsToLoad[subRelationshipPath] == undefined) {
           relationshipsToLoad[subRelationshipPath] = {
-            tableName: tableName,
-            relationshipName: relationshipName,
+            relationship: relationship,
             relationshipCriteria: relationshipCriteria,
             rows: rows
           }
         }
       }
-      else if (relationshipCriteria['@load'] === true) {
-        let relationship = table.relationships ? table.relationships[relationshipName] : undefined
-        if (relationship == undefined) {
-          throw new Error(`Relationship '${relationshipName}' not contained table '${tableName}'`)
-        }
-  
-        let otherTable = schema[relationship.otherTable]
-        if (otherTable == undefined) {
-          throw new Error('Table not contained in schema: ' + relationship.otherTable)
-        }
-  
+      else if (relationshipCriteria['@load'] === true) {  
         let relationshipRows = []
         
         for (let row of rows) {
-          if (relationship.manyToOne && row[relationshipName] != undefined || 
-              relationship.oneToMany && row[relationshipName] instanceof Array && row[relationshipName].length > 0) {
+          if (relationship.manyToOne && row[relationship.name] != undefined || 
+              relationship.oneToMany && row[relationship.name] instanceof Array && row[relationship.name].length > 0) {
             
             if (relationship.manyToOne) {
-              relationshipRows.push(row[relationshipName])
+              relationshipRows.push(row[relationship.name])
             }
             else {
-              relationshipRows.push(...row[relationshipName])
+              relationshipRows.push(...row[relationship.name])
             }
           }
         }
@@ -726,7 +647,6 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
         l.lib('Relationship was already loaded through a JOIN. Determining relationships of the relationship. Going into recursion...')
   
         determineRelationshipsToLoad(
-          schema, 
           relationship.otherTable, 
           relationshipRows, 
           relationshipCriteria, 
@@ -756,47 +676,31 @@ export function determineRelationshipsToLoad(schema: Schema, tableName: string, 
   return relationshipsToLoad
 }
 
-export function buildSelectQuery(schema: Schema, tableName: string, criteria: Criteria): Query {
-  let table = schema[tableName]
-
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
+export function buildSelectQuery(table: Table, criteria: Criteria): Query {
   let query = new Query
-  query.from(tableName, tableName)
+  query.from(table.name, table.name)
 
-  addCriteria(schema, tableName, query, criteria, tableName)
-  selectAllColumnsExplicitly(schema, query)
+  addCriteria(table, query, criteria, table.name)
+  selectAllColumnsExplicitly(table.schema, query)
 
   return query
 }
 
-export function buildCountQuery(schema: Schema, tableName: string, criteria: Criteria): Query {
-  let table = schema[tableName]
-
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
+export function buildCountQuery(table: Table, criteria: Criteria): Query {
   let query = new Query
-  query.from(tableName, tableName).select('COUNT(*)')
-  addCriteria(schema, tableName, query, criteria, tableName)
+  query.from(table.name, table.name).select('COUNT(*)')
+
+  addCriteria(table, query, criteria, table.name)
 
   return query
 }
 
-export async function select(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
+export async function select(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
   let l = log.fn('select')
-  l.location = [ tableName ]
+  l.location = [ table.name ]
   l.param('criteria', criteria)
 
-  let table = schema[tableName]
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
-  let query = buildSelectQuery(schema, tableName, criteria)
+  let query = buildSelectQuery(table, criteria)
   l.dev('Built SELECT query', query)
 
   l.lib('Querying database with given SQL string and values...')
@@ -812,12 +716,12 @@ export async function select(schema: Schema, tableName: string, db: string, quer
   l.dev('Received rows', joinedRows)
 
   l.calling('Unjoining rows for criteria...')
-  let rows = unjoinRows(schema, tableName, joinedRows, criteria, tableName + '__')
+  let rows = unjoinRows(table, joinedRows, criteria, table.name + '__')
   l.called('Unjoined rows for criteria...', criteria)
   l.dev('Unjoined rows', rows)
 
-  l.calling('Determing relationships to load...')
-  let relationshipsToLoad = determineRelationshipsToLoad(schema, tableName, rows, criteria)
+  l.calling('Determine relationships to load...')
+  let relationshipsToLoad = determineRelationshipsToLoad(table, rows, criteria)
   l.called('Determined relationships to load for criteria...', criteria)
 
   l.lib('Loading all relationships that need to be loaded in a seperate query...', Object.keys(relationshipsToLoad))
@@ -827,24 +731,15 @@ export async function select(schema: Schema, tableName: string, db: string, quer
 
     let relationshipToLoad = relationshipsToLoad[relationshipPath]
     
-    let relationshipTable = schema[relationshipToLoad.tableName]
-    l.lib('Relationship table', relationshipTable)
-    l.lib('Relationship name', relationshipToLoad.relationshipName)
-
-    if (relationshipTable == undefined) {
-      throw new Error('Table not contained in schema: ' + relationshipToLoad.tableName)
-    }
-
-    let relationship = relationshipTable.relationships ? relationshipTable.relationships[relationshipToLoad.relationshipName] : undefined
-    if (relationship == undefined) {
-      throw new Error(`Relationship '${relationshipToLoad.relationshipName}' not contained table '${relationshipToLoad.tableName}'`)
-    }
+    let relationship = relationshipToLoad.relationship
+    l.lib('Relationship table', relationship.table.name)
+    l.lib('Relationship name', relationship.name)
 
     let idsToLoad: any[] = []
     for (let row of relationshipToLoad.rows) {
-      if (row[relationship.thisId] !== undefined) {
-        if (idsToLoad.indexOf(row[relationship.thisId]) == -1) {
-          idsToLoad.push(row[relationship.thisId])
+      if (row[relationship.thisId.name] !== undefined) {
+        if (idsToLoad.indexOf(row[relationship.thisId.name]) == -1) {
+          idsToLoad.push(row[relationship.thisId.name])
         }
       }
     }
@@ -853,10 +748,10 @@ export async function select(schema: Schema, tableName: string, db: string, quer
       ...relationshipToLoad.relationshipCriteria
     }
 
-    criteria[relationship.otherId] = idsToLoad
+    criteria[relationship.otherId.name] = idsToLoad
 
     l.calling('Loading relationship rows with the following criteria', criteria)
-    let loadedRelationships = await select(schema, relationship.otherTable, db, queryFn, criteria)
+    let loadedRelationships = await select(relationship.otherTable, db, queryFn, criteria)
     l.called('Loaded relationship rows for criteria', criteria)
     l.dev('Loaded relationship rows', loadedRelationships)
 
@@ -866,21 +761,21 @@ export async function select(schema: Schema, tableName: string, db: string, quer
       l.dev('Attaching relationship row', row)
 
       if (relationship.oneToMany === true) {
-        row[relationshipToLoad.relationshipName] = []
+        row[relationship.name] = []
       }
       else {
-        row[relationshipToLoad.relationshipName] = null
+        row[relationship.name] = null
       }
 
       for (let loadedRelationship of loadedRelationships) {
-        if (row[relationship.thisId] == loadedRelationship[relationship.otherId]) {
+        if (row[relationship.thisId.name] == loadedRelationship[relationship.otherId.name]) {
           if (relationship.oneToMany === true) {
             l.dev('Pushing into array of one-to-many...', loadedRelationship)
-            row[relationshipToLoad.relationshipName].push(loadedRelationship)
+            row[relationship.name].push(loadedRelationship)
           }
           else {
             l.dev('Setting property of many-to-one..', loadedRelationship)
-            row[relationshipToLoad.relationshipName] = loadedRelationship
+            row[relationship.name] = loadedRelationship
           }
         }
       }
@@ -896,28 +791,22 @@ export interface UpdateCriteria {
   '@criteria': Criteria
 }
 
-export async function update(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria): Promise<any[]> {
+export async function update(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria): Promise<any[]> {
   let l = log.fn('update')
-  l.param('tableName', tableName)
+  l.param('table.name', table.name)
   l.param('criteria', criteria)
 
-  let table = schema[tableName]
-
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
   let query = new Query
-  query.update(tableName)
+  query.update(table.name)
 
-  for (let column of Object.keys(table.columns)) {
-    if (criteria[column] !== undefined) {
-      let value = criteria[column]
-      query.set(column, value)
+  for (let column of table.columns) {
+    if (criteria[column.name] !== undefined) {
+      let value = criteria[column.name]
+      query.set(column.name, value)
     }
   }
 
-  addCriteria(schema, tableName, query, criteria['@criteria'])
+  addCriteria(table, query, criteria['@criteria'])
 
   if (db == 'postgres') {
     query.returning('*')
@@ -935,20 +824,14 @@ export async function update(schema: Schema, tableName: string, db: string, quer
   return updatedRows
 }
 
-export async function delete_(schema: Schema, tableName: string, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
+export async function delete_(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>, criteria: Criteria): Promise<any[]> {
   let l = log.fn('delete_')
-  l.param('tableName', tableName)
+  l.param('table.name', table.name)
   l.param('criteria', criteria)
 
-  let table = schema[tableName]
-
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
   let query = new Query
-  query.deleteFrom(tableName)
-  addCriteria(schema, tableName, query, criteria)
+  query.deleteFrom(table.name)
+  addCriteria(table, query, criteria)
 
   if (db == 'postgres') {
     query.returning('*')
@@ -962,8 +845,8 @@ export async function delete_(schema: Schema, tableName: string, db: string, que
 
   let deletedRows = await queryFn(sqlString, values)
   
-  l.returning('Returning deleted rows...', deletedRows)
-  return deletedRows
+  l.returning('Returning deleted rows...', deletedRows.rows)
+  return deletedRows.rows
 }
 
 export interface CriteriaIssue {

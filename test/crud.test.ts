@@ -66,7 +66,7 @@ describe('crud', function() {
   //       object1.object1.object1 = object1
   //       object1.object1.object2 = object1.object2
         
-  //       let createdInstance = await create(schema, 'table1', 'postgres', pgQueryFn, object1)
+  //       let createdInstance = await create(schema.getTable('table1'), 'postgres', pgQueryFn, object1)
 
   //       let expectedInstance = {
   //         id: 1,
@@ -171,7 +171,7 @@ describe('crud', function() {
   //       object1.object1.object1 = object1
   //       object1.object1.object2 = object1.object2
         
-  //       await create(schema, 'table1', 'postgres', pgQueryFn, object1)
+  //       await create(schema.getTable('table1'), 'postgres', pgQueryFn, object1)
 
   //       let criteria = {
   //         id: 1,
@@ -186,7 +186,7 @@ describe('crud', function() {
   //         object2: {}
   //       }  
 
-  //       let instances: any[] = await read(schema, 'table1', 'postgres', pgQueryFn, criteria)
+  //       let instances: any[] = await read(schema.getTable('table1'), 'postgres', pgQueryFn, criteria)
 
   //       let expectedInstance = {
   //         id: 1,
@@ -272,7 +272,7 @@ describe('crud', function() {
   //       object1.object1.object1 = object1
   //       object1.object1.object2 = object1.object2
         
-  //       await create(schema, 'table1', 'postgres', pgQueryFn, object1)
+  //       await create(schema.getTable('table1'), 'postgres', pgQueryFn, object1)
 
   //       let updateObject1 = new Object1
   //       updateObject1.id = 1
@@ -311,7 +311,7 @@ describe('crud', function() {
   //       updateObject1.object1.object1 = updateObject1
   //       updateObject1.object1.object2 = updateObject1.object2
 
-  //       let updatedInstance = await update(schema, 'table1', 'postgres', pgQueryFn, updateObject1)
+  //       let updatedInstance = await update(schema.getTable('table1'), 'postgres', pgQueryFn, updateObject1)
 
   //       let expectedInstance = {
   //         id: 1,
@@ -400,9 +400,9 @@ describe('crud', function() {
   //       object1.object1.object1 = object1
   //       object1.object1.object2 = object1.object2
         
-  //       await create(schema, 'table1', 'postgres', pgQueryFn, object1)
+  //       await create(schema.getTable('table1'), 'postgres', pgQueryFn, object1)
 
-  //       let deletedInstance = await delete_(schema, 'table1', 'postgres', pgQueryFn, { id: 1 })
+  //       let deletedInstance = await delete_(schema.getTable('table1'), 'postgres', pgQueryFn, { id: 1 })
 
   //       let expectedInstance = {
   //         id: 1,

@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
-import { instanceToRow, isUpdate, rowsRepresentSameEntity, rowToInstance, unjoinRows } from '../src/row'
+import { isUpdate, rowsRepresentSameEntity, unjoinRows } from '../src/row'
 import { ManyToManyObject2, Object1, Object2, schema } from './testSchema'
 
 let pool: Pool = new Pool({
@@ -34,231 +34,12 @@ describe('row', function() {
     await pool.query('DROP TABLE IF EXISTS many_to_many_table2 CASCADE')
   })
 
-  describe('instanceToRow', function() {
-    it('should convert an instance to a row', function() {
-      let object1 = new Object1
-      object1.id = 1
-      object1.property1 = 'a'
-      object1.property2 = 1
-      object1.manyToOneObject1Id = 2
-      object1.oneToOneObject1Id = 3
-
-      expect(instanceToRow(schema, 'table1', object1)).to.deep.equal({
-        id: 1,
-        column1: 'a',
-        column2: 1,
-        many_to_one_object1_id: 2,
-        one_to_one_object1_id: 3
-      })
-    })
-
-    it('should convert an instance which has relationships to a row', function() {
-      let object1 = new Object1
-      object1.id = 1
-      object1.property1 = 'a'
-      object1.property2 = 1
-      object1.manyToManyObject2 = [new ManyToManyObject2, new ManyToManyObject2]
-      object1.manyToManyObject2[0].object1Id = 1
-      object1.manyToManyObject2[0].object2Id = 'x'
-      object1.manyToManyObject2[0].property1 = 'b'
-      object1.manyToManyObject2[0].property2 = 2
-      object1.manyToManyObject2[0].object1 = object1
-      object1.manyToManyObject2[0].object2 = new Object2
-      object1.manyToManyObject2[0].object2.id = 'x'
-      object1.manyToManyObject2[0].object2.property1 = 'c'
-      object1.manyToManyObject2[0].object2.property2 = 3
-      object1.manyToManyObject2[1].object1Id = 1
-      object1.manyToManyObject2[1].object2Id = 'y'
-      object1.manyToManyObject2[1].property1 = 'd'
-      object1.manyToManyObject2[1].property2 = 4
-      object1.manyToManyObject2[1].object1 = object1
-      object1.manyToManyObject2[1].object2 = new Object2
-      object1.manyToManyObject2[1].object2.id = 'y'
-      object1.manyToManyObject2[1].object2.property1 = 'e'
-      object1.manyToManyObject2[1].object2.property2 = 5
-
-      let row = instanceToRow(schema, 'table1', object1)
-
-      let expectedRow = {
-        id: 1,
-        column1: 'a',
-        column2: 1,
-        manyToManyObject2: [
-          {
-            table1_id: 1,
-            table2_id: 'x',
-            column1: 'b',
-            column2: 2,
-            object2: {
-              id: 'x',
-              column1: 'c',
-              column2: 3
-            }
-          } as any,
-          {
-            table1_id: 1,
-            table2_id: 'y',
-            column1: 'd',
-            column2: 4,
-            object2: {
-              id: 'y',
-              column1: 'e',
-              column2: 5
-            }
-          } as any
-        ]
-      }
-
-      expectedRow.manyToManyObject2[0].object1 = expectedRow
-      expectedRow.manyToManyObject2[1].object1 = expectedRow
-
-      expect(row).to.deep.equal(expectedRow)
-    })
-
-    it('should use a custom rowToInstance function', function() {
-      let object1 = new Object1
-      object1.id = 1
-      object1.property1 = 'a'
-      object1.property2 = 2
-      object1.manyToOneObject1Id = 2
-      object1.oneToOneObject1Id = 3
-
-      schema.table1.instanceToRow = function(instance: Object1, row: any) {
-        row.id++
-        row.column1 = 'b'
-        return row
-      }
-      
-      let row = instanceToRow(schema, 'table1', object1)
-      delete schema.table1.instanceToRow
-
-      expect(row).to.deep.equal({
-        id: 2,
-        column1: 'b',
-        column2: 2 ,
-        many_to_one_object1_id: 2,
-        one_to_one_object1_id: 3
-      })
-    })
-  })
-
-  describe('rowToInstance', function() {
-    it('should convert a row to an instance', function() {
-      let row = {
-        id: 1,
-        column1: 'a',
-        column2: 1,
-        many_to_one_object1_id: 2,
-        one_to_one_object1_id: 3
-      }
-
-      expect(rowToInstance(schema, 'table1', row)).to.deep.equal({
-        id: 1,
-        property1: 'a',
-        property2: 1,
-        manyToOneObject1Id: 2,
-        oneToOneObject1Id: 3
-      })
-    })
-
-    it('should convert a row which has relationships to an instance', function() {
-      let row = {
-        id: 1,
-        column1: 'a',
-        column2: 1,
-        manyToManyObject2: [
-          {
-            table1_id: 1,
-            table2_id: 'x',
-            column1: 'b',
-            object2: {
-              id: 'x',
-              column1: 'c'
-            }
-          } as any,
-          {
-            table1_id: 1,
-            table2_id: 'y',
-            column1: 'd',
-            object2: {
-              id: 'y',
-              column1: 'e'
-            }
-          } as any
-        ]
-      }
-
-      row.manyToManyObject2[0].object1 = row
-      row.manyToManyObject2[1].object1 = row
-
-      let instance = rowToInstance(schema, 'table1', row)
-
-      let expectedInstance = {
-        id: 1,
-        property1: 'a',
-        property2: 1,
-        manyToManyObject2: [
-          {
-            object1Id: 1,
-            object2Id: 'x',
-            property1: 'b',
-            object2: {
-              id: 'x',
-              property1: 'c'
-            }
-          } as ManyToManyObject2,
-          {
-            object1Id: 1,
-            object2Id: 'y',
-            property1: 'd',
-            object2: {
-              id: 'y',
-              property1: 'e'
-            }
-          } as ManyToManyObject2
-        ]
-      }
-
-      expectedInstance.manyToManyObject2[0].object1 = expectedInstance
-      expectedInstance.manyToManyObject2[1].object1 = expectedInstance
-
-      expect(instance).to.deep.equal(expectedInstance)
-    })
-
-    it('should use a custom rowToInstance function', function() {
-      let row = {
-        id: 1,
-        column1: 'a',
-        column2: 1,
-        many_to_one_object1_id: 2,
-        one_to_one_object1_id: 3
-      }
-
-      schema.table1.rowToInstance = function(instance: Object1, row: any) {
-        instance.id!++
-        instance.property1 = 'b'
-        return row
-      }
-      
-      let instance = rowToInstance(schema, 'table1', row)
-      delete schema.table1.rowToInstance
-
-      expect(instance).to.deep.equal({
-        id: 1,
-        property1: 'a',
-        property2: 1,
-        manyToOneObject1Id: 2,
-        oneToOneObject1Id: 3
-      })
-    })
-  })
-
   describe('isUpdate', function() {
     it('should return false if the generated primary key is not set', async function() {
       let row = {
       }
 
-      let result = await isUpdate(schema, 'table1', 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('table1'), 'postgres', pgQueryFn, row)
 
       expect(result).to.be.false
     })
@@ -268,7 +49,7 @@ describe('row', function() {
         id: 1
       }
 
-      let result = await isUpdate(schema, 'table1', 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('table1'), 'postgres', pgQueryFn, row)
 
       expect(result).to.be.true
     })
@@ -278,7 +59,7 @@ describe('row', function() {
         id: 'x'
       }
 
-      let result = await isUpdate(schema, 'table2', 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('table2'), 'postgres', pgQueryFn, row)
 
       expect(result).to.be.false
     })
@@ -290,7 +71,7 @@ describe('row', function() {
         id: 'x'
       }
 
-      let result = await isUpdate(schema, 'table2', 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('table2'), 'postgres', pgQueryFn, row)
 
       expect(result).to.be.true
     })
@@ -301,7 +82,7 @@ describe('row', function() {
         table2_id: 'x'
       }
 
-      let result = await isUpdate(schema, 'many_to_many_table2', 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('many_to_many_table2'), 'postgres', pgQueryFn, row)
 
       expect(result).to.be.false
     })
@@ -314,7 +95,7 @@ describe('row', function() {
         table2_id: 'x'
       }
 
-      let result = await isUpdate(schema, 'many_to_many_table2', 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('many_to_many_table2'), 'postgres', pgQueryFn, row)
 
       expect(result).to.be.true
     })
@@ -338,7 +119,7 @@ describe('row', function() {
       ]
 
       let criteria = { a: 'a', b: 1 }
-      let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
+      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
 
       expect(instances.length).to.equal(2)
       expect(instances[0]).to.deep.equal({
@@ -368,7 +149,7 @@ describe('row', function() {
       ]
 
       let criteria = { }
-      let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
+      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
 
       expect(instances.length).to.equal(0)
     })
@@ -457,7 +238,7 @@ describe('row', function() {
 
       let criteria = { manyToOneObject2: { '@load': true }, manyToOneObject1: { '@load': true } }
 
-      let unjoinedRows = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
+      let unjoinedRows = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
 
       expect(unjoinedRows.length).to.equal(3)
 
@@ -622,7 +403,7 @@ describe('row', function() {
 
       let criteria = { oneToOneObject2: { '@load': true }, oneToOneObject1: { '@load': true } }
 
-      let unjoinedRows = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
+      let unjoinedRows = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
 
       expect(unjoinedRows.length).to.equal(3)
 
@@ -744,7 +525,7 @@ describe('row', function() {
 
       let criteria = { manyToManyObject2: { '@load': true, object2: { '@load': true } }}
 
-      let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
+      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
 
       expect(instances.length).to.equal(2)
       expect(instances[0]).to.deep.equal({
@@ -815,7 +596,7 @@ describe('row', function() {
 
       let criteria = { manyToManyObject2: { '@load': true, object2: { '@load': true, manyToManyObject2: { '@load': true } }}}
 
-      let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
+      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
 
       expect(instances.length).to.equal(1)
       expect(instances[0]).to.deep.equal({
@@ -883,7 +664,7 @@ describe('row', function() {
 
       let criteria = { object2: { '@load': true }, manyToManyObject2: { '@load': true, object2: { '@load': true } }}
 
-      let instances = unjoinRows(schema, 'table1', rows, criteria, 'table1__')
+      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
 
       expect(instances.length).to.equal(1)
 
@@ -910,28 +691,28 @@ describe('row', function() {
       let row1 = { id: 1, column1: 'a', column2: 1 }
       let row2 = { id: 1, column1: 'b', column2: 2 }
 
-      expect(rowsRepresentSameEntity(schema['table1'], row1, row2)).to.be.true
-      expect(rowsRepresentSameEntity(schema['table1'], row2, row1)).to.be.true
+      expect(rowsRepresentSameEntity(schema.getTable('table1'), row1, row2)).to.be.true
+      expect(rowsRepresentSameEntity(schema.getTable('table1'), row2, row1)).to.be.true
 
       let row3 = { table1_id: 1, table2_id: 'x', column1: 'a' }
       let row4 = { table1_id: 1, table2_id: 'x', column1: 'b' }
 
-      expect(rowsRepresentSameEntity(schema['many_to_many_table2'], row3, row4)).to.be.true
-      expect(rowsRepresentSameEntity(schema['many_to_many_table2'], row3, row4)).to.be.true
+      expect(rowsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4)).to.be.true
+      expect(rowsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4)).to.be.true
     })
 
     it('should not detect two rows as the same entity', function() {
       let row1 = { id: 1 }
       let row2 = { id: 2, column1: 'a', column2: 1 }
 
-      expect(rowsRepresentSameEntity(schema['table1'], row1, row2)).to.be.false
-      expect(rowsRepresentSameEntity(schema['table1'], row2, row1)).to.be.false
+      expect(rowsRepresentSameEntity(schema.getTable('table1'), row1, row2)).to.be.false
+      expect(rowsRepresentSameEntity(schema.getTable('table1'), row2, row1)).to.be.false
 
       let row3 = { table1_id: 1, table2_id: 'x' }
       let row4 = { table1_id: 2, table2_id: 'x', column1: 'a' }
 
-      expect(rowsRepresentSameEntity(schema['many_to_many_table2'], row3, row4)).to.be.false
-      expect(rowsRepresentSameEntity(schema['many_to_many_table2'], row3, row4)).to.be.false
+      expect(rowsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4)).to.be.false
+      expect(rowsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4)).to.be.false
     })
   })
 })

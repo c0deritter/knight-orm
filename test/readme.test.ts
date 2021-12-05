@@ -39,7 +39,7 @@ describe('README.md', function () {
           name: 'Luisa'
         }
       
-        let stored = await store(schema, 'knight', 'postgres', pgQueryFn, row)
+        let stored = await store(schema.getTable('knight'), 'postgres', pgQueryFn, row)
 
         expect(stored).to.deep.equal({
           id: 1,
@@ -59,7 +59,7 @@ describe('README.md', function () {
           }
         }      
 
-        let stored = await store(schema, 'knight', 'postgres', pgQueryFn, row)
+        let stored = await store(schema.getTable('knight'), 'postgres', pgQueryFn, row)
 
         expect(stored).to.deep.equal({
           id: 1,
@@ -90,7 +90,7 @@ describe('README.md', function () {
           }
         }
 
-        let stored = await store(schema, 'address', 'postgres', pgQueryFn, row)
+        let stored = await store(schema.getTable('address'), 'postgres', pgQueryFn, row)
 
         expect(stored).to.deep.equal({
           knight_id: 1,
@@ -111,95 +111,93 @@ describe('README.md', function () {
   })
 })
 
-async function pgQueryFn(sqlString: string, values?: any[]): Promise<any[]> {
+async function pgQueryFn(sqlString: string, values?: any[]): Promise<any> {
   let result = await pool.query(sqlString, values)
-  return result.rows
+  return result
 }
 
-let schema: Schema = {
-  'knight': {
-    columns: {
-      'id': { property: 'id', primaryKey: true, generated: true },
-      'name': 'name',
-      'best_friend_id': 'bestFriendId'
-    },
+let schema = new Schema
 
-    relationships: {
-      'bestFriend': {
-        manyToOne: true,
-        thisId: 'best_friend_id',
-        otherTable: 'knight',
-        otherId: 'id'
-      },
-
-      'knightsWhoThinkIAmTheirBestFriend': {
-        oneToMany: true,
-        thisId: 'id',
-        otherTable: 'knight',
-        otherId: 'best_friend_id'
-      },
-
-      'friends': {
-        oneToMany: true,
-        thisId: 'id',
-        otherTable: 'friends',
-        otherId: 'befriender_id'
-      },
-
-      'address': {
-        manyToOne: true,
-        thisId: 'id',
-        otherTable: 'address',
-        otherId: 'knight_id',
-        otherRelationship: 'knight'
-      }
-    },
-
-    newInstance: () => new Knight
+schema.addTable('knight', {
+  columns: {
+    'id': { property: 'id', primaryKey: true, generated: true },
+    'name': 'name',
+    'best_friend_id': 'bestFriendId'
   },
 
-  // this is the many-to-many association table
-  'friends': {
-    columns: {
-      'befriender_id': 'befrienderId',
-      'friend_id': 'friendId'
-    },
-    relationships: {
-      'befriender': {
-        manyToOne: true,
-        thisId: 'befriender_id',
-        otherTable: 'knight',
-        otherId: 'id'
-      },
-      'friend': {
-        manyToOne: true,
-        thisId: 'friend_id',
-        otherTable: 'knight',
-        otherId: 'id'
-      }
+  relationships: {
+    'bestFriend': {
+      manyToOne: true,
+      thisId: 'best_friend_id',
+      otherTable: 'knight',
+      otherId: 'id'
     },
 
-    newInstance: () => new Friends
+    'knightsWhoThinkIAmTheirBestFriend': {
+      oneToMany: true,
+      thisId: 'id',
+      otherTable: 'knight',
+      otherId: 'best_friend_id'
+    },
+
+    'friends': {
+      oneToMany: true,
+      thisId: 'id',
+      otherTable: 'friends',
+      otherId: 'befriender_id'
+    },
+
+    'address': {
+      manyToOne: true,
+      thisId: 'id',
+      otherTable: 'address',
+      otherId: 'knight_id',
+      otherRelationship: 'knight'
+    }
   },
+  newInstance: () => new Knight
+})
 
-  'address': {
-    columns: {
-      'knight_id': 'knight_id',
-      'street': 'street'
+schema.addTable('friends', {
+  columns: {
+    'befriender_id': 'befrienderId',
+    'friend_id': 'friendId'
+  },
+  relationships: {
+    'befriender': {
+      manyToOne: true,
+      thisId: 'befriender_id',
+      otherTable: 'knight',
+      otherId: 'id'
     },
-    relationships: {
-      'knight': {
-        manyToOne: true,
-        thisId: 'knight_id',
-        otherTable: 'knight',
-        otherId: 'id',
-        otherRelationship: 'address'
-      }
-    },
+    'friend': {
+      manyToOne: true,
+      thisId: 'friend_id',
+      otherTable: 'knight',
+      otherId: 'id'
+    }
+  },
+  newInstance: () => new Friends
+})
 
-    newInstance: () => new Address
-  }
-}
+schema.addTable('address', {
+  columns: {
+    'knight_id': 'knight_id',
+    'street': 'street'
+  },
+  relationships: {
+    'knight': {
+      manyToOne: true,
+      thisId: 'knight_id',
+      otherTable: 'knight',
+      otherId: 'id',
+      otherRelationship: 'address'
+    }
+  },
+  newInstance: () => new Address
+})
+
+schema.check()
 
 class Knight {
   id?: number

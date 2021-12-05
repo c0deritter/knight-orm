@@ -1,248 +1,25 @@
 import { Criteria, summarizeCriteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { comparison } from 'knight-sql'
-import { checkSchema, databaseIndependentQuery, getNotGeneratedPrimaryKeyColumns, isGeneratedPrimaryKeyColumn, SelectResult } from '.'
-import { getPrimaryKey, getPropertyName, isPrimaryKeyColumn, Schema, Table } from './Schema'
+import { databaseIndependentQuery, SelectResult } from './query'
+import { Column, Table } from './schema'
 
 let log = new Log('knight-orm/rowTools.ts')
 
-class AlreadyConverted {
-  instancesAndRows: { instance: any, row: any }[] = []
-
-  add(instance: any, row: any) {
-    this.instancesAndRows.push({ instance: instance, row: row })
-  }
-
-  getRow(instance: any) {
-    for (let instanceAndRow of this.instancesAndRows) {
-      if (instanceAndRow.instance === instance) {
-        return instanceAndRow.row
-      }
-    }
-  }
-
-  getInstance(row: any) {
-    for (let instanceAndRow of this.instancesAndRows) {
-      if (instanceAndRow.row === row) {
-        return instanceAndRow.instance
-      }
-    }
-  }
-}
-
-export function instanceToRow(schema: Schema, tableName: string, instance: any, alreadyConverted: AlreadyConverted = new AlreadyConverted): any {
-  let l = log.fn('instanceToRow')
-  l.param('tableName', tableName)
-  l.param('instance', instance)
-  l.param('alreadyConverted', alreadyConverted.instancesAndRows)
-
-  let row = alreadyConverted.getRow(instance)
-  if (row != undefined) {
-    l.lib('Row was already converted. Returning it...', row)
-    return row
-  }
-
-  let table = schema[tableName]
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
-  if (typeof table.columns != 'object' || table.columns === null) {
-    throw new Error('Table does not contain any column definitions: ' + tableName)
-  }
-
-  row = {}
-  for (let columnName of Object.keys(table.columns)) {
-    let propertyName = getPropertyName(table, columnName)
-    
-    if (propertyName != undefined && propertyName in instance) {
-      row[columnName] = instance[propertyName]
-    }
-  }
-
-  l.lib('Created row through simple copying of the values from the instance', row)
-
-  if (typeof table.instanceToRow == 'function') {
-    l.calling('Additionally applying custom instanceToRow function')
-    row = table.instanceToRow(instance, row)
-    l.called('Custom instanceToRow function applied', row)
-  }
-
-  alreadyConverted.add(instance, row)
-
-  if (table.relationships != undefined) {
-    let relationshipNames = Object.keys(table.relationships)
-
-    if (relationshipNames.length > 0) {
-      l.lib('Iterating through relationships', relationshipNames)
-      l.location = []
-
-      for (let relationshipName of relationshipNames) {
-        l.location[0] = relationshipName
-        l.lib('Processing next relationship', relationshipName)
-    
-        if (typeof instance[relationshipName] == 'object' && instance[relationshipName] !== null) {
-          let relationship = table.relationships[relationshipName]
-    
-          if (relationship.manyToOne) {
-            l.calling('Relationship is many-to-one. Converting relationship instance by using recursion.')
-            let relationshipRow = instanceToRow(schema, relationship.otherTable, instance[relationshipName], alreadyConverted)
-            l.called('Converted relationship instance', relationshipRow)
-            row[relationshipName] = relationshipRow
-          }
-          else if (instance[relationshipName] instanceof Array) {
-            l.lib('Relationship is one-to-many. Converting every relationship instance...')
-    
-            if (row[relationshipName] == undefined) {
-              row[relationshipName] = []
-            }
-
-            for (let relationshipInstance of instance[relationshipName]) {
-              l.calling('Converting next relationship instance by using recursion')
-              let relationshipRow = instanceToRow(schema, relationship.otherTable, relationshipInstance, alreadyConverted)
-              l.called('Converted relationship instance')
-        
-              row[relationshipName].push(relationshipRow)
-            }        
-          }
-          else {
-            l.warn('Relationship is one-to-many but given relationship row object is not of type array', instance[relationshipName])
-          }
-        }
-        else if (instance[relationshipName] !== undefined) {
-          l.lib('Relationship is not an object and not undefined which is invalid. Assigning it to row as it is.')
-          row[relationshipName] = instance[relationshipName]
-        }
-        else {
-          l.lib('Relationship does not exist on this instance. Continuing...')
-        }
-      }
-
-      l.location = undefined
-    }
-  }
-
-  l.returning('Returning row', row)
-  return row
-}
-
-export function rowToInstance(schema: Schema, tableName: string, row: any, alreadyConverted: AlreadyConverted = new AlreadyConverted): any {
-  let l = log.fn('rowToInstance')
-  l.param('tableName', tableName)
-  l.param('row', row)
-  l.param('alreadyConverted', alreadyConverted.instancesAndRows)
-
-  let instance = alreadyConverted.getInstance(row)
-  if (instance != undefined) {
-    l.lib('Instance was already converted. Returning it...', instance)
-    return instance
-  }
-
-  let table = schema[tableName]
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
-  if (typeof table.columns != 'object' || table.columns === null) {
-    throw new Error('Table does not contain any column definitions: ' + tableName)
-  }
-
-  instance = table.newInstance()
-
-  for (let columnName of Object.keys(table.columns)) {
-    if (columnName in row) {
-      let propertyName = getPropertyName(table, columnName)
-      
-      if (propertyName != undefined) {
-        instance[propertyName] = row[columnName]
-      }
-    }
-  }
-
-  l.lib('Created instance through simple copying of the values from the row', instance)
-
-  if (typeof table.rowToInstance == 'function') {
-    l.calling('Additionally applying custom rowToInstance function')
-    instance = table.rowToInstance(row, instance)
-    l.called('Custom rowToInstance function applied', instance)
-  }
-
-  alreadyConverted.add(instance, row)
-
-  l.lib('Converting relationships...')
-
-  if (table.relationships != undefined) {
-    let relationshipNames = Object.keys(table.relationships)
-
-    if (relationshipNames.length > 0) {
-      l.lib('Iterating through relationships', relationshipNames)
-      l.location = []
-
-      for (let relationshipName of relationshipNames) {
-        l.location[0] = relationshipName
-        l.lib('Processing next relationship', relationshipName)
-  
-        if (typeof row[relationshipName] == 'object' && row[relationshipName] !== null) {
-          let relationship = table.relationships[relationshipName]
-    
-          if (relationship.manyToOne) {
-            l.calling('Relationship is many-to-one. Converting relationship row by using recursion.')
-            let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, row[relationshipName], alreadyConverted)
-            l.called('Converted relationship instance')
-            l.lib('Setting converted relationship instance')
-            instance[relationshipName] = relationshipInstance
-          }
-          else if (row[relationshipName] instanceof Array) {
-            l.lib('Relationship is one-to-many. Converting every relationship instance...')
-    
-            if (instance[relationshipName] == undefined) {
-              instance[relationshipName] = []
-            }
-
-            for (let relationshipRow of row[relationshipName]) {
-              l.calling('Converting next relationship row by using recursion')
-              let relationshipInstance = rowToInstance(schema, table.relationships[relationshipName].otherTable, relationshipRow, alreadyConverted)
-              l.called('Converted relationship instance')
-              l.lib('Adding converted relationship instance')
-              instance[relationshipName].push(relationshipInstance)
-            }        
-          }
-        }
-        else if (row[relationshipName] !== undefined) {
-          l.lib('Relationship is not an object and not undefined which is invalid. Assigning it to instance as it is.')
-          row[relationshipName] = instance[relationshipName]
-        }
-        else {
-          l.lib('Relationship is not set. Continuing...')
-        }
-      }
-
-      l.location = undefined
-    }
-  }
-
-  l.returning('Returning instance...' ,instance)
-  return instance
-}
-
 export async function isUpdate(
-  schema: Schema,
-  tableName: string,
+  table: Table,
   db: string,
   queryFn: (sqlString: string, values?: any[]) => Promise<any>,
   row: any
 ): Promise<boolean> {
   
   let l = log.fn('isUpdate')
-  l.param('tableName', tableName)
+  l.param('table.name', table.name)
   l.param('db', db)
   l.param('row', row)
 
-  checkSchema(schema, tableName)
-  let table = schema[tableName]
-
   if (! areAllNotGeneratedPrimaryKeyColumnsSet(table, row)) {
-    throw new Error(`At least one not generated primary key column (${getNotGeneratedPrimaryKeyColumns(table).join(', ')}) is not set. Enable logging for more details.`)
+    throw new Error(`At least one not generated primary key column (${table.notGeneratedPrimaryKey.map(column => column.name).join(', ')}) is not set. Enable logging for more details.`)
   }
 
   let hasNotGeneratedPrimaryKeys = false
@@ -250,11 +27,11 @@ export async function isUpdate(
   let generatedPrimaryKeyIsNull = true
   let generatedPrimaryKeyIsNotNull = true
 
-  for (let column of getPrimaryKey(table)) {
-    if (isGeneratedPrimaryKeyColumn(table, column)) {
+  for (let column of table.primaryKey) {
+    if (column.generated) {
       generatedPrimaryKeyCount++
 
-      if (row[column] == null) {
+      if (row[column.name] == null) {
         generatedPrimaryKeyIsNotNull = false
       }
       else {
@@ -266,10 +43,6 @@ export async function isUpdate(
     }
   }
 
-  if (generatedPrimaryKeyCount > 1) {
-    throw new Error(`The table ${tableName} has more than one generated primary key which is not valid.`)
-  }
-
   if (generatedPrimaryKeyCount == 1 && ! generatedPrimaryKeyIsNull && ! generatedPrimaryKeyIsNotNull) {
     throw new Error('There is a generated primary key which are null and generated primary keys which are not null. This is an inconsistent set of column values. Cannot determine if row is to be inserted or to be updated. Please enable logging for more details.')
   }
@@ -277,10 +50,10 @@ export async function isUpdate(
   if ((generatedPrimaryKeyCount == 1 && generatedPrimaryKeyIsNotNull || ! generatedPrimaryKeyCount) && hasNotGeneratedPrimaryKeys) {
     l.lib('The row has not generated primary key columns. Determining if the row was already inserted.')
     
-    let query = sql.select('*').from(tableName)
+    let query = sql.select('*').from(table.name)
 
-    for (let column of getPrimaryKey(table)) {
-      query.where(comparison(column, row[column]), 'AND')
+    for (let column of table.primaryKey) {
+      query.where(comparison(column.name, row[column.name]), 'AND')
     }
 
     let rows
@@ -330,17 +103,17 @@ export async function isUpdate(
   let filteredRow: any = undefined
   let everyColumnIsNull = true
 
-  for (let column of Object.keys(table.columns)) {
-    let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column : column
+  for (let column of table.columns) {
+    let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column.name : column.name
 
     if (aliasedColumn in joinedRow) {
       if (filteredRow == undefined) {
         filteredRow = {}
       }
 
-      filteredRow[column] = joinedRow[aliasedColumn]
+      filteredRow[column.name] = joinedRow[aliasedColumn]
 
-      if (filteredRow[column] !== null) {
+      if (filteredRow[column.name] !== null) {
         everyColumnIsNull = false
       }
     }
@@ -365,62 +138,54 @@ export async function isUpdate(
  * @param alias The alias which was prepended to the column names in regard to the given table
  * @returns An array of row objects which relationships are unjoined
  */
-export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[], criteria: Criteria, alias: string): any[]  {
+export function unjoinRows(table: Table, joinedRows: any[], criteria: Criteria, alias: string): any[]  {
   let l = log.fn('unjoinRows')
 
-  l.param('tableName', tableName)
+  l.param('table.name', table.name)
   l.param('criteria', criteria)
   l.param('alias', alias)
 
   l.location = [ alias, '' ]
 
-  let table = schema[tableName]
-  if (table == undefined) {
-    throw new Error('Table not contained in schema: ' + tableName)
-  }
-
-  let relationshipNames = table.relationships != undefined ? Object.keys(table.relationships) : []
   let relationshipToRows: { [relationshipName: string]: any[] } = {}
 
   let summarizedCriteria = summarizeCriteria(criteria)
   l.lib('Summarized criteria', summarizedCriteria)
 
-  if (relationshipNames.length > 0) {
-    l.lib('Unjoining relationships...', relationshipNames)
+  if (table.relationships.length > 0) {
+    l.lib('Unjoining relationships...')
   }
 
-  for (let relationshipName of relationshipNames) {
-    l.location[1] = '> ' + relationshipName
+  for (let relationship of table.relationships) {
+    l.location[1] = '> ' + relationship.name
 
-    l.lib('Unjoining relationship', relationshipName)
+    l.lib('Unjoining relationship', relationship.name)
 
-    if (! (relationshipName in summarizedCriteria)) {
+    if (! (relationship.name in summarizedCriteria)) {
       l.lib('Relationship is not contained in criteria. Continuing...')
       continue
     }
 
-    if (summarizedCriteria[relationshipName]['@load'] !== true) {
+    if (summarizedCriteria[relationship.name]['@load'] !== true) {
       l.lib('Relationship is not to be loaded. Skipping...')
       continue
     }
 
-    let relationship = table.relationships![relationshipName]
-    let relationshipTableName = relationship.otherTable
-    let relationshipAlias = alias + relationshipName + '__'
+    let relationshipAlias = alias + relationship.name + '__'
 
     l.calling('Fetching all relationship rows. Calling unjoinRows again...')
-    let relationshipRows = unjoinRows(schema, relationshipTableName, joinedRows, summarizedCriteria[relationshipName], relationshipAlias)
+    let relationshipRows = unjoinRows(relationship.otherTable, joinedRows, summarizedCriteria[relationship.name], relationshipAlias)
     l.called('Returning from fetching all relationship rows...')
     
     l.dev('Found relationship rows', relationshipRows)
-    relationshipToRows[relationshipName] = relationshipRows
+    relationshipToRows[relationship.name] = relationshipRows
 
     l.lib('Continuing unjoining relationships...')
   }
 
   l.location[1] = ''
 
-  if (relationshipNames.length > 0) {
+  if (table.relationships.length > 0) {
     l.lib('Finished unjoining relationships. Continuing with unjoining every row...')
   }
   else {
@@ -458,39 +223,38 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
     }
 
     let relationshipNames = Object.keys(relationshipToRows)
-    if (relationshipNames.length > 0) {
-      l.lib('Adding relationships', relationshipNames)
+    if (table.relationships.length > 0) {
+      l.lib('Adding relationships...')
     }
 
     for (let relationshipName of relationshipNames) {
       l.location[1] = '> ' + relationshipName
+      let relationship = table.getRelationship(relationshipName)
 
-      l.lib('Adding relationship rows for relationship', relationshipName)
+      l.lib('Adding relationship rows for relationship', relationship.name)
 
-      let relationship = table.relationships![relationshipName]
-      
       if (relationship.manyToOne) {
         l.dev('Relationship is many-to-one. Initializing property with null.')
-        unjoinedRow[relationshipName] = null
+        unjoinedRow[relationship.name] = null
       }
       else if (relationship.oneToMany) {
         l.dev('Relationship is one-to-many. Initializing property with empty array.')
-        unjoinedRow[relationshipName] = []
+        unjoinedRow[relationship.name] = []
       }
 
       l.dev('Iterating through every relationshop row...')
 
-      for (let relationshipRow of relationshipToRows[relationshipName]) {
-        if (unjoinedRow[relationship.thisId] === relationshipRow[relationship.otherId]) {
+      for (let relationshipRow of relationshipToRows[relationship.name]) {
+        if (unjoinedRow[relationship.thisId.name] === relationshipRow[relationship.otherId.name]) {
           if (relationship.manyToOne) {
             l.lib('Setting many-to-one row', relationshipRow)
-            unjoinedRow[relationshipName] = relationshipRow
+            unjoinedRow[relationship.name] = relationshipRow
             break
           }
 
           else if (relationship.oneToMany) {
             l.lib('Adding one-to-many row', relationshipRow)
-            unjoinedRow[relationshipName].push(relationshipRow)
+            unjoinedRow[relationship.name].push(relationshipRow)
           }
         }
 
@@ -499,10 +263,10 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
         }
       }
 
-      if (relationship.manyToOne && unjoinedRow[relationshipName] === null) {
+      if (relationship.manyToOne && unjoinedRow[relationship.name] === null) {
         l.lib('No relationship row was found (many-to-one)')
       }
-      else if (relationship.oneToMany && unjoinedRow[relationshipName].length == 0) {
+      else if (relationship.oneToMany && unjoinedRow[relationship.name].length == 0) {
         l.lib('No relationship rows were found (one-to-many)')
       }
     }
@@ -515,10 +279,8 @@ export function unjoinRows(schema: Schema, tableName: string, joinedRows: any[],
 }
 
 export function isPrimaryKeySet(table: Table, row: any): boolean {
-  let primaryKey = getPrimaryKey(table)
-
-  for (let column of primaryKey) {
-    if (row[column] == null) {
+  for (let column of table.primaryKey) {
+    if (row[column.name] == null) {
       return false
     }
   }
@@ -527,10 +289,8 @@ export function isPrimaryKeySet(table: Table, row: any): boolean {
 }
 
 export function areAllNotGeneratedPrimaryKeyColumnsSet(table: Table, row: any): boolean {
-  let notGenerated = getNotGeneratedPrimaryKeyColumns(table)
-
-  for (let column of notGenerated) {
-    if (row[column] == null) {
+  for (let column of table.notGeneratedPrimaryKey) {
+    if (row[column.name] == null) {
       return false
     }
   }
@@ -543,14 +303,12 @@ export function rowsRepresentSameEntity(table: Table, row1: any, row2: any): boo
     return false
   }
 
-  let primaryKey = getPrimaryKey(table)
-
-  if (primaryKey.length == 0) {
+  if (table.primaryKey.length == 0) {
     return false
   }
 
-  for (let column of primaryKey) {
-    if (row1[column] === undefined || row1[column] !== row2[column]) {
+  for (let column of table.primaryKey) {
+    if (row1[column.name] === undefined || row1[column.name] !== row2[column.name]) {
       return false
     }
   }
@@ -563,16 +321,12 @@ export function instancesRepresentSameEntity(table: Table, instance1: any, insta
     return false
   }
   
-  let primaryKey = getPrimaryKey(table)
-
-  if (primaryKey.length == 0) {
+  if (table.primaryKey.length == 0) {
     return false
   }
 
-  for (let column of primaryKey) {
-    let property = getPropertyName(table, column)
-
-    if (property != undefined && (instance1[property] === undefined || instance1[property] !== instance2[property])) {
+  for (let column of table.primaryKey) {
+    if (column.propertyName != undefined && (instance1[column.propertyName] === undefined || instance1[column.propertyName] !== instance2[column.propertyName])) {
       return false
     }
   }
@@ -594,45 +348,35 @@ export function isRowRelevant(row: any, filter: any): boolean {
   return true
 }
 
-export function reduceToPrimaryKeys(table: Table, row: any): any {
+export function reduceToPrimaryKey(table: Table, row: any): any {
   let reduced: any = {}
   
-  for (let column of Object.keys(table.columns)) {
-    if (isPrimaryKeyColumn(table, column)) {
-      reduced[column] = row[column]
+  for (let column of table.columns) {
+    if (column.primaryKey) {
+      reduced[column.name] = row[column.name]
     }
   }
 
   return reduced
 }
 
-export function areAllPrimaryKeyColumnsSet(table: Table, row: any): boolean {
-  for (let column of getPrimaryKey(table)) {
-    if (row[column] === undefined) {
-      return false
-    }
-  }
-
-  return true
-}
-
 export function reduceToColumnsOfTable(table: Table, row: any, alias?: string): any {
   let reduced: any = {}
 
-  for (let column of Object.keys(table.columns)) {
-    let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column : column
+  for (let column of table.columns) {
+    let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column.name : column.name
     reduced[aliasedColumn] = row[aliasedColumn]
   }
 
   return reduced
 }
 
-export function idsNotSet(table: Table, row: any): string[] {
-  let idsNotSet = []
+export function idsNotSet(table: Table, row: any): Column[] {
+  let idsNotSet: Column[] = []
 
-  for (let idColumn of getPrimaryKey(table)) {
-    if (row[idColumn] === undefined) {
-      idsNotSet.push(idColumn)
+  for (let column of table.primaryKey) {
+    if (row[column.name] === undefined) {
+      idsNotSet.push(column)
     }
   }
 
