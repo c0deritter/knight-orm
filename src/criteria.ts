@@ -1,8 +1,8 @@
 import { Criteria, CriteriaObject, isCriteriaComparison, Operator, OrderBy } from 'knight-criteria'
 import { Log } from 'knight-log'
 import { comparison, Condition, Query } from 'knight-sql'
+import { unjoinRows } from './join'
 import { databaseIndependentQuery, selectAllColumnsExplicitly, SelectResult } from './query'
-import { unjoinRows } from './row'
 import { Relationship, Table } from './schema'
 
 let log = new Log('knight-orm/criteria.ts')
