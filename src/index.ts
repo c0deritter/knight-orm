@@ -1,4 +1,5 @@
 export * from './criteria'
+export * from './join'
 export * from './orm'
 export * from './query'
 export * from './row'
