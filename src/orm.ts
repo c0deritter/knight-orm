@@ -624,7 +624,7 @@ export class Orm {
     this.queryFn = queryFn
   }
 
-  store(className: string|(new () => any), instance: any): Promise<any> {
+  store<T>(className: new (...args: any[]) => T, instance: T): Promise<any> {
     return store(this.schema.getTableByClassName(className), this.db, this.queryFn, instance)
   }
 
@@ -632,7 +632,7 @@ export class Orm {
     return store(this.schema.getTable(tableName), this.db, this.queryFn, row, { asDatabaseRow: true })
   }
 
-  read(className: string|(new () => any), criteria: Criteria): Promise<any[]> {
+  read<T>(className: new (...args: any[]) => T, criteria: Criteria): Promise<T[]> {
     let table = this.schema.getTableByClassName(className)
     let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
     let rows = select(table, this.db, this.queryFn, rowCriteria)
