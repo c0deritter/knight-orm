@@ -53,9 +53,25 @@ export class Schema {
     throw new Error(`Table '${tableName}' not contained in schema. Use method 'Schema.check' to find errors early.`)
   }
 
+  getTableByClassName(className: string|(new () => any)): Table {
+    if (typeof className == 'function') {
+      className = className.name
+    }
+
+    for (let table of this.tables) {
+      if (table.className == className) {
+        return table
+      }
+    }
+
+    throw new Error(`Class '${className}' does not map to any table in the schema. Use method 'Schema.check' to find errors early.`)
+  }
+
   check() {
     for (let table of this.tables) {
       if (table.relationships) {
+        table.className
+        
         for (let relationship of table.relationships) {
           relationship.thisId
           relationship.otherTable
@@ -99,6 +115,7 @@ export class Table {
   columns: Column[] = []
   relationships: Relationship[] = []
 
+  private _className?: string
   private _primaryKey?: Column[]
   private _generatedPrimaryKey?: Column|null = null
   private _notGeneratedPrimaryKey?: Column[]
@@ -183,6 +200,19 @@ export class Table {
         this.relationships.push(relationshipObj)
       }
     }
+  }
+
+  get className(): string {
+    if (! this._className) {
+      let instance = this.newInstance()
+      this._className = instance?.constructor?.name
+
+      if (! this._className) {
+        throw new Error(`Function 'newInstance' did not provide an object with a 'constructor.name' property to derive the class name from.`)
+      }
+    }
+
+    return this._className
   }
 
   get primaryKey(): Column[] {

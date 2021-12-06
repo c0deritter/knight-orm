@@ -1,6 +1,7 @@
+import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { comparison } from 'knight-sql'
-import { reduceToPrimaryKey } from '.'
+import { instanceCriteriaToRowCriteria, reduceToPrimaryKey, Schema, select } from '.'
 import { databaseIndependentQuery, InsertUpdateDeleteResult } from './query'
 import { isUpdate } from './row'
 import { Table } from './schema'
@@ -609,4 +610,38 @@ export async function store(
     
   l.returning('Returning storage information...', storeInfo)
   return storeInfo
+}
+
+export class Orm {
+
+  schema: Schema
+  db: string
+  queryFn: (sqlString: string, values?: any[]) => Promise<any>
+
+  constructor(schema: Schema, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>) {
+    this.schema = schema
+    this.db = db
+    this.queryFn = queryFn
+  }
+
+  store(className: string|(new () => any), instance: any): Promise<any> {
+    return store(this.schema.getTableByClassName(className), this.db, this.queryFn, instance)
+  }
+
+  storeDatabaseRow(tableName: string, row: any): Promise<any> {
+    return store(this.schema.getTable(tableName), this.db, this.queryFn, row, { asDatabaseRow: true })
+  }
+
+  read(className: string|(new () => any), criteria: Criteria): Promise<any[]> {
+    let table = this.schema.getTableByClassName(className)
+    let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
+    let rows = select(table, this.db, this.queryFn, rowCriteria)
+    let instances = table.rowToInstance(rows)
+    return instances
+  }
+
+  readAsDatabaseCriteria(tableName: string, criteria: Criteria): Promise<any> {
+    let table = this.schema.getTable(tableName)
+    return select(table, this.db, this.queryFn, criteria)
+  }
 }
