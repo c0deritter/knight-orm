@@ -290,7 +290,7 @@ export class Table {
     throw new Error(`Relationship '${relationshipName}' not contained in table '${this.name}'. Use method 'Schema.check' to find errors early.`)
   }
 
-  instanceToRow(instance: any, alreadyConverted: AlreadyConverted = new AlreadyConverted): any {
+  instanceToRow(instance: any, withoutRelationships = false, alreadyConverted: AlreadyConverted = new AlreadyConverted): any {
     let l = tableLogger.mt('instanceToRow')
     l.param('instance', instance)
     l.param('alreadyConverted', alreadyConverted.instancesAndRows)
@@ -315,6 +315,11 @@ export class Table {
       row = this.customInstanceToRow(instance, row)
       l.called('Custom instanceToRow function applied', row)
     }
+
+    if (withoutRelationships) {
+      l.returning('Returning converted row without relationships...', row)
+      return row
+    }
   
     alreadyConverted.add(instance, row)
   
@@ -329,7 +334,7 @@ export class Table {
         if (typeof instance[relationship.name] == 'object' && instance[relationship.name] !== null) {
           if (relationship.manyToOne) {
             l.calling('Relationship is many-to-one. Converting relationship instance by using recursion.')
-            let relationshipRow = relationship.otherTable.instanceToRow(instance[relationship.name], alreadyConverted)
+            let relationshipRow = relationship.otherTable.instanceToRow(instance[relationship.name], withoutRelationships, alreadyConverted)
             l.called('Converted relationship instance', relationshipRow)
             row[relationship.name] = relationshipRow
           }
@@ -342,7 +347,7 @@ export class Table {
   
             for (let relationshipInstance of instance[relationship.name]) {
               l.calling('Converting next relationship instance by using recursion')
-              let relationshipRow = relationship.otherTable.instanceToRow(relationshipInstance, alreadyConverted)
+              let relationshipRow = relationship.otherTable.instanceToRow(relationshipInstance, withoutRelationships, alreadyConverted)
               l.called('Converted relationship instance')
         
               row[relationship.name].push(relationshipRow)
@@ -465,6 +470,10 @@ export class Column {
     this.propertyName = propertyName
     this.primaryKey = primaryKey
     this.generated = generated
+  }
+
+  getName(asDatabaseColumn = true): string {
+    return asDatabaseColumn ? this.name : this.propertyName
   }
 
   isForeignKey(): boolean {

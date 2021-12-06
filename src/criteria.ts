@@ -7,6 +7,11 @@ import { Relationship, Table } from './schema'
 
 let log = new Log('knight-orm/criteria.ts')
 
+export interface CriteriaIssue {
+  location: string
+  message: string
+}
+
 export function validateCriteria(table: Table, criteria: Criteria, path: string = ''): CriteriaIssue[] {
   let issues: CriteriaIssue[] = []
 
@@ -847,11 +852,6 @@ export async function delete_(table: Table, db: string, queryFn: (sqlString: str
   
   l.returning('Returning deleted rows...', deletedRows.rows)
   return deletedRows.rows
-}
-
-export interface CriteriaIssue {
-  location: string
-  message: string
 }
 
 // export function rowToUpdateCriteria(schema: Schema, tableName: string, row: any): UpdateCriteria {

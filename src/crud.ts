@@ -2,8 +2,7 @@ import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql from 'knight-sql'
 import { buildCountQuery, delete_ as criteriaDelete, instanceCriteriaToRowCriteria, select } from './criteria'
-import { store, StoredRows } from './orm'
-import { idsNotSet } from './row'
+import { store, StoredObjects } from './orm'
 import { Table } from './schema'
 
 let log = new Log('knight-orm/crud.ts')
@@ -67,11 +66,11 @@ export async function count(table: Table, db: string, queryFn: (sqlString: strin
   return rowCount
 }
 
-export async function update<T>(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: Partial<T>, alreadyUpdatedRows: StoredRows = new StoredRows): Promise<T> {
+export async function update<T>(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, instance: Partial<T>, alreadyUpdatedRows: StoredObjects = new StoredObjects): Promise<T> {
   let l = log.fn('update')
   l.param('db', db)
   l.param('instance', instance)
-  l.param('alreadyUpdatedRows', alreadyUpdatedRows.rowEntries)
+  l.param('alreadyUpdatedRows', alreadyUpdatedRows.entries)
 
   let row = {} //table.instanceToRow(instance) TODO: !!!
   l.lib('row', row)
@@ -89,7 +88,7 @@ export async function update<T>(table: Table, db: string, queryFn: (sqlString: s
   let criteria: any = {}//rowToUpdateCriteria(schema, tableName, row) // TODO: Remove :any
   l.lib('criteria', criteria)
 
-  let missingIdValues = idsNotSet(table, criteria)
+  let missingIdValues: string[] = [] //idsNotSet(table, criteria)
   if (missingIdValues.length > 0) {
     throw new Error('Not all id\'s are set. ' + JSON.stringify(missingIdValues))
   }
@@ -200,7 +199,7 @@ export async function delete_<T>(table: Table, db: string, queryFn: (sqlString: 
   let criteria = {} //instanceToDeleteCriteria(schema, tableName, instance)
   l.lib('Converted instance to delete criteria', criteria)
 
-  let missingIdValues = idsNotSet(table, criteria)
+  let missingIdValues: string[] = [] //idsNotSet(table, criteria)
   l.lib('missingIdValues', missingIdValues)
 
   if (missingIdValues.length > 0) {

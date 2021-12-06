@@ -1,55 +1,54 @@
 import { Log } from 'knight-log'
 import sql, { comparison } from 'knight-sql'
+import { reduceToPrimaryKey } from '.'
 import { databaseIndependentQuery, InsertUpdateDeleteResult } from './query'
 import { isUpdate } from './row'
 import { Table } from './schema'
 
 let log = new Log('knight-orm/orm.ts')
 
-export interface RowEntry {
+export interface StoredObjectsEntry {
   stored: boolean,
-  instance: any,
-  row: any,
-  afterSettingResultHandlers: ((result: any) => Promise<void>)[]
+  obj: any,
+  afterStorageHandlers: ((result: any) => Promise<void>)[]
 }
 
-let storedRowsLog = log.cls('StoredRows')
+let storedObjectsLog = log.cls('StoredObjects')
 
-export class StoredRows {
-  rowEntries: RowEntry[] = []
+export class StoredObjects {
+  entries: StoredObjectsEntry[] = []
 
-  setRowAboutToBeStored(row: any, instance?: any) {
-    if (! this.isRowContained(row)) {
-      this.rowEntries.push({
+  setRowAboutToBeStored(obj: any) {
+    if (! this.isContained(obj)) {
+      this.entries.push({
         stored: false,
-        instance: instance,
-        row: row,
-        afterSettingResultHandlers: []
-      } as RowEntry)
+        obj: obj,
+        afterStorageHandlers: []
+      } as StoredObjectsEntry)
     }
   }
 
-  isRowAboutToBeStored(row: any): boolean {
-    let rowEntry = this.getRowEntry(row)
-    return rowEntry != undefined && ! rowEntry.stored
+  isAboutToBeStored(obj: any): boolean {
+    let entry = this.getEntry(obj)
+    return entry != undefined && ! entry.stored
   }
 
-  async setRowStored(row: any): Promise<void> {
-    let l = storedRowsLog.mt('setRowStored')
-    let rowEntry = this.getRowEntry(row)
+  async setStored(obj: any): Promise<void> {
+    let l = storedObjectsLog.mt('setStored')
+    let entry = this.getEntry(obj)
 
-    if (rowEntry == undefined) {
-      throw new Error('Could not set result because the row object was not already fiddled with')
+    if (entry == undefined) {
+      throw new Error('Could not set as stored because the object was not set to be about to be stored.')
     }
 
-    rowEntry.stored = true
+    entry.stored = true
 
-    if (rowEntry.afterSettingResultHandlers.length > 0) {
+    if (entry.afterStorageHandlers.length > 0) {
       l.lib('Calling every registered handler after the result was set')
   
-      for (let fn of rowEntry.afterSettingResultHandlers) {
+      for (let fn of entry.afterStorageHandlers) {
         l.calling('Calling next result handler...')
-        await fn(rowEntry.row)
+        await fn(entry.obj)
         l.called('Called result handler')
       }
     }
@@ -57,57 +56,49 @@ export class StoredRows {
       l.lib('There are no handler to be called after the result was set')
     }
 
-    l.returning('Finished setting result. Returning...')
+    l.returning('Returning...')
   }
 
-  isRowStored(row: any): boolean {
-    let rowEntry = this.getRowEntry(row)
-    return rowEntry != undefined && rowEntry.stored
+  isStored(obj: any): boolean {
+    let entry = this.getEntry(obj)
+    return entry != undefined && entry.stored
   }
 
-  getRowByInstance(instance: any): any|undefined {
-    for (let rowEntry of this.rowEntries) {
-      if (rowEntry.instance === instance) {
-        return rowEntry.row
-      }
-    }    
-  }
-
-  getRowEntry(row: any): RowEntry|undefined {
-    for (let rowEntry of this.rowEntries) {
-      if (rowEntry.row === row) {
-        return rowEntry
+  getEntry(obj: any): StoredObjectsEntry|undefined {
+    for (let entry of this.entries) {
+      if (entry.obj === obj) {
+        return entry
       }
     }
   }
 
-  isRowContained(row: any): boolean {
-    return this.getRowEntry(row) != undefined
+  isContained(obj: any): boolean {
+    return this.getEntry(obj) != undefined
   }
 
-  remove(row: any) {
+  remove(obj: any) {
     let index = -1
 
-    for (let i = 0; i < this.rowEntries.length; i++) {
-      if (this.rowEntries[i].row === row) {
+    for (let i = 0; i < this.entries.length; i++) {
+      if (this.entries[i].obj === obj) {
         index = i
         break
       }
     }
 
     if (index > -1) {
-      this.rowEntries.splice(index, 1)
+      this.entries.splice(index, 1)
     }
   }
 
-  addAfterStoredRowHandler(row: any, handler: (justStoredRow: any) => Promise<void>) {
-    let rowEntry = this.getRowEntry(row)
+  addAfterStorageHandler(obj: any, handler: (justStoredRow: any) => Promise<void>) {
+    let entry = this.getEntry(obj)
 
-    if (rowEntry == undefined) {
-      throw new Error('Could not addAfterStoredRowHandler because the given row object is was not added yet. Use \'setRowAboutToBeStored\' to do so.')
+    if (entry == undefined) {
+      throw new Error('Could not addAfterStorageHandler because the given object is was not added yet. Use \'setAboutToBeStored\' to do so.')
     }
 
-    rowEntry.afterSettingResultHandlers.push(handler)
+    entry.afterStorageHandlers.push(handler)
   }
 }
 
@@ -121,16 +112,16 @@ export interface StoreOptions {
  * @param tableName 
  * @param db 
  * @param queryFn 
- * @param row 
- * @param storedRows 
+ * @param obj 
+ * @param storedObjects 
  */
 export async function store(
       table: Table, 
       db: string,
       queryFn: (sqlString: string, values?: any[]) => Promise<any>,
-      instance: any,
+      obj: any,
       options?: StoreOptions,
-      storedRows: StoredRows = new StoredRows,
+      storedObjects: StoredObjects = new StoredObjects,
       relationshipPath: string = 'root'
     ): Promise<any> {
 
@@ -146,32 +137,18 @@ export async function store(
 
   l.param('table.name', table.name)
   l.param('db', db)
-  l.param('instance', instance)
-  l.dev('alreadyStoredRows', storedRows.rowEntries)
+  l.param('obj', obj)
+  l.param('options', options)
+  l.dev('storedRows.rowEntries', storedObjects.entries)
 
-  let row: any
-  if (options && options.asDatabaseRow === true) {
-    row = instance
-    instance = undefined
-
-    if (storedRows.isRowContained(row)) {
-      l.lib('Row already stored. Returning...')
-      return
-    }
-  }
-  else {
-    row = storedRows.getRowByInstance(instance)
-
-    if (row != undefined) {
-      l.lib('Instance already stored. Returning...')
-      return
-    }
-
-    row = table.instanceToRow(instance)
+  if (storedObjects.isContained(obj)) {
+    l.lib('Row already stored. Returning...')
+    return
   }
 
+  let asDatabaseRow = options && options.asDatabaseRow === true ? true : false
   let storeInfo: any = {}
-  storedRows.setRowAboutToBeStored(row, instance)
+  storedObjects.setRowAboutToBeStored(obj)
 
   if (table.relationships.length > 0) {
     l.lib('Storing missing many-to-one or one-to-one relationships first to be able to assign their id\'s before storing the actual row')
@@ -187,55 +164,82 @@ export async function store(
         continue
       }
 
-      let manyToOneRow = row[relationship.name]
+      let manyToOneObj = obj[relationship.name]
 
-      if (manyToOneRow == undefined) {
-        l.lib('There is not row set for this relationship. Skipping...')
+      if (manyToOneObj == undefined) {
+        l.lib('There is no obj set for this relationship. Skipping...')
         continue
       }
 
-      if (typeof manyToOneRow != 'object') {
-        l.lib('The associated row for the relationship is not of type object. Skipping...')
+      if (typeof manyToOneObj != 'object') {
+        l.lib('The associated value for the relationship is not of type object. Skipping...')
         continue
       }
 
       l.lib('Relationship', relationship)
 
-      if (! storedRows.isRowContained(manyToOneRow)) {
-        l.lib('There is a relationship row object and it was not stored yet')
+      if (! storedObjects.isContained(manyToOneObj)) {
+        l.lib('There is a relationship object and it was not stored yet')
         l.calling('Storing it now...')
         
         let relationshipStoreInfo = await store(
           relationship.otherTable, 
           db, 
           queryFn, 
-          row[relationship.name], 
+          obj[relationship.name], 
           options,
-          storedRows, 
+          storedObjects, 
           relationshipPath != undefined ? relationshipPath + '.' + relationship.name : relationship.name
         )
 
-        l.called('Returned from storing the relationship row...')
+        l.called('Returned from storing the relationship object...')
 
-        l.lib(`Setting the many-to-one id one column using the stored relationship row -> ${relationship.thisId.name} =`, relationshipStoreInfo[relationship.otherId.name])
-        row[relationship.thisId.name] = manyToOneRow[relationship.otherId.name]
+        l.lib(`Setting the many-to-one id using the stored relationship object: ${relationship.thisId.getName(asDatabaseRow)} =`, relationshipStoreInfo[relationship.otherId.getName(asDatabaseRow)])
+        obj[relationship.thisId.getName(asDatabaseRow)] = manyToOneObj[relationship.otherId.getName(asDatabaseRow)]
         
-        l.dev('Setting relationship store info', relationshipStoreInfo)
+        l.dev('Adding store information for the relationship', relationshipStoreInfo)
         storeInfo[relationship.name] = relationshipStoreInfo
       }
 
-      else if (manyToOneRow[relationship.otherId.name] !== undefined) {
-        l.lib(`Relationship row is about to be stored up the recursion chain but the needed id is already there. Setting it... ${relationship.thisId.name} = ${manyToOneRow[relationship.otherId.name]}`)
-        row[relationship.thisId.name] = manyToOneRow[relationship.otherId.name]
+      else if (manyToOneObj[relationship.otherId.getName(asDatabaseRow)] !== undefined) {
+        l.lib(`Relationship object is about to be stored up the recursion chain but the needed id is already there. Setting it... ${relationship.thisId.getName(asDatabaseRow)} = ${manyToOneObj[relationship.otherId.getName(asDatabaseRow)]}`)
+        obj[relationship.thisId.getName(asDatabaseRow)] = manyToOneObj[relationship.otherId.getName(asDatabaseRow)]
       }
 
-      else if (storedRows.isRowAboutToBeStored(manyToOneRow)) {
-        l.lib('Row is about to be stored somewhere up the recursion chain. Adding handler which sets the id on the relationship owning row as soon as the relationship row is stored.')
+      else if (storedObjects.isAboutToBeStored(manyToOneObj)) {
+        l.lib('Object is about to be stored somewhere up the recursion chain. Adding handler which sets the id on the relationship owning object as soon as the relationship object is stored.')
 
-        storedRows.addAfterStoredRowHandler(manyToOneRow, async (justStoredManyToOneRow: any) => {
-          let l = log.fn('afterStoredRowHandler')
-          l.param('justStoredRow', justStoredManyToOneRow)
+        storedObjects.addAfterStorageHandler(manyToOneObj, async (justStoredManyToOneObj: any) => {
+          let l = log.fn('afterStorageHandler')
+          l.param('justStoredManyToOneObject', justStoredManyToOneObj)
           l.param('relationship', relationship)
+
+          l.lib('Converting just stored object to a database row...')
+
+          let row
+          let justStoredManyToOneRow
+          if (asDatabaseRow) {
+            row = obj
+            justStoredManyToOneRow = justStoredManyToOneObj
+            l.lib('Given object should be treated as a database row')
+          }
+          else {
+            l.lib('Converting instance to row')
+            l.calling('Calling Table.instanceToRow...')
+            let reduced = {
+              [relationship.otherId.name]: obj[relationship.otherId.name]
+            }
+            justStoredManyToOneRow = table.instanceToRow(reduced, true)
+            l.called('Called Table.instanceToRow...')
+
+            l.lib('Converting instance to row')
+            l.calling('Calling Table.instanceToRow...')
+            reduced = reduceToPrimaryKey(table, obj)
+            row = table.instanceToRow(reduced, true)
+            l.called('Called Table.instanceToRow...')
+          }
+
+          l.lib('Updating row...', row)
 
           let query = sql.update(table.name)
 
@@ -264,16 +268,31 @@ export async function store(
       }
 
       else {
-        throw new Error('Relationship row was already stored but it still does not contain the needed id for the many-to-one relationship.')
+        throw new Error('Relationship object was already stored but it still does not contain the needed id for the many-to-one relationship.')
       }
     }
 
     l.location.pop()
   }
 
+  l.lib('Converting object to a database row...')
+  
+  let row
+  if (asDatabaseRow) {
+    l.lib('Given object should be treated as a database row')
+    row = obj
+  }
+  else {
+    l.lib('Given object should be treated as an instance')
+    l.calling('Calling Table.instanceToRow...')
+    let reduced = reduceToPrimaryKey(table, obj)
+    row = table.instanceToRow(reduced, true)
+    l.called('Called Table.instanceToRow...')
+  }
+
   l.lib('Determining if to store or to update the given row...', row)
   
-  let doUpdate = await isUpdate(table, db, queryFn, row)
+  let doUpdate = await isUpdate(table, db, queryFn, row, asDatabaseRow)
 
   if (doUpdate) {
     l.lib('Updating the given row...')
@@ -304,7 +323,7 @@ export async function store(
     storeInfo['@update'] = true
 
     for (let column of table.primaryKey) {
-      storeInfo[column.name] = row[column.name]
+      storeInfo[column.name] = obj[column.name]
     }
   }
 
@@ -336,31 +355,31 @@ export async function store(
     storeInfo['@update'] = false
 
     for (let column of table.primaryKey) {
-      storeInfo[column.name] = row[column.name]
+      storeInfo[column.getName(asDatabaseRow)] = obj[column.getName(asDatabaseRow)]
     }
 
     if (generatedPrimaryKey) {
-      l.dev(`Setting generated primary key on row: ${generatedPrimaryKey.name} = ${result.insertId}`)
-      row[generatedPrimaryKey.name] = result.insertId
-      l.dev(`Setting generated primary key on storage information: ${generatedPrimaryKey.name} = ${result.insertId}`)
-      storeInfo[generatedPrimaryKey.name] = result.insertId
+      l.dev(`Setting generated primary key on object: ${generatedPrimaryKey.getName(asDatabaseRow)} = ${result.insertId}`)
+      obj[generatedPrimaryKey.getName(asDatabaseRow)] = result.insertId
+      l.dev(`Setting generated primary key on storage information: ${generatedPrimaryKey.getName(asDatabaseRow)} = ${result.insertId}`)
+      storeInfo[generatedPrimaryKey.getName(asDatabaseRow)] = result.insertId
     }
   }
 
   l.lib('Storage information', storeInfo)
-  l.calling('Triggering actions that can be down now after this row was stored...')
+  l.calling('Triggering actions that can be down now after this object was stored...')
 
   try {
-    await storedRows.setRowStored(row)
+    await storedObjects.setStored(obj)
   }
   catch (e) {
     throw new Error(e as any)
   }
 
-  l.called('Triggered actions after row was stored')
+  l.called('Triggered actions after object was stored')
 
   if (table.relationships.length > 0) {
-    l.lib('Storing one-to-many relationship rows and setting one-to-one back references...')
+    l.lib('Storing one-to-many relationship objects and setting one-to-one back references...')
 
     l.location.push('')
 
@@ -371,34 +390,61 @@ export async function store(
       let otherTable = relationship.otherTable
 
       if (relationship.manyToOne && relationship.otherRelationship) {
-        let oneToOneRow = row[relationship.name]
+        let oneToOneObj = obj[relationship.name]
 
-        if (oneToOneRow == undefined) {
-          l.lib('There is no row set for this one-to-one relationship. Skipping...')
+        if (oneToOneObj == undefined) {
+          l.lib('There is no object set for this one-to-one relationship. Skipping...')
           continue
         }
 
-        if (typeof oneToOneRow != 'object') {
-          l.lib('The associated row value for the relationship is not of type object. Skipping...', oneToOneRow)
+        if (typeof oneToOneObj != 'object') {
+          l.lib('The associated value for the relationship is not of type object. Skipping...', oneToOneObj)
           continue
         }
 
         l.lib('Relationship', relationship)
         let otherRelationship = relationship.otherRelationship
 
-        if (! storedRows.isRowContained(oneToOneRow)) {
-          throw new Error('One-to-one row is neither to be stored nor stored. This is an invalid state because any many-to-one row should have already been processed. Please contact the library programmer.')
+        if (! storedObjects.isContained(oneToOneObj)) {
+          throw new Error('One-to-one object is neither to be stored nor stored. This is an invalid state because any many-to-one object should have already been processed. Please contact the library programmer.')
         }
 
-        else if (storedRows.isRowAboutToBeStored(oneToOneRow)) {
-          l.lib('One-to-one row is about to be stored', oneToOneRow)
-          l.lib(`Setting its many-to-one relationship id which references back -> ${otherRelationship.thisId.name} =`, row[otherRelationship.otherId.name])
-          oneToOneRow[otherRelationship.thisId.name] = row[otherRelationship.otherId.name]
+        else if (storedObjects.isAboutToBeStored(oneToOneObj)) {
+          l.lib('One-to-one object is about to be stored', oneToOneObj)
+          l.lib(`Setting its many-to-one relationship id which references back -> ${otherRelationship.thisId.getName(asDatabaseRow)} =`, obj[otherRelationship.otherId.getName(asDatabaseRow)])
+          oneToOneObj[otherRelationship.thisId.getName(asDatabaseRow)] = obj[otherRelationship.otherId.getName(asDatabaseRow)]
         }
 
         else {
-          l.lib('One-to-one row was already stored', oneToOneRow)
-          l.lib(`Setting its many-to-one relationship id which references back -> ${otherRelationship.thisId.name} =`, row[otherRelationship.otherId.name])
+          l.lib('One-to-one object was already stored', oneToOneObj)
+          l.lib(`Setting its many-to-one relationship id which references back -> ${otherRelationship.thisId.getName(asDatabaseRow)} =`, obj[otherRelationship.otherId.getName(asDatabaseRow)])
+
+          l.lib('Converting just stored object to a database row...')
+
+          let row
+          let oneToOneRow
+          if (options && options.asDatabaseRow === true) {
+            row = obj
+            oneToOneRow = oneToOneObj
+            l.lib('Given object should be treated as a database row')
+          }
+          else {
+            l.lib('Converting instance to row')
+            l.calling('Calling Table.instanceToRow...')
+            let reduced = {
+              [otherRelationship.otherId.propertyName]: obj[otherRelationship.otherId.propertyName]
+            }
+            row = table.instanceToRow(reduced, true)
+            l.called('Called Table.instanceToRow...')
+
+            l.lib('Converting one-to-one instance to row')
+            l.calling('Calling Table.instanceToRow...')
+            reduced = reduceToPrimaryKey(table, oneToOneObj)
+            oneToOneRow = table.instanceToRow(reduced, true)
+            l.called('Called Table.instanceToRow...')
+          }
+
+          l.lib('Updating row...', row)
 
           let query = sql.update(otherTable.name)
     
@@ -431,15 +477,15 @@ export async function store(
       }
 
       else if (relationship.oneToMany) {
-        let oneToManyArray = row[relationship.name]
+        let oneToManyArray = obj[relationship.name]
 
         if (oneToManyArray == undefined) {
-          l.lib('There is no row set for this one-to-one relationship. Skipping...')
+          l.lib('There is no array set for this one-to-many relationship. Skipping...')
           continue
         }
 
         if (! (oneToManyArray instanceof Array)) {
-          l.lib('Relationship is one-to-many but given relationship object is not of type array. Skipping...', oneToManyArray)
+          l.lib('Relationship is one-to-many but given relationship value is not of type array. Skipping...', oneToManyArray)
           continue
         }
 
@@ -448,23 +494,23 @@ export async function store(
           continue
         }
 
-        l.lib('One-to-many relationship is an array. Iterating through every one-to-many row...')
+        l.lib('One-to-many relationship is an array. Iterating through every one-to-many object...')
 
-        for (let oneToManyRow of oneToManyArray) {
-          if (! storedRows.isRowContained(oneToManyRow)) {
-            l.lib('One-to-many row was not stored yet', oneToManyRow)
+        for (let oneToManyObj of oneToManyArray) {
+          if (! storedObjects.isContained(oneToManyObj)) {
+            l.lib('One-to-many object was not stored yet', oneToManyObj)
             
-            l.lib(`Setting many-to-one relationship id on the one-to-many row: ${relationship.otherId.name} = ${row[relationship.thisId.name]}`)
-            oneToManyRow[relationship.otherId.name] = row[relationship.thisId.name]
+            l.lib(`Setting many-to-one relationship id on the one-to-many object: ${relationship.otherId.getName(asDatabaseRow)} = ${obj[relationship.thisId.getName(asDatabaseRow)]}`)
+            oneToManyObj[relationship.otherId.getName(asDatabaseRow)] = obj[relationship.thisId.getName(asDatabaseRow)]
             
             l.called('Storing the row...')
             let relationshipStoreInfo = await store(
               relationship.otherTable, 
               db, 
               queryFn, 
-              oneToManyRow, 
+              oneToManyObj, 
               options, 
-              storedRows, 
+              storedObjects, 
               relationshipPath != undefined ? relationshipPath + '.' + relationship.name : relationship.name
             )
   
@@ -479,28 +525,53 @@ export async function store(
             }
           }
   
-          else if (storedRows.isRowAboutToBeStored(oneToManyRow)) {
-            l.lib('One-to-many row is about to be stored up the recursion chain', oneToManyRow)
+          else if (storedObjects.isAboutToBeStored(oneToManyObj)) {
+            l.lib('One-to-many object is about to be stored up the recursion chain', oneToManyObj)
 
-            if (oneToManyRow[relationship.otherId.name] === undefined) {
-              l.lib(`The many-to-one id referencing this one-to-many row is not set. Setting it: ${relationship.otherId.name} =`, row[relationship.thisId.name])
-              oneToManyRow[relationship.otherId.name] = row[relationship.thisId.name]
+            if (oneToManyObj[relationship.otherId.getName(asDatabaseRow)] === undefined) {
+              l.lib(`The many-to-one id referencing this one-to-many object is not set. Setting it: ${relationship.otherId.getName(asDatabaseRow)} =`, obj[relationship.thisId.getName(asDatabaseRow)])
+              oneToManyObj[relationship.otherId.getName(asDatabaseRow)] = obj[relationship.thisId.getName(asDatabaseRow)]
             }
             else {
-              l.lib('The many-to-one id referencing back to this one-to-many row is already set which means that this row is part of a many-to-many relationship')
+              l.lib('The many-to-one id referencing back to this one-to-many object is already set which means that this object is part of a many-to-many relationship')
             }
           }
   
           else {
-            l.lib('One-to-many row was already stored', oneToManyRow)
+            l.lib('One-to-many object was already stored', oneToManyObj)
 
-            if (oneToManyRow[relationship.otherId.name] === undefined) {
-              l.lib(`The many-to-one id referencing this one-to-many row is not set. Setting it in the database: ${relationship.otherId.name} =`, row[relationship.thisId.name])
+            if (oneToManyObj[relationship.otherId.getName(asDatabaseRow)] === undefined) {
+              l.lib(`The many-to-one id referencing this one-to-many object is not set. Setting it in the database: ${relationship.otherId.getName(asDatabaseRow)} =`, obj[relationship.thisId.getName(asDatabaseRow)])
   
+              let row
+              let oneToManyRow
+              if (options && options.asDatabaseRow === true) {
+                row = obj
+                oneToManyRow = oneToManyObj
+                l.lib('Given object should be treated as a database row')
+              }
+              else {
+                l.lib('Converting instance to row')
+                l.calling('Calling Table.instanceToRow...')
+                let reduced = {
+                  [relationship.thisId.name]: obj[relationship.thisId.name]
+                }
+                row = table.instanceToRow(reduced, true)
+                l.called('Called Table.instanceToRow...')
+    
+                l.lib('Converting one-to-many instance to row')
+                l.calling('Calling Table.instanceToRow...')
+                reduced = reduceToPrimaryKey(table, oneToManyObj)
+                oneToManyRow = table.instanceToRow(reduced, true)
+                l.called('Called Table.instanceToRow...')
+              }
+    
+              l.lib('Updating row...', row)
+
               let query = sql.update(relationship.otherTable.name)
       
               for (let column of otherTable.primaryKey) {
-                if (row[column.name] === undefined) {
+                if (obj[column.name] === undefined) {
                   throw new Error('Could not set the many-to-one id on one-to-many row because not all primary key columns are set. Please contact the library programmer.')
                 }
     
@@ -526,7 +597,7 @@ export async function store(
               }
             }
             else {
-              l.lib('The many-to-one id referencing back to this one-to-many row is already set which means that this row is part of a many-to-many relationship')
+              l.lib('The many-to-one id referencing back to this one-to-many object is already set which means that this object is part of a many-to-many relationship')
             }
           }    
         }

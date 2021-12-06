@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
-import { isUpdate, rowsRepresentSameEntity, unjoinRows } from '../src/row'
+import { isUpdate, objectsRepresentSameEntity, unjoinRows } from '../src/row'
 import { ManyToManyObject2, Object1, Object2, schema } from './testSchema'
 
 let pool: Pool = new Pool({
@@ -39,7 +39,7 @@ describe('row', function() {
       let row = {
       }
 
-      let result = await isUpdate(schema.getTable('table1'), 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('table1'), 'postgres', pgQueryFn, row, true)
 
       expect(result).to.be.false
     })
@@ -49,7 +49,7 @@ describe('row', function() {
         id: 1
       }
 
-      let result = await isUpdate(schema.getTable('table1'), 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('table1'), 'postgres', pgQueryFn, row, true)
 
       expect(result).to.be.true
     })
@@ -59,7 +59,7 @@ describe('row', function() {
         id: 'x'
       }
 
-      let result = await isUpdate(schema.getTable('table2'), 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('table2'), 'postgres', pgQueryFn, row, true)
 
       expect(result).to.be.false
     })
@@ -71,7 +71,7 @@ describe('row', function() {
         id: 'x'
       }
 
-      let result = await isUpdate(schema.getTable('table2'), 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('table2'), 'postgres', pgQueryFn, row, true)
 
       expect(result).to.be.true
     })
@@ -82,7 +82,7 @@ describe('row', function() {
         table2_id: 'x'
       }
 
-      let result = await isUpdate(schema.getTable('many_to_many_table2'), 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('many_to_many_table2'), 'postgres', pgQueryFn, row, true)
 
       expect(result).to.be.false
     })
@@ -95,7 +95,7 @@ describe('row', function() {
         table2_id: 'x'
       }
 
-      let result = await isUpdate(schema.getTable('many_to_many_table2'), 'postgres', pgQueryFn, row)
+      let result = await isUpdate(schema.getTable('many_to_many_table2'), 'postgres', pgQueryFn, row, true)
 
       expect(result).to.be.true
     })
@@ -686,33 +686,33 @@ describe('row', function() {
     })
   })
 
-  describe('rowsRepresentSameEntity', function() {
+  describe('objectsRepresentSameEntity', function() {
     it('should detect two rows as the same entity', function() {
       let row1 = { id: 1, column1: 'a', column2: 1 }
       let row2 = { id: 1, column1: 'b', column2: 2 }
 
-      expect(rowsRepresentSameEntity(schema.getTable('table1'), row1, row2)).to.be.true
-      expect(rowsRepresentSameEntity(schema.getTable('table1'), row2, row1)).to.be.true
+      expect(objectsRepresentSameEntity(schema.getTable('table1'), row1, row2, true)).to.be.true
+      expect(objectsRepresentSameEntity(schema.getTable('table1'), row2, row1, true)).to.be.true
 
       let row3 = { table1_id: 1, table2_id: 'x', column1: 'a' }
       let row4 = { table1_id: 1, table2_id: 'x', column1: 'b' }
 
-      expect(rowsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4)).to.be.true
-      expect(rowsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4)).to.be.true
+      expect(objectsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4, true)).to.be.true
+      expect(objectsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4, true)).to.be.true
     })
 
     it('should not detect two rows as the same entity', function() {
       let row1 = { id: 1 }
       let row2 = { id: 2, column1: 'a', column2: 1 }
 
-      expect(rowsRepresentSameEntity(schema.getTable('table1'), row1, row2)).to.be.false
-      expect(rowsRepresentSameEntity(schema.getTable('table1'), row2, row1)).to.be.false
+      expect(objectsRepresentSameEntity(schema.getTable('table1'), row1, row2, true)).to.be.false
+      expect(objectsRepresentSameEntity(schema.getTable('table1'), row2, row1, true)).to.be.false
 
       let row3 = { table1_id: 1, table2_id: 'x' }
       let row4 = { table1_id: 2, table2_id: 'x', column1: 'a' }
 
-      expect(rowsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4)).to.be.false
-      expect(rowsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4)).to.be.false
+      expect(objectsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4, true)).to.be.false
+      expect(objectsRepresentSameEntity(schema.getTable('many_to_many_table2'), row3, row4, true)).to.be.false
     })
   })
 })

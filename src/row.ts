@@ -2,24 +2,25 @@ import { Criteria, summarizeCriteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { comparison } from 'knight-sql'
 import { databaseIndependentQuery, SelectResult } from './query'
-import { Column, Table } from './schema'
+import { Table } from './schema'
 
-let log = new Log('knight-orm/rowTools.ts')
+let log = new Log('knight-orm/row.ts')
 
 export async function isUpdate(
   table: Table,
   db: string,
   queryFn: (sqlString: string, values?: any[]) => Promise<any>,
-  row: any
+  obj: any,
+  asDatabaseRow = false
 ): Promise<boolean> {
   
   let l = log.fn('isUpdate')
   l.param('table.name', table.name)
   l.param('db', db)
-  l.param('row', row)
+  l.param('obj', obj)
 
-  if (! areAllNotGeneratedPrimaryKeyColumnsSet(table, row)) {
-    throw new Error(`At least one not generated primary key column (${table.notGeneratedPrimaryKey.map(column => column.name).join(', ')}) is not set. Enable logging for more details.`)
+  if (! areAllNotGeneratedPrimaryKeyColumnsSet(table, obj, asDatabaseRow)) {
+    throw new Error(`At least one not generated primary key field (${table.notGeneratedPrimaryKey.map(column => column.name).join(', ')}) is not set. Enable logging for more details.`)
   }
 
   let hasNotGeneratedPrimaryKeys = false
@@ -31,7 +32,7 @@ export async function isUpdate(
     if (column.generated) {
       generatedPrimaryKeyCount++
 
-      if (row[column.name] == null) {
+      if (obj[column.getName(asDatabaseRow)] == null) {
         generatedPrimaryKeyIsNotNull = false
       }
       else {
@@ -44,12 +45,21 @@ export async function isUpdate(
   }
 
   if (generatedPrimaryKeyCount == 1 && ! generatedPrimaryKeyIsNull && ! generatedPrimaryKeyIsNotNull) {
-    throw new Error('There is a generated primary key which are null and generated primary keys which are not null. This is an inconsistent set of column values. Cannot determine if row is to be inserted or to be updated. Please enable logging for more details.')
+    throw new Error('There is a generated primary key which are null and generated primary keys which are not null. This is an inconsistent set of values. Cannot determine if the object is to be inserted or to be updated. Please enable logging for more details.')
   }
 
   if ((generatedPrimaryKeyCount == 1 && generatedPrimaryKeyIsNotNull || ! generatedPrimaryKeyCount) && hasNotGeneratedPrimaryKeys) {
-    l.lib('The row has not generated primary key columns. Determining if the row was already inserted.')
+    l.lib('The object does not have generated primary key fields. Determining if the object was already inserted.')
     
+    let row
+    if (asDatabaseRow === true) {
+      row = obj
+    }
+    else {
+      let reduced = reduceToPrimaryKey(table, obj)
+      row = table.instanceToRow(reduced, true)
+    }
+
     let query = sql.select('*').from(table.name)
 
     for (let column of table.primaryKey) {
@@ -100,20 +110,20 @@ export async function isUpdate(
  * If the row did not contain any column of the given table, undefined is returned.
  */
  export function unjoinTable(table: Table, joinedRow: any, alias?: string, returnUndefinedIfEveryColumnIsNull = false): any {
-  let filteredRow: any = undefined
+  let unjoinedRow: any = undefined
   let everyColumnIsNull = true
 
   for (let column of table.columns) {
     let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column.name : column.name
 
     if (aliasedColumn in joinedRow) {
-      if (filteredRow == undefined) {
-        filteredRow = {}
+      if (unjoinedRow == undefined) {
+        unjoinedRow = {}
       }
 
-      filteredRow[column.name] = joinedRow[aliasedColumn]
+      unjoinedRow[column.name] = joinedRow[aliasedColumn]
 
-      if (filteredRow[column.name] !== null) {
+      if (unjoinedRow[column.name] !== null) {
         everyColumnIsNull = false
       }
     }
@@ -123,7 +133,7 @@ export async function isUpdate(
     return
   }
 
-  return filteredRow
+  return unjoinedRow
 }
 
 /**
@@ -208,7 +218,7 @@ export function unjoinRows(table: Table, joinedRows: any[], criteria: Criteria, 
 
     let rowAlreadyUnjoined = false
     for (let alreadyUnjoinedRow of unjoinedRows) {
-      if (rowsRepresentSameEntity(table, alreadyUnjoinedRow, unjoinedRow)) {
+      if (objectsRepresentSameEntity(table, alreadyUnjoinedRow, unjoinedRow, true)) {
         rowAlreadyUnjoined = true
         break
       }
@@ -278,9 +288,9 @@ export function unjoinRows(table: Table, joinedRows: any[], criteria: Criteria, 
   return unjoinedRows
 }
 
-export function isPrimaryKeySet(table: Table, row: any): boolean {
+export function isPrimaryKeySet(table: Table, obj: any, asDatabaseRow = false): boolean {
   for (let column of table.primaryKey) {
-    if (row[column.name] == null) {
+    if (obj[column.getName(asDatabaseRow)] == null) {
       return false
     }
   }
@@ -288,9 +298,9 @@ export function isPrimaryKeySet(table: Table, row: any): boolean {
   return true
 }
 
-export function areAllNotGeneratedPrimaryKeyColumnsSet(table: Table, row: any): boolean {
+export function areAllNotGeneratedPrimaryKeyColumnsSet(table: Table, obj: any, asDatabaseRow = false): boolean {
   for (let column of table.notGeneratedPrimaryKey) {
-    if (row[column.name] == null) {
+    if (obj[column.getName(asDatabaseRow)] == null) {
       return false
     }
   }
@@ -298,8 +308,8 @@ export function areAllNotGeneratedPrimaryKeyColumnsSet(table: Table, row: any): 
   return true
 }
 
-export function rowsRepresentSameEntity(table: Table, row1: any, row2: any): boolean {
-  if (row1 == undefined || row2 == undefined) {
+export function objectsRepresentSameEntity(table: Table, obj1: any, obj2: any, asDatabaseRows = false): boolean {
+  if (obj1 == undefined || obj2 == undefined) {
     return false
   }
 
@@ -308,7 +318,7 @@ export function rowsRepresentSameEntity(table: Table, row1: any, row2: any): boo
   }
 
   for (let column of table.primaryKey) {
-    if (row1[column.name] === undefined || row1[column.name] !== row2[column.name]) {
+    if (obj1[column.getName(asDatabaseRows)] === undefined || obj1[column.getName(asDatabaseRows)] !== obj2[column.getName(asDatabaseRows)]) {
       return false
     }
   }
@@ -316,69 +326,14 @@ export function rowsRepresentSameEntity(table: Table, row1: any, row2: any): boo
   return true
 }
 
-export function instancesRepresentSameEntity(table: Table, instance1: any, instance2: any): boolean {
-  if (instance1 == undefined || instance2 == undefined) {
-    return false
-  }
-  
-  if (table.primaryKey.length == 0) {
-    return false
-  }
-
-  for (let column of table.primaryKey) {
-    if (column.propertyName != undefined && (instance1[column.propertyName] === undefined || instance1[column.propertyName] !== instance2[column.propertyName])) {
-      return false
-    }
-  }
-
-  return true
-}
-
-export function isRowRelevant(row: any, filter: any): boolean {
-  if (filter == undefined) {
-    return true
-  }
-
-  for (let property of Object.keys(filter)) {
-    if (row[property] !== filter[property]) {
-      return false
-    }
-  }
-
-  return true
-}
-
-export function reduceToPrimaryKey(table: Table, row: any): any {
+export function reduceToPrimaryKey(table: Table, obj: any, asDatabaseRow = false): any {
   let reduced: any = {}
   
   for (let column of table.columns) {
     if (column.primaryKey) {
-      reduced[column.name] = row[column.name]
+      reduced[column.getName(asDatabaseRow)] = obj[column.getName(asDatabaseRow)]
     }
   }
 
   return reduced
-}
-
-export function reduceToColumnsOfTable(table: Table, row: any, alias?: string): any {
-  let reduced: any = {}
-
-  for (let column of table.columns) {
-    let aliasedColumn = alias != undefined && alias.length > 0 ? alias + column.name : column.name
-    reduced[aliasedColumn] = row[aliasedColumn]
-  }
-
-  return reduced
-}
-
-export function idsNotSet(table: Table, row: any): Column[] {
-  let idsNotSet: Column[] = []
-
-  for (let column of table.primaryKey) {
-    if (row[column.name] === undefined) {
-      idsNotSet.push(column)
-    }
-  }
-
-  return idsNotSet
 }
