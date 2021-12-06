@@ -640,7 +640,7 @@ export class Orm {
     return instances
   }
 
-  readAsDatabaseCriteria(tableName: string, criteria: Criteria): Promise<any> {
+  readDatabaseCriteria(tableName: string, criteria: Criteria): Promise<any> {
     let table = this.schema.getTable(tableName)
     return select(table, this.db, this.queryFn, criteria)
   }

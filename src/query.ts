@@ -145,15 +145,11 @@ export function selectAllColumnsExplicitly(schema: Schema, query: Query) {
     for (let from of query._from.pieces) {
       if (from instanceof From) {
         let fromTable = schema.getTable(from.table)
-  
-        if (fromTable == undefined) {
-          throw new Error('Table not contained in schema: ' + from.table)
-        }
     
         for (let column of fromTable.columns) {
           let alias = from.alias != undefined && from.alias.length > 0 ? from.alias : undefined
           query.select((alias != undefined ? alias + '.' : '') + column.name + ' ' + (alias != undefined ? '"' + alias + '__' + column.name + '"' : ''))
-        }  
+        }
       }
     }
   }
@@ -163,10 +159,6 @@ export function selectAllColumnsExplicitly(schema: Schema, query: Query) {
       if (join instanceof Join) {
         let joinTable = schema.getTable(join.table)
   
-        if (joinTable == undefined) {
-          throw new Error('Table not contained in schema: ' + join.table)
-        }
-    
         for (let column of joinTable.columns) {
           let alias = join.alias != undefined && join.alias.length > 0 ? join.alias : undefined
           query.select((alias != undefined ? alias + '.' : '') + column.name + ' ' + (alias != undefined ? '"' + alias + '__' + column.name + '"' : ''))
