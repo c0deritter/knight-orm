@@ -1,10 +1,10 @@
 import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { comparison } from 'knight-sql'
-import { instanceCriteriaToRowCriteria, reduceToPrimaryKey, Schema, select } from '.'
+import { count, instanceCriteriaToRowCriteria, select } from './criteria'
 import { databaseIndependentQuery, InsertUpdateDeleteResult } from './query'
-import { isUpdate } from './row'
-import { Table } from './schema'
+import { isUpdate, reduceToPrimaryKey } from './row'
+import { Schema, Table } from './schema'
 
 let log = new Log('knight-orm/orm.ts')
 
@@ -613,35 +613,29 @@ export async function store(
 }
 
 export class Orm {
-
   schema: Schema
   db: string
-  queryFn: (sqlString: string, values?: any[]) => Promise<any>
 
-  constructor(schema: Schema, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>) {
+  constructor(schema: Schema, db: string) {
     this.schema = schema
     this.db = db
-    this.queryFn = queryFn
   }
 
-  store<T>(className: new (...args: any[]) => T, instance: T): Promise<any> {
-    return store(this.schema.getTableByClassName(className), this.db, this.queryFn, instance)
+  store<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, instance: T): Promise<any> {
+    return store(this.schema.getTableByClassName(className), this.db, queryFn, instance)
   }
 
-  storeDatabaseRow(tableName: string, row: any): Promise<any> {
-    return store(this.schema.getTable(tableName), this.db, this.queryFn, row, { asDatabaseRow: true })
-  }
-
-  read<T>(className: new (...args: any[]) => T, criteria: Criteria): Promise<T[]> {
+  async read<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, criteria: Criteria): Promise<T[]> {
     let table = this.schema.getTableByClassName(className)
     let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
-    let rows = select(table, this.db, this.queryFn, rowCriteria)
+    let rows = await select(table, this.db, queryFn, rowCriteria)
     let instances = table.rowToInstance(rows)
     return instances
   }
 
-  readDatabaseCriteria(tableName: string, criteria: Criteria): Promise<any> {
-    let table = this.schema.getTable(tableName)
-    return select(table, this.db, this.queryFn, criteria)
+  async count(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => any, criteria: Criteria): Promise<number> {
+    let table = this.schema.getTableByClassName(className)
+    let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
+    return count(table, this.db, queryFn, rowCriteria)
   }
 }

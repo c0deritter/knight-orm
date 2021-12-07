@@ -691,15 +691,6 @@ export function buildSelectQuery(table: Table, criteria: Criteria): Query {
   return query
 }
 
-export function buildCountQuery(table: Table, criteria: Criteria): Query {
-  let query = new Query
-  query.from(table.name, table.name).select('COUNT(*)')
-
-  addCriteria(table, query, criteria, table.name)
-
-  return query
-}
-
 export async function select(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
   let l = log.fn('select')
   l.location = [ table.name ]
@@ -789,6 +780,36 @@ export async function select(table: Table, db: string, queryFn: (sqlString: stri
 
   l.returning('Returning rows...', rows)
   return rows
+}
+
+export function buildCountQuery(table: Table, criteria: Criteria): Query {
+  let query = new Query
+  query.from(table.name, table.name).select('COUNT(*) as count')
+  addCriteria(table, query, criteria, table.name)
+  return query
+}
+
+export async function count(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<number> {
+  let query = buildCountQuery(table, criteria)
+
+  let rows
+  try {
+    rows = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as SelectResult
+  }
+  catch (e) {
+    throw new Error(e as any)
+  }
+
+  let count = rows[0].count
+
+  try {
+    parseInt(count)
+  }
+  catch (e) {
+    throw new Error(e as any)
+  }
+  
+  return count
 }
 
 export interface UpdateCriteria {
