@@ -1,8 +1,8 @@
 import { expect } from 'chai'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
-import { isUpdate, objectsRepresentSameEntity, unjoinRows } from '../src/row'
-import { ManyToManyObject2, Object1, Object2, schema } from './testSchema'
+import { isUpdate, objectsRepresentSameEntity, unjoinRows } from '../src'
+import { schema } from './testSchema'
 
 let pool: Pool = new Pool({
   host: 'postgres',

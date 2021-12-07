@@ -1,7 +1,7 @@
 import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { comparison } from 'knight-sql'
-import { count, instanceCriteriaToRowCriteria, select } from './criteria'
+import { criteriaCount, instanceCriteriaToRowCriteria, criteriaSelect } from './criteria'
 import { databaseIndependentQuery, InsertUpdateDeleteResult } from './query'
 import { isUpdate, reduceToPrimaryKey } from './row'
 import { Schema, Table } from './schema'
@@ -637,7 +637,7 @@ export class Orm {
   async read<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, criteria: Criteria): Promise<T[]> {
     let table = this.schema.getTableByClassName(className)
     let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
-    let rows = await select(table, this.db, queryFn, rowCriteria)
+    let rows = await criteriaSelect(table, this.db, queryFn, rowCriteria)
     let instances = table.rowToInstance(rows)
     return instances
   }
@@ -645,7 +645,7 @@ export class Orm {
   count(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => any, criteria: Criteria): Promise<number> {
     let table = this.schema.getTableByClassName(className)
     let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
-    return count(table, this.db, queryFn, rowCriteria)
+    return criteriaCount(table, this.db, queryFn, rowCriteria)
   }
 
   delete<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, instance: T): Promise<any> {

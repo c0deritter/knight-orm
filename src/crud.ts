@@ -1,7 +1,7 @@
 import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql from 'knight-sql'
-import { buildCountQuery, delete_ as criteriaDelete, instanceCriteriaToRowCriteria, select } from './criteria'
+import { buildCriteriaCountQuery, criteriaDelete as criteriaDelete, instanceCriteriaToRowCriteria, criteriaSelect } from './criteria'
 import { store, StoredObjects } from './orm'
 import { Table } from './schema'
 
@@ -29,7 +29,7 @@ export async function read<T>(table: Table, db: string, queryFn: (sqlString: str
   let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
   l.lib('rowCriteria', rowCriteria)
 
-  let rows = await select(table, db, queryFn, rowCriteria)
+  let rows = await criteriaSelect(table, db, queryFn, rowCriteria)
   l.lib('rows', rows)
 
   let instances: T[] = []
@@ -51,7 +51,7 @@ export async function count(table: Table, db: string, queryFn: (sqlString: strin
   let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
   l.lib('rowCriteria', rowCriteria)
 
-  let query = buildCountQuery(table, rowCriteria)
+  let query = buildCriteriaCountQuery(table, rowCriteria)
 
   let sqlString = query.sql(db)
   let values = query.values()

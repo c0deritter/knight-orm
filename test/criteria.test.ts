@@ -5,7 +5,7 @@ import { Join, Query } from 'knight-sql'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
 import { store } from '../src'
-import { addCriteria, buildSelectQuery, delete_, determineRelationshipsToLoad, instanceCriteriaToRowCriteria, select, validateCriteria } from '../src/criteria'
+import { addCriteria, buildCriteriaSelectQuery, criteriaDelete, determineRelationshipsToLoad, instanceCriteriaToRowCriteria, criteriaSelect, validateCriteria } from '../src/criteria'
 import { schema } from './testSchema'
 
 chai.use(chaiAsPromised)
@@ -1414,10 +1414,10 @@ describe('criteria', function() {
     })
   })
 
-  describe('buildSelectQuery', function() {
+  describe('buildCriteriaSelectQuery', function() {
     it('should handle a simple select query', function() {
       let criteria = { column1: 'a', column2: 1 }
-      let query = buildSelectQuery(schema.getTable('table1'), criteria)
+      let query = buildCriteriaSelectQuery(schema.getTable('table1'), criteria)
       expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.column3 "table1__column3", table1.many_to_one_object1_id "table1__many_to_one_object1_id", table1.many_to_one_object2_id "table1__many_to_one_object2_id", table1.one_to_one_object1_id "table1__one_to_one_object1_id", table1.one_to_one_object2_id "table1__one_to_one_object2_id", table1.one_to_many_object1_many_to_one_id "table1__one_to_many_object1_many_to_one_id" FROM table1 table1 WHERE table1.column1 = ? AND table1.column2 = ?')
     })
   
@@ -1435,7 +1435,7 @@ describe('criteria', function() {
         }
       }
   
-      let query = buildSelectQuery(schema.getTable('table1'), criteria)
+      let query = buildCriteriaSelectQuery(schema.getTable('table1'), criteria)
   
       expect(query._select!.pieces!.length).to.equal(20)
       expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
@@ -1469,7 +1469,7 @@ describe('criteria', function() {
         }
       }
   
-      let query = buildSelectQuery(schema.getTable('table1'), criteria)
+      let query = buildCriteriaSelectQuery(schema.getTable('table1'), criteria)
   
       expect(query._select!.pieces!.length).to.equal(20)
       expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
@@ -1506,7 +1506,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 }, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, {})
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {})
 
       expect(rows.length).to.equal(3)
 
@@ -1555,7 +1555,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 }, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
         '@orderBy': {
           field: 'column2',
           direction: 'DESC'
@@ -1609,7 +1609,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 }, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
         '@limit': 2
       })
 
@@ -1648,7 +1648,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 }, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
         '@offset': 2
       })
 
@@ -1672,7 +1672,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }}, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         manyToOneObject1: {
           column2: 1
@@ -1699,7 +1699,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { manyToOneObject1: { } }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { manyToOneObject1: { } }, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
         manyToOneObject1: {
           id: 1
         }
@@ -1725,7 +1725,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }}, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         manyToOneObject1: {
           '@load': true,
@@ -1764,7 +1764,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }}, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         manyToOneObject1: {
           '@loadSeparately': true,
@@ -1829,7 +1829,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         oneToManyObject1: {
           column1: 'd'
@@ -1856,7 +1856,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         oneToManyObject1: {
           '@load': true,
@@ -1897,7 +1897,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         oneToManyObject1: {
           '@loadSeparately': true,
@@ -1964,7 +1964,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }, oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }, oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, { asDatabaseRow: true })
 
-      let rows = await select(schema.getTable('table1'), 'postgres', pgQueryFn, [
+      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, [
         {
           column1: 'a',
           manyToOneObject1: {
@@ -2073,18 +2073,18 @@ describe('criteria', function() {
       await pgQueryFn('INSERT INTO table2 DEFAULT VALUES')
       await pgQueryFn('INSERT INTO table2 DEFAULT VALUES')
 
-      let rows = await select(schema.getTable('table2'), 'postgres', pgQueryFn, {})
+      let rows = await criteriaSelect(schema.getTable('table2'), 'postgres', pgQueryFn, {})
 
       expect(rows.length).to.equal(0)
     })
   })
 
-  describe('delete_', function() {
+  describe('criteriaDelete', function() {
     it('should delete a simple row by id', async function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', column2: 1 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2 }, { asDatabaseRow: true })
 
-      let deletedRows = await delete_(schema.getTable('table1'), 'postgres', pgQueryFn, { id: 1 })
+      let deletedRows = await criteriaDelete(schema.getTable('table1'), 'postgres', pgQueryFn, { id: 1 })
 
       expect(deletedRows).to.deep.equal([{
         id: 1,
@@ -2118,7 +2118,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', column2: 1 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2 }, { asDatabaseRow: true })
 
-      let deletedRows = await delete_(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a' })
+      let deletedRows = await criteriaDelete(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a' })
 
       expect(deletedRows).to.deep.equal([{
         id: 1,
@@ -2152,7 +2152,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', column2: 1 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2 }, { asDatabaseRow: true })
 
-      expect(delete_(schema.getTable('table1'), 'postgres', pgQueryFn, { invalid: 'invalid' })).to.be.rejectedWith(Error)
+      expect(criteriaDelete(schema.getTable('table1'), 'postgres', pgQueryFn, { invalid: 'invalid' })).to.be.rejectedWith(Error)
 
       let table1Result = await pgQueryFn('SELECT * FROM table1')
 

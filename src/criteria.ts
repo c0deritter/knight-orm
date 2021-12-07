@@ -681,7 +681,7 @@ export function determineRelationshipsToLoad(
   return relationshipsToLoad
 }
 
-export function buildSelectQuery(table: Table, criteria: Criteria): Query {
+export function buildCriteriaSelectQuery(table: Table, criteria: Criteria): Query {
   let query = new Query
   query.from(table.name, table.name)
 
@@ -691,12 +691,12 @@ export function buildSelectQuery(table: Table, criteria: Criteria): Query {
   return query
 }
 
-export async function select(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
+export async function criteriaSelect(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
   let l = log.fn('select')
   l.location = [ table.name ]
   l.param('criteria', criteria)
 
-  let query = buildSelectQuery(table, criteria)
+  let query = buildCriteriaSelectQuery(table, criteria)
   l.dev('Built SELECT query', query)
 
   l.lib('Querying database with given SQL string and values...')
@@ -747,7 +747,7 @@ export async function select(table: Table, db: string, queryFn: (sqlString: stri
     criteria[relationship.otherId.name] = idsToLoad
 
     l.calling('Loading relationship rows with the following criteria', criteria)
-    let loadedRelationships = await select(relationship.otherTable, db, queryFn, criteria)
+    let loadedRelationships = await criteriaSelect(relationship.otherTable, db, queryFn, criteria)
     l.called('Loaded relationship rows for criteria', criteria)
     l.dev('Loaded relationship rows', loadedRelationships)
 
@@ -782,15 +782,15 @@ export async function select(table: Table, db: string, queryFn: (sqlString: stri
   return rows
 }
 
-export function buildCountQuery(table: Table, criteria: Criteria): Query {
+export function buildCriteriaCountQuery(table: Table, criteria: Criteria): Query {
   let query = new Query
   query.from(table.name, table.name).select('COUNT(*) as count')
   addCriteria(table, query, criteria, table.name)
   return query
 }
 
-export async function count(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<number> {
-  let query = buildCountQuery(table, criteria)
+export async function criteriaCount(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<number> {
+  let query = buildCriteriaCountQuery(table, criteria)
 
   let rows
   try {
@@ -817,7 +817,7 @@ export interface UpdateCriteria {
   '@criteria': Criteria
 }
 
-export async function update(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria): Promise<any[]> {
+export async function criteriaUpdate(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria): Promise<any[]> {
   let l = log.fn('update')
   l.param('table.name', table.name)
   l.param('criteria', criteria)
@@ -850,7 +850,7 @@ export async function update(table: Table, db: string, queryFn: (sqlString: stri
   return updatedRows
 }
 
-export async function delete_(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>, criteria: Criteria): Promise<any[]> {
+export async function criteriaDelete(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>, criteria: Criteria): Promise<any[]> {
   let l = log.fn('delete_')
   l.param('table.name', table.name)
   l.param('criteria', criteria)

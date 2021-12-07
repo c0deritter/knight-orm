@@ -116,6 +116,32 @@ async function pgQueryFn(sqlString: string, values?: any[]): Promise<any> {
   return result
 }
 
+class Knight {
+  id?: number
+  name?: string
+  bestFriendId?: number
+  
+  bestFriend?: Knight
+  knightsWhoThinkIAmTheirBestFriend?: Knight[]
+  friends?: Friends[]
+  address?: Address
+}
+
+class Friends {
+  befrienderId?: number
+  friendId?: number
+
+  befriender?: Knight
+  friend?: Knight
+}
+
+class Address {
+  knightId?: number
+  street?: string
+
+  knight?: Knight
+}
+
 let schema = new Schema
 
 schema.addTable('knight', {
@@ -198,29 +224,3 @@ schema.addTable('address', {
 })
 
 schema.check()
-
-class Knight {
-  id?: number
-  name?: string
-  bestFriendId?: number
-  
-  bestFriend?: Knight
-  knightsWhoThinkIAmTheirBestFriend?: Knight[]
-  friends?: Friends[]
-  address?: Address
-}
-
-class Friends {
-  befrienderId?: number
-  friendId?: number
-
-  befriender?: Knight
-  friend?: Knight
-}
-
-class Address {
-  knightId?: number
-  street?: string
-
-  knight?: Knight
-}
