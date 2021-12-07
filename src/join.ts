@@ -1,6 +1,6 @@
 import { Criteria, summarizeCriteria } from 'knight-criteria'
 import { Log } from 'knight-log'
-import { objectsRepresentSameEntity } from '.'
+import { objectsRepresentSameEntity } from './row'
 import { Table } from './schema'
 
 let log = new Log('knight-orm/row.ts')
