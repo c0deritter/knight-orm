@@ -612,6 +612,15 @@ export async function store(
   return storeInfo
 }
 
+export async function delete_(
+  table: Table,
+  db: string,
+  queryFn: (sqlString: string, values?: any[]) => Promise<any>,
+  obj: any,
+  asDatabaseRow = false
+): Promise<any> {
+}
+
 export class Orm {
   schema: Schema
   db: string
@@ -633,9 +642,14 @@ export class Orm {
     return instances
   }
 
-  async count(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => any, criteria: Criteria): Promise<number> {
+  count(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => any, criteria: Criteria): Promise<number> {
     let table = this.schema.getTableByClassName(className)
     let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
     return count(table, this.db, queryFn, rowCriteria)
+  }
+
+  delete<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, instance: T): Promise<any> {
+    let table = this.schema.getTableByClassName(className)
+    return delete_(table, this.db, queryFn, instance)
   }
 }
