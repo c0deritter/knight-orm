@@ -1265,7 +1265,7 @@ describe('orm', function() {
     })
   })
 
-  describe.only('delete', function() {
+  describe('delete', function() {
     it('should delete an entity', async function() {
       await pgQueryFn('INSERT INTO table1 (column1) VALUES ($1)', ['a'])
       await pgQueryFn('INSERT INTO table1 (column1) VALUES ($1)', ['b'])
