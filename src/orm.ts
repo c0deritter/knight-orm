@@ -1,9 +1,9 @@
 import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { comparison } from 'knight-sql'
-import { criteriaCount, instanceCriteriaToRowCriteria, criteriaSelect } from './criteria'
+import { criteriaCount, criteriaSelect, instanceCriteriaToRowCriteria } from './criteria'
 import { databaseIndependentQuery, InsertUpdateDeleteResult } from './query'
-import { isUpdate, reduceToPrimaryKey } from './row'
+import { isPrimaryKeySet, isUpdate, reduceToPrimaryKey } from './row'
 import { Schema, Table } from './schema'
 
 let log = new Log('knight-orm/orm.ts')
@@ -619,6 +619,36 @@ export async function delete_(
   obj: any,
   asDatabaseRow = false
 ): Promise<any> {
+  let l = log.mt('delete')
+  l.param('obj', obj)
+  l.param('asDatabaseRow', asDatabaseRow)
+
+  if (! isPrimaryKeySet(table, obj)) {
+    throw new Error('Could not delete object because the primary key is not set.')
+  }
+
+  let query = sql.deleteFrom(table.name)
+  let deleteInfo: any = {}
+
+  for (let column of table.primaryKey) {
+    query.where(comparison(column.name, obj[column.getName(asDatabaseRow)]))
+    deleteInfo[column.getName(asDatabaseRow)] = obj[column.getName(asDatabaseRow)]
+  }
+
+  let result
+  try {
+    result = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as InsertUpdateDeleteResult
+  }
+  catch (e) {
+    throw new Error(e as any)
+  }
+
+  if (result.affectedRows != 1) {
+    throw new Error('Could not delete object.')
+  }
+
+  l.returning('Returning delete info...', deleteInfo)
+  return deleteInfo
 }
 
 export class Orm {

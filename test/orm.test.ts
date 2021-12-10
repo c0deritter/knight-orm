@@ -2,7 +2,7 @@ import * as chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
-import { store } from '../src/orm'
+import { delete_, store } from '../src/orm'
 import { schema } from './testSchema'
 
 chai.use(chaiAsPromised)
@@ -1261,6 +1261,68 @@ describe('orm', function() {
         column3: null,
         one_to_one_object1_id: null,
         one_to_many_object2_many_to_one_id: null
+      })
+    })
+  })
+
+  describe.only('delete', function() {
+    it('should delete an entity', async function() {
+      await pgQueryFn('INSERT INTO table1 (column1) VALUES ($1)', ['a'])
+      await pgQueryFn('INSERT INTO table1 (column1) VALUES ($1)', ['b'])
+
+      let result = await delete_(schema.getTable('table1'), 'postgres', pgQueryFn, { id: 1 })
+
+      expect(result).to.deep.equal({
+        id: 1
+      })
+
+      let table1Result = await pgQueryFn('SELECT * FROM table1')
+
+      expect(table1Result.rows.length).to.equal(1)
+      expect(table1Result.rows[0]).to.deep.equal({
+        id: 2,
+        column1: 'b',
+        column2: null,
+        column3: null,
+        many_to_one_object1_id: null,
+        many_to_one_object2_id: null,
+        one_to_one_object1_id: null,
+        one_to_one_object2_id: null,
+        one_to_many_object1_many_to_one_id: null,
+      })
+    })
+
+    it('should not delete anything if the primary key is missing', async function() {
+      await pgQueryFn('INSERT INTO table1 (column1) VALUES ($1)', ['a'])
+      await pgQueryFn('INSERT INTO table1 (column1) VALUES ($1)', ['b'])
+
+      expect(delete_(schema.getTable('table1'), 'postgres', pgQueryFn, { })).to.be.rejectedWith('Could not delete object because the primary key is not set.')
+
+      let table1Result = await pgQueryFn('SELECT * FROM table1 ORDER BY id')
+
+      expect(table1Result.rows.length).to.equal(2)
+      expect(table1Result.rows[0]).to.deep.equal({
+        id: 1,
+        column1: 'a',
+        column2: null,
+        column3: null,
+        many_to_one_object1_id: null,
+        many_to_one_object2_id: null,
+        one_to_one_object1_id: null,
+        one_to_one_object2_id: null,
+        one_to_many_object1_many_to_one_id: null,
+      })
+
+      expect(table1Result.rows[1]).to.deep.equal({
+        id: 2,
+        column1: 'b',
+        column2: null,
+        column3: null,
+        many_to_one_object1_id: null,
+        many_to_one_object2_id: null,
+        one_to_one_object1_id: null,
+        one_to_one_object2_id: null,
+        one_to_many_object1_many_to_one_id: null,
       })
     })
   })
