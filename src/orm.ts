@@ -103,8 +103,19 @@ export class StoredObjects {
   }
 }
 
+export type StoreFunction = (
+  table: Table, 
+  db: string,
+  queryFn: (sqlString: string, values?: any[]) => Promise<any>,
+  obj: any,
+  options?: StoreOptions,
+  storedObjects?: StoredObjects,
+  relationshipPath?: string
+) => Promise<any>
+
 export interface StoreOptions {
   asDatabaseRow?: boolean
+  customStoreFunctions?: { [classOrTableName: string] : StoreFunction }
 }
 
 /**
@@ -140,7 +151,7 @@ export async function store(
   l.param('db', db)
   l.param('obj', obj)
   l.param('options', options)
-  l.dev('storedRows.rowEntries', storedObjects.entries)
+  l.dev('storedObjects.rowEntries', storedObjects.entries)
 
   if (storedObjects.isContained(obj)) {
     l.lib('Row already stored. Returning...')
@@ -181,9 +192,25 @@ export async function store(
 
       if (! storedObjects.isContained(manyToOneObj)) {
         l.lib('There is a relationship object and it was not stored yet')
+
+        let storeFn = store
+        if (options && options.customStoreFunctions) {
+          if (asDatabaseRow && relationship.otherTableName in options.customStoreFunctions) {
+            l.lib('Found custom store function')
+            storeFn = options.customStoreFunctions[relationship.otherTableName]
+          }
+          else if (! asDatabaseRow && relationship.otherTable.className in options.customStoreFunctions) {
+            l.lib('Found custom store function')
+            storeFn = options.customStoreFunctions[relationship.otherTable.className]
+          }
+          else {
+            l.lib('Did not find custom store function')
+          }
+        }
+
         l.calling('Storing it now...')
         
-        let relationshipStoreInfo = await store(
+        let relationshipStoreInfo = await storeFn(
           relationship.otherTable, 
           db, 
           queryFn, 
@@ -504,8 +531,23 @@ export async function store(
             l.lib(`Setting many-to-one relationship id on the one-to-many object: ${relationship.otherId.getName(asDatabaseRow)} = ${obj[relationship.thisId.getName(asDatabaseRow)]}`)
             oneToManyObj[relationship.otherId.getName(asDatabaseRow)] = obj[relationship.thisId.getName(asDatabaseRow)]
             
+            let storeFn = store
+            if (options && options.customStoreFunctions) {
+              if (asDatabaseRow && relationship.otherTableName in options.customStoreFunctions) {
+                l.lib('Found custom store function')
+                storeFn = options.customStoreFunctions[relationship.otherTableName]
+              }
+              else if (! asDatabaseRow && relationship.otherTable.className in options.customStoreFunctions) {
+                l.lib('Found custom store function')
+                storeFn = options.customStoreFunctions[relationship.otherTable.className]
+              }
+              else {
+                l.lib('Did not find custom store function')
+              }
+            }
+
             l.called('Storing the row...')
-            let relationshipStoreInfo = await store(
+            let relationshipStoreInfo = await storeFn(
               relationship.otherTable, 
               db, 
               queryFn, 
@@ -655,13 +697,29 @@ export class Orm {
   schema: Schema
   db: string
 
+  customFunctions: { [className: string]: {
+    store?: StoreFunction
+  }} = {}
+
   constructor(schema: Schema, db: string) {
     this.schema = schema
     this.db = db
   }
 
+  get customStoreFunctions(): { [className: string]: StoreFunction } {
+    let result: { [className: string]: StoreFunction } = {}
+
+    for (let className of Object.keys(this.customFunctions)) {
+      if ('store' in this.customFunctions[className]) {
+        result[className] = this.customFunctions[className].store!
+      }
+    }
+
+    return result
+  }
+
   store<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, instance: T): Promise<any> {
-    return store(this.schema.getTableByClassName(className), this.db, queryFn, instance)
+    return store(this.schema.getTableByClassName(className), this.db, queryFn, instance, { customStoreFunctions: this.customStoreFunctions })
   }
 
   async read<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, criteria: Criteria): Promise<T[]> {
