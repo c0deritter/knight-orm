@@ -862,8 +862,8 @@ export interface UpdateCriteria {
   '@criteria': Criteria
 }
 
-export async function criteriaUpdate(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria, asDatabaseCriteria = false): Promise<any[]> {
-  let l = log.fn('update')
+export async function criteriaUpdate(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria, asDatabaseCriteria = false): Promise<any> {
+  let l = log.fn('criteriaUpdate')
   l.param('table.name', table.name)
   l.param('criteria', criteria)
 
@@ -879,24 +879,26 @@ export async function criteriaUpdate(table: Table, db: string, queryFn: (sqlStri
 
   addCriteria(table, query, criteria['@criteria'], asDatabaseCriteria)
 
-  if (db == 'postgres') {
-    query.returning('*')
-  }
-
   let sqlString = query.sql(db)
   let values = query.values()
 
   l.lib('SQL string', sqlString)
   l.lib('Values', values)
 
-  let updatedRows = await queryFn(sqlString, values)
+  let result
+  try {
+    result = await queryFn(sqlString, values)
+  }
+  catch (e) {
+    throw new Error(e as any)
+  }
   
-  l.returning('Returning updated rows...', updatedRows)
-  return updatedRows
+  l.returning('Returning result...', result)
+  return result
 }
 
-export async function criteriaDelete(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>, criteria: Criteria, asDatabaseCriteria = false): Promise<any[]> {
-  let l = log.fn('delete_')
+export async function criteriaDelete(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>, criteria: Criteria, asDatabaseCriteria = false): Promise<any> {
+  let l = log.fn('criteriaDelete')
   l.param('table.name', table.name)
   l.param('criteria', criteria)
 
@@ -904,18 +906,20 @@ export async function criteriaDelete(table: Table, db: string, queryFn: (sqlStri
   query.deleteFrom(table.name)
   addCriteria(table, query, criteria, asDatabaseCriteria)
 
-  if (db == 'postgres') {
-    query.returning('*')
-  }
-
   let sqlString = query.sql(db)
   let values = query.values()
 
   l.lib('SQL string', sqlString)
   l.lib('Values', values)
 
-  let deletedRows = await queryFn(sqlString, values)
+  let result
+  try {
+    result = await queryFn(sqlString, values)
+  }
+  catch (e) {
+    throw new Error(e as any)
+  }
   
-  l.returning('Returning deleted rows...', deletedRows.rows)
-  return deletedRows.rows
+  l.returning('Returning result...', result)
+  return result
 }
