@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
-import { isUpdate, objectsRepresentSameEntity, unjoinRows } from '../src'
+import { isUpdate, objectsRepresentSameEntity } from '../src'
 import { schema } from './testSchema'
 
 let pool: Pool = new Pool({

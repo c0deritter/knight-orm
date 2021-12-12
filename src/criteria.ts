@@ -1,7 +1,7 @@
 import { Criteria, CriteriaObject, isCriteriaComparison, Operator, OrderBy } from 'knight-criteria'
 import { Log } from 'knight-log'
 import { comparison, Condition, Query } from 'knight-sql'
-import { unjoinRows } from './join'
+import { JoinAlias } from './join'
 import { databaseIndependentQuery, selectAllColumnsExplicitly, SelectResult } from './query'
 import { Relationship, Table } from './schema'
 
@@ -224,34 +224,32 @@ export function addCriteria(
   query: Query, 
   criteria: Criteria | undefined, 
   asDatabaseCriteria = false, 
-  alias?: string, 
-  condition?: Condition
+  joinAlias: JoinAlias = new JoinAlias(table), 
+  sqlCondition?: Condition
 ) {
   let l = log.fn('addCriteria')
   l.param('table.name', table.name)
   l.param('query', query)
   l.param('criteria', criteria)
-  l.param('alias', alias)
-  l.param('condition', condition)
+  l.param('joinAlias', joinAlias)
+  l.param('condition', sqlCondition)
 
   if (criteria == undefined) {
     l.returning('Criteria are undefined or null. Returning...')
     return
   }
 
-  if (condition == undefined) {
+  if (sqlCondition == undefined) {
     if (query._where == undefined) {
       query._where = new Condition
       query._where.removeOuterLogicalOperators = true
     }
 
-    condition = query._where
+    sqlCondition = query._where
   }
   else {
-    condition.removeOuterLogicalOperators = true
+    sqlCondition.removeOuterLogicalOperators = true
   }
-
-  let aliasPrefix = alias != undefined && alias.length > 0 ? alias + '.' : ''
 
   if (criteria instanceof Array) {
     l.lib('Given criteria is an array')
@@ -270,14 +268,14 @@ export function addCriteria(
       }
 
       l.lib('Adding logical operator', logical)
-      condition.push(logical)
+      sqlCondition.push(logical)
 
       let subCondition = new Condition
       subCondition.surroundWithBrackets = true
-      condition.push(subCondition)
+      sqlCondition.push(subCondition)
 
       l.calling('Add sub criteria through recursion', arrayValue)
-      addCriteria(table, query, arrayValue as any, asDatabaseCriteria, alias, subCondition)
+      addCriteria(table, query, arrayValue as any, asDatabaseCriteria, joinAlias, subCondition)
       l.called('Added sub criteria through recursion')
     }
   }
@@ -288,12 +286,12 @@ export function addCriteria(
       if (typeof criteria['@orderBy'] == 'string') {
         if (asDatabaseCriteria && table.hasColumn(criteria['@orderBy'])) {
           l.lib('Adding ORDER BY', criteria['@orderBy'])
-          query.orderBy(aliasPrefix + criteria['@orderBy'])
+          query.orderBy(joinAlias.joinAlias + criteria['@orderBy'])
         }
         else if (! asDatabaseCriteria && table.hasColumnByProperty(criteria['@orderBy'])) {
           let column = table.getColumnByProperty(criteria['@orderBy'])!
           l.lib(`Adding ORDER BY from property name '${criteria['@orderBy']}'`, column.name)
-          query.orderBy(aliasPrefix + column.name)
+          query.orderBy(joinAlias.joinAlias + column.name)
         }
         else {
           l.lib('Not adding ORDER BY because the given column or property is not contained in the table', criteria['@orderBy'])
@@ -306,12 +304,12 @@ export function addCriteria(
           if (typeof orderBy == 'string') {
             if (asDatabaseCriteria && table.hasColumn(orderBy)) {
               l.lib('Adding ORDER BY', orderBy)
-              query.orderBy(aliasPrefix + orderBy)
+              query.orderBy(joinAlias.joinAlias + orderBy)
             }
             else if (! asDatabaseCriteria && table.hasColumnByProperty(orderBy)) {
               let column = table.getColumnByProperty(orderBy)!
               l.lib(`Adding ORDER BY from property name '${criteria['@orderBy']}'`, column.name)
-              query.orderBy(aliasPrefix + column.name)
+              query.orderBy(joinAlias.joinAlias + column.name)
             }
             else {
               l.lib('Not adding ORDER BY because the given column or property is not contained in the table', orderBy)
@@ -350,11 +348,11 @@ export function addCriteria(
   
               if (direction == undefined) {
                 l.lib('Adding ORDER BY', columnName)
-                query.orderBy(aliasPrefix + columnName)
+                query.orderBy(joinAlias.joinAlias + columnName)
               }
               else {
                 l.lib('Adding ORDER BY', columnName)
-                query.orderBy(aliasPrefix + columnName + ' ' + direction)
+                query.orderBy(joinAlias.joinAlias + columnName + ' ' + direction)
               }  
             }
             else {
@@ -390,11 +388,11 @@ export function addCriteria(
 
             if (direction == undefined) {
               l.lib('Adding ORDER BY', columnName)
-              query.orderBy(aliasPrefix + columnName)
+              query.orderBy(joinAlias.joinAlias + columnName)
             }
             else {
               l.lib('Adding ORDER BY', columnName)
-              query.orderBy(aliasPrefix + columnName + ' ' + direction)
+              query.orderBy(joinAlias.joinAlias + columnName + ' ' + direction)
             }  
           }
           else {
@@ -421,14 +419,14 @@ export function addCriteria(
     }
 
     if (criteria['@not'] === true) {
-      condition.push('NOT')
+      sqlCondition.push('NOT')
       
       let negatedCondition = new Condition
       negatedCondition.removeOuterLogicalOperators = true
       negatedCondition.surroundWithBrackets = true
 
-      condition.push(negatedCondition)
-      condition = negatedCondition
+      sqlCondition.push(negatedCondition)
+      sqlCondition = negatedCondition
     }
 
     l.lib('Iterating over all columns')
@@ -445,7 +443,7 @@ export function addCriteria(
       l.lib('Processing column using criterium', value)
 
       l.lib('Adding logical operator AND')
-      condition.push('AND')
+      sqlCondition.push('AND')
 
       if (isCriteriaComparison(value)) {
         l.lib('Given object represents a comparison')
@@ -458,15 +456,15 @@ export function addCriteria(
         }
 
         if (value['@value'] !== undefined) {
-          let comp = comparison(aliasPrefix + column.name, operator, value['@value'])
+          let comp = comparison(joinAlias.joinAlias + column.name, operator, value['@value'])
           
           if (value['@not'] === true) {
             l.lib('Adding comparison with NOT', comp)
-            condition.push('NOT', comp)
+            sqlCondition.push('NOT', comp)
           }
           else {
             l.lib('Adding comparison', comp)
-            condition.push(comp)
+            sqlCondition.push(comp)
           }
         }
         else {
@@ -487,9 +485,9 @@ export function addCriteria(
         }
 
         if (! atLeastOneComparison) {
-          let comp = comparison(aliasPrefix + column.name, value)
+          let comp = comparison(joinAlias.joinAlias + column.name, value)
           l.lib('Adding comparison', comp)
-          condition.push(comp)
+          sqlCondition.push(comp)
         }
         else {
           l.lib('Array represents connected comparisons')
@@ -499,7 +497,7 @@ export function addCriteria(
           let subCondition = new Condition
           subCondition.removeOuterLogicalOperators = true
           subCondition.surroundWithBrackets = true
-          condition.push(subCondition)
+          sqlCondition.push(subCondition)
 
           for (let arrayValue of value) {
             if (typeof arrayValue == 'string') {
@@ -530,7 +528,7 @@ export function addCriteria(
               l.lib('Adding logical operator', logical)
               subCondition.push(logical)
 
-              let comp = comparison(aliasPrefix + column.name, operator, arrayValue['@value'])
+              let comp = comparison(joinAlias.joinAlias + column.name, operator, arrayValue['@value'])
               
               if (arrayValue['@not'] === true) {
                 l.lib('Adding comparison with NOT', comp)
@@ -550,9 +548,9 @@ export function addCriteria(
         }
       }
       else {
-        let comp = comparison(aliasPrefix + column.name, value)
+        let comp = comparison(joinAlias.joinAlias + column.name, value)
         l.lib('Adding comparison with default operator =', comp)
-        condition.push(comp)
+        sqlCondition.push(comp)
       }
     }
 
@@ -578,14 +576,13 @@ export function addCriteria(
           let thisId = relationship.thisId
           let otherId = relationship.otherId
 
-          let joinAlias = alias != undefined && alias.length > 0 ? alias + '__' + relationship.name : relationship.name
-          l.dev('joinAlias', joinAlias)
+          let relationshipJoinAlias = joinAlias.join(relationship)
 
-          query.join('LEFT', otherTable.name, joinAlias, (alias != undefined && alias.length > 0 ? alias + '.' : '') + thisId.name + ' = ' + joinAlias + '.' + otherId.name)
+          query.join('LEFT', otherTable.name, relationshipJoinAlias.alias, joinAlias.joinAlias + thisId.name + ' = ' + relationshipJoinAlias.joinAlias + otherId.name)
           l.lib('Added LEFT JOIN to query', query._join!.pieces![query._join!.pieces!.length - 1])
 
           l.calling('Filling query with the relationship criteria', relationshipCriteria)
-          addCriteria(otherTable, query, relationshipCriteria, asDatabaseCriteria, joinAlias, condition)
+          addCriteria(otherTable, query, relationshipCriteria, asDatabaseCriteria, relationshipJoinAlias, sqlCondition)
           l.called('Filled query with the relationship criteria', relationshipCriteria)
         }
         else {
@@ -731,7 +728,7 @@ export function buildCriteriaReadQuery(table: Table, criteria: Criteria, asDatab
   let query = new Query
   query.from(table.name, table.name)
 
-  addCriteria(table, query, criteria, asDatabaseCriteria, table.name)
+  addCriteria(table, query, criteria, asDatabaseCriteria)
   selectAllColumnsExplicitly(table.schema, query)
 
   return query
@@ -757,8 +754,10 @@ export async function criteriaRead(table: Table, db: string, queryFn: (sqlString
 
   l.dev('Received rows', joinedRows)
 
+  let joinAlias = new JoinAlias(table)
+
   l.calling('Unjoining rows for criteria...')
-  let objects = unjoinRows(table, joinedRows, criteria, asDatabaseCriteria, table.name + '__')
+  let objects = joinAlias.unjoinRows(joinedRows, criteria, asDatabaseCriteria)
   l.called('Unjoined objects for criteria...', criteria)
   l.dev('Unjoined objects', objects)
 
@@ -831,7 +830,7 @@ export async function criteriaRead(table: Table, db: string, queryFn: (sqlString
 export function buildCriteriaCountQuery(table: Table, criteria: Criteria, asDatabaseCriteria = false): Query {
   let query = new Query
   query.from(table.name, table.name).select('COUNT(*) as count')
-  addCriteria(table, query, criteria, asDatabaseCriteria, table.name)
+  addCriteria(table, query, criteria, asDatabaseCriteria)
   return query
 }
 
