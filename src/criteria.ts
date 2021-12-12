@@ -735,7 +735,7 @@ export function buildCriteriaReadQuery(table: Table, criteria: Criteria, asDatab
 }
 
 export async function criteriaRead(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria, asDatabaseCriteria = false): Promise<any[]> {
-  let l = log.fn('select')
+  let l = log.fn('criteriaRead')
   l.location = [ table.name ]
   l.param('criteria', criteria)
 

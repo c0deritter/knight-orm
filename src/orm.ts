@@ -118,15 +118,6 @@ export interface StoreOptions {
   customStoreFunctions?: { [classOrTableName: string] : StoreFunction }
 }
 
-/**
- * 
- * @param schema 
- * @param tableName 
- * @param db 
- * @param queryFn 
- * @param obj 
- * @param storedObjects 
- */
 export async function store(
       table: Table, 
       db: string,
@@ -722,22 +713,15 @@ export class Orm {
     return store(this.schema.getTableByClassName(className), this.db, queryFn, instance, { customStoreFunctions: this.customStoreFunctions })
   }
 
-  async read<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, criteria: Criteria): Promise<T[]> {
-    let table = this.schema.getTableByClassName(className)
-    let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
-    let rows = await criteriaRead(table, this.db, queryFn, rowCriteria)
-    let instances = table.rowToInstance(rows)
-    return instances
+  delete<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, instance: T): Promise<any> {
+    return delete_(this.schema.getTableByClassName(className), this.db, queryFn, instance)
+  }
+
+  read<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, criteria: Criteria): Promise<T[]> {
+    return criteriaRead(this.schema.getTableByClassName(className), this.db, queryFn, criteria)
   }
 
   count(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => any, criteria: Criteria): Promise<number> {
-    let table = this.schema.getTableByClassName(className)
-    let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
-    return criteriaCount(table, this.db, queryFn, rowCriteria)
-  }
-
-  delete<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, instance: T): Promise<any> {
-    let table = this.schema.getTableByClassName(className)
-    return delete_(table, this.db, queryFn, instance)
+    return criteriaCount(this.schema.getTableByClassName(className), this.db, queryFn, criteria)
   }
 }
