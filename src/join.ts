@@ -3,7 +3,7 @@ import { Log } from 'knight-log'
 import { objectsRepresentSameEntity } from './row'
 import { Table } from './schema'
 
-let log = new Log('knight-orm/row.ts')
+let log = new Log('knight-orm/join.ts')
 
 /**
  * Gets a row consisting of multiple joined tables and unjoins a given table. It basically
