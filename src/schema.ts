@@ -120,6 +120,7 @@ export class Table {
   private _generatedPrimaryKey?: Column|null = null
   private _notGeneratedPrimaryKey?: Column[]
   private _columnNames?: string[]
+  private _propertyNames?: string[]
   private _relationshipNames?: string[]
 
   newInstance: () => any
@@ -270,6 +271,18 @@ export class Table {
     return this._columnNames
   }
 
+  get propertyNames(): string[] {
+    if (! this._propertyNames) {
+      this._propertyNames = []
+
+      for (let column of this.columns) {
+        this._propertyNames.push(column.propertyName)
+      }
+    }
+
+    return this._propertyNames
+  }
+
   get relationshipNames(): string[] {
     if (! this._relationshipNames) {
       this._relationshipNames = []
@@ -283,13 +296,7 @@ export class Table {
   }
 
   hasColumn(columnName: string): boolean {
-    for (let column of this.columns) {
-      if (column.name == columnName) {
-        return true
-      }
-    }
-
-    return false
+    return this.columnNames.indexOf(columnName) > -1
   }
 
   getColumn(columnName: string): Column {
@@ -302,7 +309,11 @@ export class Table {
     throw new Error(`Column '${columnName}' not contained in table '${this.name}'. Use method 'Schema.check' to find errors early.`)
   }
 
-  getColumnByPropertyName(propertyName: string): Column|undefined {
+  hasColumnByProperty(propertyName: string): boolean {
+    return this.propertyNames.indexOf(propertyName) > -1
+  }
+
+  getColumnByProperty(propertyName: string): Column|undefined {
     for (let column of this.columns) {
       if (column.propertyName == propertyName) {
         return column

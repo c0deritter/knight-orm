@@ -5,7 +5,7 @@ import { Join, Query } from 'knight-sql'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
 import { store } from '../src'
-import { addCriteria, buildCriteriaSelectQuery, criteriaDelete, determineRelationshipsToLoad, instanceCriteriaToRowCriteria, criteriaSelect, validateCriteria } from '../src/criteria'
+import { addCriteria, buildCriteriaReadQuery, criteriaDelete, criteriaRead, determineRelationshipsToLoadSeparately, instanceCriteriaToRowCriteria, validateCriteria } from '../src/criteria'
 import { schema } from './testSchema'
 
 chai.use(chaiAsPromised)
@@ -43,7 +43,7 @@ describe('criteria', function() {
 
   describe('validateCriteria', function() {
     it('should not find issues if the given criteria empty', function() {
-      expect(validateCriteria(schema.getTable('table1'), {})).to.deep.equal([])
+      expect(validateCriteria(schema.getTable('table1'), {}, true)).to.deep.equal([])
     })
 
     it('should not find issues if the given criteria are valid', function() {
@@ -59,7 +59,7 @@ describe('criteria', function() {
         '@orderBy': 'id',
         '@limit': 5,
         '@offset': 10
-      })).to.deep.equal([])
+      }, true)).to.deep.equal([])
     })
 
     it('should not find issues if the given comparison is valid', function() {
@@ -71,7 +71,7 @@ describe('criteria', function() {
         column2: {
           '@operator': '>'
         }
-      })).to.deep.equal([])
+      }, true)).to.deep.equal([])
     })
 
     it('should not find issues if the given criteria which are given as an array are valid', function() {
@@ -87,7 +87,7 @@ describe('criteria', function() {
         '@orderBy': 'id',
         '@limit': 5,
         '@offset': 10
-      }])).to.deep.equal([])
+      }], true)).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @load', function() {
@@ -95,7 +95,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@load': true
         }
-      })).to.deep.equal([])
+      }, true)).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @loadSeparately', function() {
@@ -103,7 +103,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@loadSeparately': true
         }
-      })).to.deep.equal([])
+      }, true)).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @not', function() {
@@ -111,7 +111,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@not': true
         }
-      })).to.deep.equal([])
+      }, true)).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @count', function() {
@@ -119,7 +119,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@count': true
         }
-      })).to.deep.equal([])
+      }, true)).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @max', function() {
@@ -127,7 +127,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@max': true
         }
-      })).to.deep.equal([])
+      }, true)).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @min', function() {
@@ -135,7 +135,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@min': true
         }
-      })).to.deep.equal([])
+      }, true)).to.deep.equal([])
     })
 
     it('should find an issue if a column, relationship or @property does not exist', function() {
@@ -143,7 +143,7 @@ describe('criteria', function() {
         column: 'a',
         object: {},
         '@invalid': true
-      })).to.deep.equal([
+      }, true)).to.deep.equal([
         {
           location: 'column',
           message: 'Given column, relationship or @-property does not exist'
@@ -166,7 +166,7 @@ describe('criteria', function() {
           object: {},
           '@invalid': true
         }
-      })).to.deep.equal([
+      }, true)).to.deep.equal([
         {
           location: 'manyToOneObject2.column',
           message: 'Given column, relationship or @-property does not exist'
@@ -189,7 +189,7 @@ describe('criteria', function() {
           object: {},
           '@invalid': true
         }
-      }])).to.deep.equal([
+      }], true)).to.deep.equal([
         {
           location: 'manyToOneObject2.column',
           message: 'Given column, relationship or @-property does not exist'
@@ -381,7 +381,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
   
       expect(query._where!.mysql()).to.equal('column1 = ?')
       expect(query._where!.values()).to.deep.equal(['a'])
@@ -394,7 +394,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
   
       expect(query._where!.mysql()).to.equal('column1 = ? AND column2 = ?')
       expect(query._where!.values()).to.deep.equal(['a',1])
@@ -408,7 +408,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
   
       expect(query._where!.mysql()).to.equal('NOT (column1 = ? AND column2 = ?)')
       expect(query._where!.values()).to.deep.equal(['a',1])
@@ -423,7 +423,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
       
       expect(query._where!.mysql()).to.equal('column1 <> ?')
       expect(query._where!.values()).to.deep.equal(['a'])
@@ -439,7 +439,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
       
       expect(query._where!.mysql()).to.equal('NOT column1 <> ?')
       expect(query._where!.values()).to.deep.equal(['a'])
@@ -455,7 +455,7 @@ describe('criteria', function() {
       }
   
       let query1 = new Query
-      addCriteria(schema.getTable('table1'), query1, criteria1)
+      addCriteria(schema.getTable('table1'), query1, criteria1, true)
       
       expect(query1._where!.mysql()).to.equal('column1 <> ? AND column2 = ?')
       expect(query1._where!.values()).to.deep.equal(['a',1])
@@ -469,7 +469,7 @@ describe('criteria', function() {
       }
   
       let query2 = new Query
-      addCriteria(schema.getTable('table1'), query2, criteria2)
+      addCriteria(schema.getTable('table1'), query2, criteria2, true)
       
       expect(query2._where!.mysql()).to.equal('column1 = ? AND column2 <> ?')
       expect(query2._where!.values()).to.deep.equal(['a',1])
@@ -484,7 +484,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
       
       expect(query._where!.mysql()).to.equal('')
       expect(query._where!.values()).to.deep.equal([])
@@ -499,7 +499,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
       
       expect(query._where!.mysql()).to.equal('')
     })
@@ -510,7 +510,7 @@ describe('criteria', function() {
       }
   
       let query1 = new Query
-      addCriteria(schema.getTable('table1'), query1, criteria1)
+      addCriteria(schema.getTable('table1'), query1, criteria1, true)
   
       expect(query1._where!.mysql()).to.equal('column1 IS NULL')
       expect(query1._where!.values()).to.deep.equal([])
@@ -523,7 +523,7 @@ describe('criteria', function() {
       }
   
       let query2 = new Query
-      addCriteria(schema.getTable('table1'), query2, criteria2)
+      addCriteria(schema.getTable('table1'), query2, criteria2, true)
       
       expect(query2._where!.mysql()).to.equal('column1 IS NULL')
       expect(query2._where!.values()).to.deep.equal([])
@@ -536,7 +536,7 @@ describe('criteria', function() {
       }
   
       let query3 = new Query
-      addCriteria(schema.getTable('table1'), query3, criteria3)
+      addCriteria(schema.getTable('table1'), query3, criteria3, true)
       
       expect(query3._where!.mysql()).to.equal('column1 IS NOT NULL')
       expect(query3._where!.values()).to.deep.equal([])
@@ -549,7 +549,7 @@ describe('criteria', function() {
       }
   
       let query4 = new Query
-      addCriteria(schema.getTable('table1'), query4, criteria4)
+      addCriteria(schema.getTable('table1'), query4, criteria4, true)
       
       expect(query4._where!.mysql()).to.equal('column1 IS NOT NULL')
       expect(query4._where!.values()).to.deep.equal([])
@@ -561,7 +561,7 @@ describe('criteria', function() {
       }
   
       let query1 = new Query
-      addCriteria(schema.getTable('table1'), query1, criteria1)
+      addCriteria(schema.getTable('table1'), query1, criteria1, true)
       
       expect(query1._where!.mysql()).to.equal('column1 IN (?, ?, ?, ?)')
       expect(query1._where!.values()).to.deep.equal([1,2,3,4])
@@ -571,7 +571,7 @@ describe('criteria', function() {
       }
   
       let query2 = new Query
-      addCriteria(schema.getTable('table1'), query2, criteria2)
+      addCriteria(schema.getTable('table1'), query2, criteria2, true)
       
       expect(query2._where!.mysql()).to.equal('column1 IN (?, ?, ?, ?)')
       expect(query2._where!.values()).to.deep.equal(['a', 'b', 'c', 'd'])
@@ -584,7 +584,7 @@ describe('criteria', function() {
       }
   
       let query3 = new Query
-      addCriteria(schema.getTable('table1'), query3, criteria3)
+      addCriteria(schema.getTable('table1'), query3, criteria3, true)
       
       expect(query3._where!.mysql()).to.equal('column1 IN (?, ?)')
       expect(query3._where!.values()).to.deep.equal([date1, date2])
@@ -606,7 +606,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
       
       expect(query._where!.mysql()).to.equal('(column2 < ? OR NOT column2 > ?)')
       expect(query._where!.values()).to.deep.equal([1, 10])
@@ -623,7 +623,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
       
       expect(query._where!.mysql()).to.equal('(column2 < ?)')
       expect(query._where!.values()).to.deep.equal([1])
@@ -640,7 +640,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
       
       expect(query._where!.mysql()).to.equal('')
       expect(query._where!.values()).to.deep.equal([])
@@ -665,7 +665,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
       
       expect(query._where!.mysql()).to.equal('(column2 < ?)')
       expect(query._where!.values()).to.deep.equal([1])
@@ -686,7 +686,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
       
       expect(query._where!.mysql()).to.equal('')
       expect(query._where!.values()).to.deep.equal([])
@@ -698,7 +698,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
   
       expect(query._where!.mysql()).to.equal('1 = 2')
       expect(query._where!.values()).to.deep.equal([])
@@ -736,7 +736,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
       
       expect(query._where!.mysql()).to.equal('(1 = 2 OR 1 = 2 OR 1 = 1 OR 1 = 1 OR 1 = 1 OR NOT 1 = 2)')
       expect(query._where!.values()).to.deep.equal([])
@@ -761,7 +761,7 @@ describe('criteria', function() {
       }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
       
       expect(query._where!.mysql()).to.equal('(column2 > ? AND NOT column2 < ?)')
       expect(query._where!.values()).to.deep.equal([1, 10])
@@ -771,7 +771,7 @@ describe('criteria', function() {
       let criteria = new TestSubCriteria
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
   
       expect(query._where!.mysql()).to.equal('column1 = ? AND column2 = ?')
       expect(query._where!.values()).to.deep.equal(['a', 1])
@@ -781,7 +781,7 @@ describe('criteria', function() {
       let criteria = new TestPropertyMethods
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
   
       expect(query._where!.mysql()).to.equal('column1 = ? AND column2 = ?')
       expect(query._where!.values()).to.deep.equal(['a', 1])
@@ -792,7 +792,7 @@ describe('criteria', function() {
       let criteria = { column1: now }
   
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
   
       expect(query._where!.mysql()).to.equal('column1 = ?')
       expect(query._where!.values()).to.deep.equal([now])
@@ -806,7 +806,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._join!.pieces!.length).to.equal(1)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
@@ -826,7 +826,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._join!.pieces!.length).to.equal(1)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
@@ -846,7 +846,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._join).to.be.undefined
       expect(query._where!.sql('mysql')).to.equal('')
@@ -863,7 +863,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._join!.pieces!.length).to.equal(2)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
@@ -890,7 +890,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._join!.pieces!.length).to.equal(1)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
@@ -917,7 +917,7 @@ describe('criteria', function() {
       ]
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria, 'alias')
+      addCriteria(schema.getTable('table1'), query, criteria, true, 'alias')
 
       expect(query._where!.mysql()).to.equal('(alias.column1 = ? AND alias.column2 = ?) XOR (alias.column1 = ? AND alias.column2 = ?)')
       expect(query._where!.values()).to.deep.equal(['a',1,'b',2])
@@ -943,7 +943,7 @@ describe('criteria', function() {
       ]
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._where!.mysql()).to.equal('(column1 = ? AND column2 = ?) XOR ((column1 = ? AND column2 = ?) OR (column1 = ? AND column2 = ?))')
       expect(query._where!.values()).to.deep.equal(['a',1,'b',2,'c',3])
@@ -964,7 +964,7 @@ describe('criteria', function() {
       ]
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._join!.pieces!.length).to.equal(1)
       expect(query._join!.pieces![0]).to.deep.equal({
@@ -983,7 +983,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('column1')
@@ -995,7 +995,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.undefined
     })
@@ -1009,7 +1009,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('column1, manyToManyObject2.column1')
@@ -1021,7 +1021,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('column1, column2')
@@ -1036,7 +1036,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('column1, column2, manyToManyObject2.column1')
@@ -1048,7 +1048,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.undefined
     })
@@ -1062,7 +1062,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('column1 DESC')
@@ -1083,7 +1083,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('column1 DESC, manyToManyObject2.column1 ASC')
@@ -1098,7 +1098,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.undefined
     })
@@ -1118,7 +1118,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('column1 DESC, column2 ASC')
@@ -1147,7 +1147,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('column1 DESC, column2 ASC, manyToManyObject2.column1 ASC')
@@ -1168,7 +1168,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._orderBy).to.be.undefined
     })
@@ -1179,7 +1179,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._limit).to.equal(10)
     })
@@ -1191,7 +1191,7 @@ describe('criteria', function() {
 
       let query = new Query
       query.limit(5)
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._limit).to.equal(5)
     })
@@ -1205,7 +1205,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._limit).to.equal(10)
     })
@@ -1216,7 +1216,7 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._offset).to.equal(10)
     })
@@ -1228,7 +1228,7 @@ describe('criteria', function() {
 
       let query = new Query
       query.offset(5)
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._offset).to.equal(5)
     })
@@ -1242,13 +1242,13 @@ describe('criteria', function() {
       }
 
       let query = new Query
-      addCriteria(schema.getTable('table1'), query, criteria)
+      addCriteria(schema.getTable('table1'), query, criteria, true)
 
       expect(query._offset).to.equal(10)
     })
   })
 
-  describe('determineRelationshipsToLoad', function() {
+  describe('determineRelationshipsToLoadSeparately', function() {
     it('should not load a relationship which does not have any criteria', function() {
       let criteria = {}
       let rows = [
@@ -1257,7 +1257,7 @@ describe('criteria', function() {
         { column1: 'c', column2: 3 },
       ]
 
-      let toLoad = determineRelationshipsToLoad(schema.getTable('table1'), rows, criteria)
+      let toLoad = determineRelationshipsToLoadSeparately(schema.getTable('table1'), rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(0)
     })
@@ -1270,13 +1270,13 @@ describe('criteria', function() {
         { column1: 'c', column2: 3 },
       ]
 
-      let toLoad = determineRelationshipsToLoad(schema.getTable('table1'), rows, criteria)
+      let toLoad = determineRelationshipsToLoadSeparately(schema.getTable('table1'), rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(1)
       expect(toLoad['.manyToManyObject2']).to.deep.equal({
         relationship: schema.getTable('table1').getRelationship('manyToManyObject2'),
         relationshipCriteria: { '@loadSeparately': true },
-        rows: [
+        objs: [
           { column1: 'a', column2: 1 },
           { column1: 'b', column2: 2 },
           { column1: 'c', column2: 3 },
@@ -1292,7 +1292,7 @@ describe('criteria', function() {
         { column1: 'c', column2: 3 },
       ]
 
-      let toLoad = determineRelationshipsToLoad(schema.getTable('table1'), rows, criteria)
+      let toLoad = determineRelationshipsToLoadSeparately(schema.getTable('table1'), rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(0)
     })
@@ -1305,13 +1305,13 @@ describe('criteria', function() {
         { column1: 'c', column2: 3, manyToManyObject2: [] },
       ]
 
-      let toLoad = determineRelationshipsToLoad(schema.getTable('table1'), rows, criteria)
+      let toLoad = determineRelationshipsToLoadSeparately(schema.getTable('table1'), rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(1)
       expect(toLoad['.manyToManyObject2.object2']).to.deep.equal({
         relationship: schema.getTable('many_to_many_table2').getRelationship('object2'),
         relationshipCriteria: { '@loadSeparately': true },
-        rows: [
+        objs: [
           { column1: 'a1' },
           { column1: 'a2' },
           { column1: 'b1' },
@@ -1327,7 +1327,7 @@ describe('criteria', function() {
         { column1: 'c', column2: 3, manyToManyObject2: [] },
       ]
 
-      let toLoad = determineRelationshipsToLoad(schema.getTable('table1'), rows, criteria)
+      let toLoad = determineRelationshipsToLoadSeparately(schema.getTable('table1'), rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(0)
     })
@@ -1345,13 +1345,13 @@ describe('criteria', function() {
         { column1: 'c', column2: 3 },
       ]
 
-      let toLoad = determineRelationshipsToLoad(schema.getTable('table1'), rows, criteria)
+      let toLoad = determineRelationshipsToLoadSeparately(schema.getTable('table1'), rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(1)
       expect(toLoad['.manyToManyObject2']).to.deep.equal({
         relationship: schema.getTable('table1').getRelationship('manyToManyObject2'),
         relationshipCriteria: { '@loadSeparately': true },
-        rows: [
+        objs: [
           { column1: 'a', column2: 1 },
           { column1: 'b', column2: 2 },
           { column1: 'c', column2: 3 },
@@ -1372,13 +1372,13 @@ describe('criteria', function() {
         { column1: 'c', column2: 3 },
       ]
 
-      let toLoad = determineRelationshipsToLoad(schema.getTable('table1'), rows, criteria)
+      let toLoad = determineRelationshipsToLoadSeparately(schema.getTable('table1'), rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(1)
       expect(toLoad['.manyToManyObject2']).to.deep.equal({
         relationship: schema.getTable('table1').getRelationship('manyToManyObject2'),
         relationshipCriteria: { '@loadSeparately': true },
-        rows: [
+        objs: [
           { column1: 'a', column2: 1 },
           { column1: 'b', column2: 2 },
           { column1: 'c', column2: 3 },
@@ -1399,13 +1399,13 @@ describe('criteria', function() {
         { column1: 'c', column2: 3 },
       ]
 
-      let toLoad = determineRelationshipsToLoad(schema.getTable('table1'), rows, criteria)
+      let toLoad = determineRelationshipsToLoadSeparately(schema.getTable('table1'), rows, criteria)
 
       expect(Object.keys(toLoad).length).to.equal(1)
       expect(toLoad['.manyToManyObject2']).to.deep.equal({
         relationship: schema.getTable('table1').getRelationship('manyToManyObject2'),
         relationshipCriteria: { '@loadSeparately': true, column1: 'a' },
-        rows: [
+        objs: [
           { column1: 'a', column2: 1 },
           { column1: 'b', column2: 2 },
           { column1: 'c', column2: 3 },
@@ -1414,10 +1414,10 @@ describe('criteria', function() {
     })
   })
 
-  describe('buildCriteriaSelectQuery', function() {
+  describe('buildCriteriaReadQuery', function() {
     it('should handle a simple select query', function() {
       let criteria = { column1: 'a', column2: 1 }
-      let query = buildCriteriaSelectQuery(schema.getTable('table1'), criteria)
+      let query = buildCriteriaReadQuery(schema.getTable('table1'), criteria, true)
       expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.column3 "table1__column3", table1.many_to_one_object1_id "table1__many_to_one_object1_id", table1.many_to_one_object2_id "table1__many_to_one_object2_id", table1.one_to_one_object1_id "table1__one_to_one_object1_id", table1.one_to_one_object2_id "table1__one_to_one_object2_id", table1.one_to_many_object1_many_to_one_id "table1__one_to_many_object1_many_to_one_id" FROM table1 table1 WHERE table1.column1 = ? AND table1.column2 = ?')
     })
   
@@ -1435,7 +1435,7 @@ describe('criteria', function() {
         }
       }
   
-      let query = buildCriteriaSelectQuery(schema.getTable('table1'), criteria)
+      let query = buildCriteriaReadQuery(schema.getTable('table1'), criteria, true)
   
       expect(query._select!.pieces!.length).to.equal(20)
       expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
@@ -1469,7 +1469,7 @@ describe('criteria', function() {
         }
       }
   
-      let query = buildCriteriaSelectQuery(schema.getTable('table1'), criteria)
+      let query = buildCriteriaReadQuery(schema.getTable('table1'), criteria, true)
   
       expect(query._select!.pieces!.length).to.equal(20)
       expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
@@ -1506,7 +1506,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 }, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {})
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, {}, true)
 
       expect(rows.length).to.equal(3)
 
@@ -1555,12 +1555,12 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 }, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, {
         '@orderBy': {
           field: 'column2',
           direction: 'DESC'
         }
-      })
+      }, true)
 
       expect(rows.length).to.equal(3)
       
@@ -1609,9 +1609,9 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 }, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, {
         '@limit': 2
-      })
+      }, true)
 
       expect(rows.length).to.equal(2)
 
@@ -1648,9 +1648,9 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2, column3: date2 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'c', column2: 3, column3: date3 }, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, {
         '@offset': 2
-      })
+      }, true)
 
       expect(rows.length).to.equal(1)
 
@@ -1672,12 +1672,12 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }}, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         manyToOneObject1: {
           column2: 1
         }
-      })
+      }, true)
 
       expect(rows.length).to.equal(1)
 
@@ -1699,11 +1699,11 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { manyToOneObject1: { } }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { manyToOneObject1: { } }, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, {
         manyToOneObject1: {
           id: 1
         }
-      })
+      }, true)
 
       expect(rows.length).to.equal(1)
 
@@ -1725,13 +1725,13 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }}, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         manyToOneObject1: {
           '@load': true,
           column2: 1
         }
-      })
+      }, true)
 
       expect(rows.length).to.equal(1)
 
@@ -1764,13 +1764,13 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }}, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         manyToOneObject1: {
           '@loadSeparately': true,
           column2: 1
         }
-      })
+      }, true)
 
       expect(rows.length).to.equal(3)
 
@@ -1829,12 +1829,12 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         oneToManyObject1: {
           column1: 'd'
         }
-      })
+      }, true)
 
       expect(rows.length).to.equal(1)
 
@@ -1856,13 +1856,13 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         oneToManyObject1: {
           '@load': true,
           column1: 'd'
         }
-      })
+      }, true)
 
       expect(rows.length).to.equal(1)
 
@@ -1897,13 +1897,13 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, {
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, {
         column1: 'a',
         oneToManyObject1: {
           '@loadSeparately': true,
           column1: 'd'
         }
-      })
+      }, true)
 
       expect(rows.length).to.equal(3)
 
@@ -1964,7 +1964,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 2 }, oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', manyToOneObject1: { column2: 3 }, oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, { asDatabaseRow: true })
 
-      let rows = await criteriaSelect(schema.getTable('table1'), 'postgres', pgQueryFn, [
+      let rows = await criteriaRead(schema.getTable('table1'), 'postgres', pgQueryFn, [
         {
           column1: 'a',
           manyToOneObject1: {
@@ -1980,7 +1980,7 @@ describe('criteria', function() {
             column1: 'd'
           }
         }
-      ])
+      ], true)
 
       expect(rows.length).to.equal(3)
       expect(rows[0]).to.deep.equal({
@@ -2073,7 +2073,7 @@ describe('criteria', function() {
       await pgQueryFn('INSERT INTO table2 DEFAULT VALUES')
       await pgQueryFn('INSERT INTO table2 DEFAULT VALUES')
 
-      let rows = await criteriaSelect(schema.getTable('table2'), 'postgres', pgQueryFn, {})
+      let rows = await criteriaRead(schema.getTable('table2'), 'postgres', pgQueryFn, {}, true)
 
       expect(rows.length).to.equal(0)
     })
@@ -2084,7 +2084,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', column2: 1 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2 }, { asDatabaseRow: true })
 
-      let deletedRows = await criteriaDelete(schema.getTable('table1'), 'postgres', pgQueryFn, { id: 1 })
+      let deletedRows = await criteriaDelete(schema.getTable('table1'), 'postgres', pgQueryFn, { id: 1 }, true)
 
       expect(deletedRows).to.deep.equal([{
         id: 1,
@@ -2118,7 +2118,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', column2: 1 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2 }, { asDatabaseRow: true })
 
-      let deletedRows = await criteriaDelete(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a' })
+      let deletedRows = await criteriaDelete(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a' }, true)
 
       expect(deletedRows).to.deep.equal([{
         id: 1,
@@ -2152,7 +2152,7 @@ describe('criteria', function() {
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'a', column2: 1 }, { asDatabaseRow: true })
       await store(schema.getTable('table1'), 'postgres', pgQueryFn, { column1: 'b', column2: 2 }, { asDatabaseRow: true })
 
-      expect(criteriaDelete(schema.getTable('table1'), 'postgres', pgQueryFn, { invalid: 'invalid' })).to.be.rejectedWith(Error)
+      expect(criteriaDelete(schema.getTable('table1'), 'postgres', pgQueryFn, { invalid: 'invalid' }, true)).to.be.rejectedWith(Error)
 
       let table1Result = await pgQueryFn('SELECT * FROM table1')
 

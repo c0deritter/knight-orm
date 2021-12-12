@@ -1,7 +1,7 @@
 import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { comparison } from 'knight-sql'
-import { criteriaCount, criteriaSelect, instanceCriteriaToRowCriteria } from './criteria'
+import { criteriaCount, criteriaRead, instanceCriteriaToRowCriteria } from './criteria'
 import { databaseIndependentQuery, InsertUpdateDeleteResult } from './query'
 import { isPrimaryKeySet, isUpdate, reduceToPrimaryKey } from './row'
 import { Schema, Table } from './schema'
@@ -725,7 +725,7 @@ export class Orm {
   async read<T>(queryFn: (sqlString: string, values?: any[]) => Promise<any>, className: new (...args: any[]) => T, criteria: Criteria): Promise<T[]> {
     let table = this.schema.getTableByClassName(className)
     let rowCriteria = instanceCriteriaToRowCriteria(table, criteria)
-    let rows = await criteriaSelect(table, this.db, queryFn, rowCriteria)
+    let rows = await criteriaRead(table, this.db, queryFn, rowCriteria)
     let instances = table.rowToInstance(rows)
     return instances
   }

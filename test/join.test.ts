@@ -38,7 +38,7 @@ describe('row', function() {
       ]
 
       let criteria = { a: 'a', b: 1 }
-      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
+      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, true, 'table1__')
 
       expect(instances.length).to.equal(2)
       expect(instances[0]).to.deep.equal({
@@ -68,7 +68,7 @@ describe('row', function() {
       ]
 
       let criteria = { }
-      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
+      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, true, 'table1__')
 
       expect(instances.length).to.equal(0)
     })
@@ -157,7 +157,7 @@ describe('row', function() {
 
       let criteria = { manyToOneObject2: { '@load': true }, manyToOneObject1: { '@load': true } }
 
-      let unjoinedRows = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
+      let unjoinedRows = unjoinRows(schema.getTable('table1'), rows, criteria, true, 'table1__')
 
       expect(unjoinedRows.length).to.equal(3)
 
@@ -322,7 +322,7 @@ describe('row', function() {
 
       let criteria = { oneToOneObject2: { '@load': true }, oneToOneObject1: { '@load': true } }
 
-      let unjoinedRows = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
+      let unjoinedRows = unjoinRows(schema.getTable('table1'), rows, criteria, true, 'table1__')
 
       expect(unjoinedRows.length).to.equal(3)
 
@@ -444,7 +444,7 @@ describe('row', function() {
 
       let criteria = { manyToManyObject2: { '@load': true, object2: { '@load': true } }}
 
-      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
+      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, true, 'table1__')
 
       expect(instances.length).to.equal(2)
       expect(instances[0]).to.deep.equal({
@@ -515,7 +515,7 @@ describe('row', function() {
 
       let criteria = { manyToManyObject2: { '@load': true, object2: { '@load': true, manyToManyObject2: { '@load': true } }}}
 
-      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
+      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, true, 'table1__')
 
       expect(instances.length).to.equal(1)
       expect(instances[0]).to.deep.equal({
@@ -583,7 +583,7 @@ describe('row', function() {
 
       let criteria = { object2: { '@load': true }, manyToManyObject2: { '@load': true, object2: { '@load': true } }}
 
-      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, 'table1__')
+      let instances = unjoinRows(schema.getTable('table1'), rows, criteria, true, 'table1__')
 
       expect(instances.length).to.equal(1)
 

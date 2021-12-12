@@ -54,16 +54,18 @@ let log = new Log('knight-orm/row.ts')
  * @param alias The alias which was prepended to the column names in regard to the given table
  * @returns An array of row objects which relationships are unjoined
  */
-export function unjoinRows(table: Table, joinedRows: any[], criteria: Criteria, alias: string): any[]  {
+export function unjoinRows(table: Table, joinedRows: any[], criteria: Criteria, asDatabaseCriteria: boolean, alias: string): any[]  {
   let l = log.fn('unjoinRows')
 
   l.param('table.name', table.name)
   l.param('criteria', criteria)
+  l.param('asDatabaseCriteria', asDatabaseCriteria)
   l.param('alias', alias)
 
   l.location = [ alias, '' ]
+  l.locationSeparator = ' > '
 
-  let relationshipToRows: { [relationshipName: string]: any[] } = {}
+  let relationshipToObjects: { [relationshipName: string]: any[] } = {}
 
   let summarizedCriteria = summarizeCriteria(criteria)
   l.lib('Summarized criteria', summarizedCriteria)
@@ -72,8 +74,11 @@ export function unjoinRows(table: Table, joinedRows: any[], criteria: Criteria, 
     l.lib('Unjoining relationships...')
   }
 
+  l.location.push('')
+
   for (let relationship of table.relationships) {
-    l.location[1] = '> ' + relationship.name
+    l.location.pop()
+    l.location.push(relationship.name)
 
     l.lib('Unjoining relationship', relationship.name)
 
@@ -90,16 +95,20 @@ export function unjoinRows(table: Table, joinedRows: any[], criteria: Criteria, 
     let relationshipAlias = alias + relationship.name + '__'
 
     l.calling('Fetching all relationship rows. Calling unjoinRows again...')
-    let relationshipRows = unjoinRows(relationship.otherTable, joinedRows, summarizedCriteria[relationship.name], relationshipAlias)
+    let relationshipObjects = unjoinRows(
+      relationship.otherTable, 
+      joinedRows, 
+      summarizedCriteria[relationship.name], 
+      asDatabaseCriteria,
+      relationshipAlias
+    )
     l.called('Returning from fetching all relationship rows...')
     
-    l.dev('Found relationship rows', relationshipRows)
-    relationshipToRows[relationship.name] = relationshipRows
+    l.dev('Found relationship objects', relationshipObjects)
+    relationshipToObjects[relationship.name] = relationshipObjects
 
     l.lib('Continuing unjoining relationships...')
   }
-
-  l.location[1] = ''
 
   if (table.relationships.length > 0) {
     l.lib('Finished unjoining relationships. Continuing with unjoining every row...')
@@ -108,7 +117,7 @@ export function unjoinRows(table: Table, joinedRows: any[], criteria: Criteria, 
     l.lib('Unjoining rows...')
   }
 
-  let unjoinedRows: any[] = []
+  let unjoinedObjs: any[] = []
 
   for (let joinedRow of joinedRows) {
     l.lib('Unjoining next row', joinedRow)
@@ -122,74 +131,84 @@ export function unjoinRows(table: Table, joinedRows: any[], criteria: Criteria, 
 
     l.lib('Unjoined row', unjoinedRow)
 
-    let rowAlreadyUnjoined = false
-    for (let alreadyUnjoinedRow of unjoinedRows) {
-      if (objectsRepresentSameEntity(table, alreadyUnjoinedRow, unjoinedRow, true)) {
-        rowAlreadyUnjoined = true
+    let unjoinedObj
+    if (asDatabaseCriteria) {
+      unjoinedObj = unjoinedRow
+    }
+    else {
+      unjoinedObj = table.rowToInstance(unjoinedRow)
+      l.lib('Converted row to instance', unjoinedObj)
+    }
+
+    let objAlreadyUnjoined = false
+    for (let alreadyUnjoinedRow of unjoinedObjs) {
+      if (objectsRepresentSameEntity(table, alreadyUnjoinedRow, unjoinedObj, asDatabaseCriteria)) {
+        objAlreadyUnjoined = true
         break
       }
     }
 
-    if (rowAlreadyUnjoined) {
-      l.lib('Not adding unjoined row to result array because it was already added')
+    if (objAlreadyUnjoined) {
+      l.lib('Not adding unjoined object to result array because it was already added')
     }
     else {
-      l.lib('Adding unjoined row to the result array')
-      unjoinedRows.push(unjoinedRow)
+      l.lib('Adding unjoined object to the result array')
+      unjoinedObjs.push(unjoinedObj)
     }
 
-    let relationshipNames = Object.keys(relationshipToRows)
+    let relationshipNames = Object.keys(relationshipToObjects)
     if (table.relationships.length > 0) {
       l.lib('Adding relationships...')
     }
 
+    l.location.push('')
     for (let relationshipName of relationshipNames) {
-      l.location[1] = '> ' + relationshipName
+      l.location.pop()
+      l.location.push(relationshipName)
+
       let relationship = table.getRelationship(relationshipName)
 
-      l.lib('Adding relationship rows for relationship', relationship.name)
+      l.lib('Adding objects for relationship', relationship.name)
 
       if (relationship.manyToOne) {
         l.dev('Relationship is many-to-one. Initializing property with null.')
-        unjoinedRow[relationship.name] = null
+        unjoinedObj[relationship.name] = null
       }
       else if (relationship.oneToMany) {
         l.dev('Relationship is one-to-many. Initializing property with empty array.')
-        unjoinedRow[relationship.name] = []
+        unjoinedObj[relationship.name] = []
       }
 
-      l.dev('Iterating through every relationshop row...')
+      l.dev('Iterating through every relationshop object...')
 
-      for (let relationshipRow of relationshipToRows[relationship.name]) {
-        if (unjoinedRow[relationship.thisId.name] === relationshipRow[relationship.otherId.name]) {
+      for (let relationshipObj of relationshipToObjects[relationship.name]) {
+        if (unjoinedObj[relationship.thisId.getName(asDatabaseCriteria)] === relationshipObj[relationship.otherId.getName(asDatabaseCriteria)]) {
           if (relationship.manyToOne) {
-            l.lib('Setting many-to-one row', relationshipRow)
-            unjoinedRow[relationship.name] = relationshipRow
+            l.lib('Setting many-to-one', relationshipObj)
+            unjoinedRow[relationship.name] = relationshipObj
             break
           }
 
           else if (relationship.oneToMany) {
-            l.lib('Adding one-to-many row', relationshipRow)
-            unjoinedRow[relationship.name].push(relationshipRow)
+            l.lib('Adding one-to-many', relationshipObj)
+            unjoinedRow[relationship.name].push(relationshipObj)
           }
         }
 
         else {
-          l.dev('Relationship row was not related', relationshipRow)
+          l.dev('Relationship object was not related', relationshipObj)
         }
       }
 
-      if (relationship.manyToOne && unjoinedRow[relationship.name] === null) {
-        l.lib('No relationship row was found (many-to-one)')
+      if (relationship.manyToOne && unjoinedObj[relationship.name] === null) {
+        l.lib('No relationship object was found (many-to-one)')
       }
-      else if (relationship.oneToMany && unjoinedRow[relationship.name].length == 0) {
-        l.lib('No relationship rows were found (one-to-many)')
+      else if (relationship.oneToMany && unjoinedObj[relationship.name].length == 0) {
+        l.lib('No relationship objects were found (one-to-many)')
       }
     }
-
-    l.location[1] = ''
   }
 
-  l.returning('Returning unjoined rows...', unjoinedRows)
-  return unjoinedRows
+  l.returning('Returning unjoined objects...', unjoinedObjs)
+  return unjoinedObjs
 }

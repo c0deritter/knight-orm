@@ -12,7 +12,7 @@ export interface CriteriaIssue {
   message: string
 }
 
-export function validateCriteria(table: Table, criteria: Criteria, path: string = ''): CriteriaIssue[] {
+export function validateCriteria(table: Table, criteria: Criteria, asDatabaseRow = false, path: string = ''): CriteriaIssue[] {
   let issues: CriteriaIssue[] = []
 
   if (criteria == undefined) {
@@ -22,7 +22,7 @@ export function validateCriteria(table: Table, criteria: Criteria, path: string 
   if (criteria instanceof Array) {
     for (let criterium of criteria) {
       if (typeof criterium == 'object') {
-        let criteriumIssues = validateCriteria(table, criterium)
+        let criteriumIssues = validateCriteria(table, criterium, asDatabaseRow)
         issues.push(...criteriumIssues)
       }
     }
@@ -30,7 +30,11 @@ export function validateCriteria(table: Table, criteria: Criteria, path: string 
 
   else if (typeof criteria == 'object' && criteria !== null) {
     for (let key of Object.keys(criteria)) {
-      if (table.columnNames.indexOf(key) > -1) {
+      if (! asDatabaseRow && table.propertyNames.indexOf(key) > -1) {
+        continue
+      }
+
+      if (asDatabaseRow && table.columnNames.indexOf(key) > -1) {
         continue
       }
 
@@ -45,13 +49,15 @@ export function validateCriteria(table: Table, criteria: Criteria, path: string 
 
       issues.push({
         location: path + key,
-        message: 'Given column, relationship or @-property does not exist'
+        message: asDatabaseRow ?
+          'Given column, relationship or @-property does not exist' : 
+          'Given property, relationship or @-property does not exist'
       })
     }
 
     for (let relationship of table.relationships) {
       if (criteria[relationship.name] != undefined) {
-        let relationshipIssues = validateCriteria(relationship.otherTable, criteria[relationship.name], path + relationship.name + '.')
+        let relationshipIssues = validateCriteria(relationship.otherTable, criteria[relationship.name], asDatabaseRow, path + relationship.name + '.')
         issues.push(...relationshipIssues)
       }
     }
@@ -150,7 +156,7 @@ export function instanceCriteriaToRowCriteria(table: Table, instanceCriteria: Cr
         let orderBy = instanceCriteria['@orderBy']
 
         if (typeof orderBy == 'string') {
-          let column = table.getColumnByPropertyName(orderBy)
+          let column = table.getColumnByProperty(orderBy)
 
           if (column != undefined) {
             rowCriteria['@orderBy'] = column.name
@@ -162,7 +168,7 @@ export function instanceCriteriaToRowCriteria(table: Table, instanceCriteria: Cr
 
           for (let orderByElement of orderBy) {
             if (typeof orderByElement == 'string') {
-              let column = table.getColumnByPropertyName(orderByElement)
+              let column = table.getColumnByProperty(orderByElement)
     
               if (column != undefined) {
                 rowCriteria['@orderBy'].push(column.name)
@@ -170,7 +176,7 @@ export function instanceCriteriaToRowCriteria(table: Table, instanceCriteria: Cr
             }
 
             else if (typeof orderByElement == 'object' && orderByElement !== null && 'field' in orderByElement) {
-              let column = table.getColumnByPropertyName(orderByElement.field)
+              let column = table.getColumnByProperty(orderByElement.field)
 
               if (column != undefined) {
                 let orderByObject: OrderBy = {
@@ -188,7 +194,7 @@ export function instanceCriteriaToRowCriteria(table: Table, instanceCriteria: Cr
         }
 
         else if (typeof orderBy == 'object' && orderBy !== null && 'field' in orderBy) {
-          let column = table.getColumnByPropertyName(orderBy.field)
+          let column = table.getColumnByProperty(orderBy.field)
 
           if (column != undefined) {
             let orderByObject: OrderBy = {
@@ -213,7 +219,14 @@ export function instanceCriteriaToRowCriteria(table: Table, instanceCriteria: Cr
   return instanceCriteria
 }
 
-export function addCriteria(table: Table, query: Query, criteria: Criteria | undefined, alias?: string, condition?: Condition) {
+export function addCriteria(
+  table: Table, 
+  query: Query, 
+  criteria: Criteria | undefined, 
+  asDatabaseCriteria = false, 
+  alias?: string, 
+  condition?: Condition
+) {
   let l = log.fn('addCriteria')
   l.param('table.name', table.name)
   l.param('query', query)
@@ -264,7 +277,7 @@ export function addCriteria(table: Table, query: Query, criteria: Criteria | und
       condition.push(subCondition)
 
       l.calling('Add sub criteria through recursion', arrayValue)
-      addCriteria(table, query, arrayValue as any, alias, subCondition)
+      addCriteria(table, query, arrayValue as any, asDatabaseCriteria, alias, subCondition)
       l.called('Added sub criteria through recursion')
     }
   }
@@ -273,31 +286,46 @@ export function addCriteria(table: Table, query: Query, criteria: Criteria | und
 
     if (criteria['@orderBy'] != undefined) {
       if (typeof criteria['@orderBy'] == 'string') {
-        if (table.hasColumn(criteria['@orderBy'])) {
-          l.lib('Adding order by', criteria['@orderBy'])
+        if (asDatabaseCriteria && table.hasColumn(criteria['@orderBy'])) {
+          l.lib('Adding ORDER BY', criteria['@orderBy'])
           query.orderBy(aliasPrefix + criteria['@orderBy'])
         }
+        else if (! asDatabaseCriteria && table.hasColumnByProperty(criteria['@orderBy'])) {
+          let column = table.getColumnByProperty(criteria['@orderBy'])!
+          l.lib(`Adding ORDER BY from property name '${criteria['@orderBy']}'`, column.name)
+          query.orderBy(aliasPrefix + column.name)
+        }
         else {
-          l.lib('Not adding order by because the given column is not contained in the table', criteria['@orderBy'])
+          l.lib('Not adding ORDER BY because the given column or property is not contained in the table', criteria['@orderBy'])
         }
       }
       else if (criteria['@orderBy'] instanceof Array) {
-        l.lib('Found an array of order by conditions', criteria['@orderBy'])
+        l.lib('Found an array of ORDER BY conditions', criteria['@orderBy'])
 
         for (let orderBy of criteria['@orderBy']) {
           if (typeof orderBy == 'string') {
-            if (table.hasColumn(orderBy)) {
-              l.lib('Adding order by', orderBy)
+            if (asDatabaseCriteria && table.hasColumn(orderBy)) {
+              l.lib('Adding ORDER BY', orderBy)
               query.orderBy(aliasPrefix + orderBy)
             }
+            else if (! asDatabaseCriteria && table.hasColumnByProperty(orderBy)) {
+              let column = table.getColumnByProperty(orderBy)!
+              l.lib(`Adding ORDER BY from property name '${criteria['@orderBy']}'`, column.name)
+              query.orderBy(aliasPrefix + column.name)
+            }
             else {
-              l.lib('Not adding order by because the given column is not contained in the table', orderBy)
+              l.lib('Not adding ORDER BY because the given column or property is not contained in the table', orderBy)
             }    
           }
           else if (typeof orderBy == 'object') {
             if (typeof orderBy.field == 'string') {
-              if (! table.hasColumn(orderBy.field)) {
-                l.lib('Not adding order by because the given column is not contained in the table', orderBy)
+              if (asDatabaseCriteria && ! table.hasColumn(orderBy.field)) {
+                l.lib('Not adding ORDER BY because the given column is not contained in the table', orderBy)
+                continue
+              }
+
+              if (! asDatabaseCriteria && ! table.hasColumnByProperty(orderBy.field)) {
+                l.lib('Not adding ORDER BY because the given property is not contained in the instance', orderBy)
                 continue
               }
   
@@ -310,22 +338,31 @@ export function addCriteria(table: Table, query: Query, criteria: Criteria | und
                   direction = upperCase
                 }
               }
-  
-              if (direction == undefined) {
-                l.lib('Adding order by', orderBy)
-                query.orderBy(aliasPrefix + orderBy.field)
+
+              let columnName
+              if (asDatabaseCriteria) {
+                columnName = orderBy.field
               }
               else {
-                l.lib('Adding order by', orderBy)
-                query.orderBy(aliasPrefix + orderBy.field + ' ' + direction)
+                let column = table.getColumnByProperty(orderBy.field)!
+                columnName = column.name
+              }
+  
+              if (direction == undefined) {
+                l.lib('Adding ORDER BY', columnName)
+                query.orderBy(aliasPrefix + columnName)
+              }
+              else {
+                l.lib('Adding ORDER BY', columnName)
+                query.orderBy(aliasPrefix + columnName + ' ' + direction)
               }  
             }
             else {
-              l.lib('Not adding order by because the given field property is not of type object', orderBy)
+              l.lib('Not adding ORDER BY because the given field property is not of type object', orderBy)
             }
           }
           else {
-            l.lib('Not adding order by because the given element was not neither a string nor an object', orderBy)
+            l.lib('Not adding ORDER BY because the given element was not neither a string nor an object', orderBy)
           }
         }
       }
@@ -342,25 +379,34 @@ export function addCriteria(table: Table, query: Query, criteria: Criteria | und
               }
             }
   
-            if (direction == undefined) {
-              l.lib('Adding order by', criteria['@orderBy'])
-              query.orderBy(aliasPrefix + criteria['@orderBy'].field)
+            let columnName
+            if (asDatabaseCriteria) {
+              columnName = criteria['@orderBy'].field
             }
             else {
-              l.lib('Adding order by', criteria['@orderBy'])
-              query.orderBy(aliasPrefix + criteria['@orderBy'].field + ' ' + direction)
+              let column = table.getColumnByProperty(criteria['@orderBy'].field)!
+              columnName = column.name
             }
+
+            if (direction == undefined) {
+              l.lib('Adding ORDER BY', columnName)
+              query.orderBy(aliasPrefix + columnName)
+            }
+            else {
+              l.lib('Adding ORDER BY', columnName)
+              query.orderBy(aliasPrefix + columnName + ' ' + direction)
+            }  
           }
           else {
-            l.lib('Not adding order by because the given column is not contained in the table', criteria['@orderBy'])
+            l.lib('Not ORDER BY because the given column is not contained in the table', criteria['@orderBy'])
           }
         }
         else {
-          l.lib('Not adding order by because the given field property is not a string', criteria['@orderBy'])
+          l.lib('Not adding ORDER BY because the given field property is not a string', criteria['@orderBy'])
         }
       }
       else {
-        l.lib('Not adding order by because it was neither a string, an array nor an object', criteria['@orderBy'])
+        l.lib('Not adding ORDER BY because it was neither a string, an array nor an object', criteria['@orderBy'])
       }
     }
 
@@ -388,14 +434,14 @@ export function addCriteria(table: Table, query: Query, criteria: Criteria | und
     l.lib('Iterating over all columns')
 
     for (let column of table.columns) {
-      l.location = [column.name]
+      l.location = [column.getName(asDatabaseCriteria)]
 
-      if (criteria[column.name] === undefined) {
-        l.lib('Skipping column because it is not contained in the given criteria')
+      if (criteria[column.getName(asDatabaseCriteria)] === undefined) {
+        l.lib('Skipping column or property because it is not contained in the given criteria')
         continue
       }
 
-      let value: any = criteria[column.name]
+      let value: any = criteria[column.getName(asDatabaseCriteria)]
       l.lib('Processing column using criterium', value)
 
       l.lib('Adding logical operator AND')
@@ -406,7 +452,7 @@ export function addCriteria(table: Table, query: Query, criteria: Criteria | und
 
         let operator = value['@operator'].toUpperCase()
 
-        if (!(operator in Operator)) {
+        if (! (operator in Operator)) {
           l.lib(`Operator '${operator}' is not supported. Continuing...`)
           continue
         }
@@ -440,7 +486,7 @@ export function addCriteria(table: Table, query: Query, criteria: Criteria | und
           }
         }
 
-        if (!atLeastOneComparison) {
+        if (! atLeastOneComparison) {
           let comp = comparison(aliasPrefix + column.name, value)
           l.lib('Adding comparison', comp)
           condition.push(comp)
@@ -539,7 +585,7 @@ export function addCriteria(table: Table, query: Query, criteria: Criteria | und
           l.lib('Added LEFT JOIN to query', query._join!.pieces![query._join!.pieces!.length - 1])
 
           l.calling('Filling query with the relationship criteria', relationshipCriteria)
-          addCriteria(otherTable, query, relationshipCriteria, joinAlias, condition)
+          addCriteria(otherTable, query, relationshipCriteria, asDatabaseCriteria, joinAlias, condition)
           l.called('Filled query with the relationship criteria', relationshipCriteria)
         }
         else {
@@ -556,22 +602,22 @@ export function addCriteria(table: Table, query: Query, criteria: Criteria | und
 export interface RelationshipToLoad {
   relationship: Relationship
   relationshipCriteria: CriteriaObject
-  rows: any[]
+  objs: any[]
 }
 
 export interface RelationshipsToLoad {
   [ relationshipPath: string ]: RelationshipToLoad
 }
 
-export function determineRelationshipsToLoad(
+export function determineRelationshipsToLoadSeparately(
   table: Table, 
-  rows: any[], 
+  objs: any[], 
   criteria: Criteria, 
   relationshipPath: string = '', 
   relationshipsToLoad: RelationshipsToLoad = {}
 ): RelationshipsToLoad {
 
-  let l = log.fn('determineRelationshipsToLoad')
+  let l = log.fn('determineRelationshipsToLoadSeparately')
   
   if (relationshipPath.length > 0) {
     l.location = [ relationshipPath ]
@@ -581,7 +627,7 @@ export function determineRelationshipsToLoad(
   }
 
   l.param('table.name', table.name)
-  l.param('rows', rows)
+  l.param('objs', objs)
   l.param('criteria', criteria)
   l.param('relationshipPath', relationshipPath)
   l.param('relationshipsToLoad', relationshipsToLoad)
@@ -597,7 +643,7 @@ export function determineRelationshipsToLoad(
     for (let criterium of criteria) {
       if (criterium instanceof Array || typeof criterium == 'object') {
         l.lib('Determining relationships to load of', criterium)
-        determineRelationshipsToLoad(table, rows, criterium, relationshipPath, relationshipsToLoad)
+        determineRelationshipsToLoadSeparately(table, objs, criterium, relationshipPath, relationshipsToLoad)
         l.lib('Determined relationships to load of', criterium)
       }
     }
@@ -629,31 +675,31 @@ export function determineRelationshipsToLoad(
           relationshipsToLoad[subRelationshipPath] = {
             relationship: relationship,
             relationshipCriteria: relationshipCriteria,
-            rows: rows
+            objs: objs
           }
         }
       }
-      else if (relationshipCriteria['@load'] === true) {  
-        let relationshipRows = []
+      else if (relationshipCriteria['@load'] === true) {
+        let relationshipObjs = []
         
-        for (let row of rows) {
-          if (relationship.manyToOne && row[relationship.name] != undefined || 
-              relationship.oneToMany && row[relationship.name] instanceof Array && row[relationship.name].length > 0) {
+        for (let obj of objs) {
+          if (relationship.manyToOne && obj[relationship.name] != undefined || 
+              relationship.oneToMany && obj[relationship.name] instanceof Array && obj[relationship.name].length > 0) {
             
             if (relationship.manyToOne) {
-              relationshipRows.push(row[relationship.name])
+              relationshipObjs.push(obj[relationship.name])
             }
             else {
-              relationshipRows.push(...row[relationship.name])
+              relationshipObjs.push(...obj[relationship.name])
             }
           }
         }
   
         l.lib('Relationship was already loaded through a JOIN. Determining relationships of the relationship. Going into recursion...')
   
-        determineRelationshipsToLoad(
+        determineRelationshipsToLoadSeparately(
           relationship.otherTable, 
-          relationshipRows, 
+          relationshipObjs, 
           relationshipCriteria, 
           subRelationshipPath,
           relationshipsToLoad
@@ -681,22 +727,22 @@ export function determineRelationshipsToLoad(
   return relationshipsToLoad
 }
 
-export function buildCriteriaSelectQuery(table: Table, criteria: Criteria): Query {
+export function buildCriteriaReadQuery(table: Table, criteria: Criteria, asDatabaseCriteria = false): Query {
   let query = new Query
   query.from(table.name, table.name)
 
-  addCriteria(table, query, criteria, table.name)
+  addCriteria(table, query, criteria, asDatabaseCriteria, table.name)
   selectAllColumnsExplicitly(table.schema, query)
 
   return query
 }
 
-export async function criteriaSelect(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<any[]> {
+export async function criteriaRead(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria, asDatabaseCriteria = false): Promise<any[]> {
   let l = log.fn('select')
   l.location = [ table.name ]
   l.param('criteria', criteria)
 
-  let query = buildCriteriaSelectQuery(table, criteria)
+  let query = buildCriteriaReadQuery(table, criteria, asDatabaseCriteria)
   l.dev('Built SELECT query', query)
 
   l.lib('Querying database with given SQL string and values...')
@@ -712,12 +758,12 @@ export async function criteriaSelect(table: Table, db: string, queryFn: (sqlStri
   l.dev('Received rows', joinedRows)
 
   l.calling('Unjoining rows for criteria...')
-  let rows = unjoinRows(table, joinedRows, criteria, table.name + '__')
-  l.called('Unjoined rows for criteria...', criteria)
-  l.dev('Unjoined rows', rows)
+  let objects = unjoinRows(table, joinedRows, criteria, asDatabaseCriteria, table.name + '__')
+  l.called('Unjoined objects for criteria...', criteria)
+  l.dev('Unjoined objects', objects)
 
   l.calling('Determine relationships to load...')
-  let relationshipsToLoad = determineRelationshipsToLoad(table, rows, criteria)
+  let relationshipsToLoad = determineRelationshipsToLoadSeparately(table, objects, criteria)
   l.called('Determined relationships to load for criteria...', criteria)
 
   l.lib('Loading all relationships that need to be loaded in a seperate query...', Object.keys(relationshipsToLoad))
@@ -732,10 +778,10 @@ export async function criteriaSelect(table: Table, db: string, queryFn: (sqlStri
     l.lib('Relationship name', relationship.name)
 
     let idsToLoad: any[] = []
-    for (let row of relationshipToLoad.rows) {
-      if (row[relationship.thisId.name] !== undefined) {
-        if (idsToLoad.indexOf(row[relationship.thisId.name]) == -1) {
-          idsToLoad.push(row[relationship.thisId.name])
+    for (let obj of relationshipToLoad.objs) {
+      if (obj[relationship.thisId.name] !== undefined) {
+        if (idsToLoad.indexOf(obj[relationship.thisId.getName(asDatabaseCriteria)]) == -1) {
+          idsToLoad.push(obj[relationship.thisId.getName(asDatabaseCriteria)])
         }
       }
     }
@@ -744,53 +790,53 @@ export async function criteriaSelect(table: Table, db: string, queryFn: (sqlStri
       ...relationshipToLoad.relationshipCriteria
     }
 
-    criteria[relationship.otherId.name] = idsToLoad
+    criteria[relationship.otherId.getName(asDatabaseCriteria)] = idsToLoad
 
-    l.calling('Loading relationship rows with the following criteria', criteria)
-    let loadedRelationships = await criteriaSelect(relationship.otherTable, db, queryFn, criteria)
+    l.calling('Loading relationship objects with the following criteria', criteria)
+    let loadedRelationships = await criteriaRead(relationship.otherTable, db, queryFn, criteria, asDatabaseCriteria)
     l.called('Loaded relationship rows for criteria', criteria)
-    l.dev('Loaded relationship rows', loadedRelationships)
+    l.dev('Loaded relationship objects', loadedRelationships)
 
-    l.lib('Attaching relationship rows...')
+    l.lib('Attaching relationship objects...')
 
-    for (let row of relationshipToLoad.rows) {
-      l.dev('Attaching relationship row', row)
+    for (let obj of relationshipToLoad.objs) {
+      l.dev('Attaching relationship row', obj)
 
       if (relationship.oneToMany === true) {
-        row[relationship.name] = []
+        obj[relationship.name] = []
       }
       else {
-        row[relationship.name] = null
+        obj[relationship.name] = null
       }
 
       for (let loadedRelationship of loadedRelationships) {
-        if (row[relationship.thisId.name] == loadedRelationship[relationship.otherId.name]) {
+        if (obj[relationship.thisId.getName(asDatabaseCriteria)] == loadedRelationship[relationship.otherId.getName(asDatabaseCriteria)]) {
           if (relationship.oneToMany === true) {
             l.dev('Pushing into array of one-to-many...', loadedRelationship)
-            row[relationship.name].push(loadedRelationship)
+            obj[relationship.name].push(loadedRelationship)
           }
           else {
             l.dev('Setting property of many-to-one..', loadedRelationship)
-            row[relationship.name] = loadedRelationship
+            obj[relationship.name] = loadedRelationship
           }
         }
       }
     }
   }
 
-  l.returning('Returning rows...', rows)
-  return rows
+  l.returning('Returning objects...', objects)
+  return objects
 }
 
-export function buildCriteriaCountQuery(table: Table, criteria: Criteria): Query {
+export function buildCriteriaCountQuery(table: Table, criteria: Criteria, asDatabaseCriteria = false): Query {
   let query = new Query
   query.from(table.name, table.name).select('COUNT(*) as count')
-  addCriteria(table, query, criteria, table.name)
+  addCriteria(table, query, criteria, asDatabaseCriteria, table.name)
   return query
 }
 
-export async function criteriaCount(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria): Promise<number> {
-  let query = buildCriteriaCountQuery(table, criteria)
+export async function criteriaCount(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria, asDatabaseCriteria = false): Promise<number> {
+  let query = buildCriteriaCountQuery(table, criteria, asDatabaseCriteria)
 
   let rows
   try {
@@ -817,7 +863,7 @@ export interface UpdateCriteria {
   '@criteria': Criteria
 }
 
-export async function criteriaUpdate(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria): Promise<any[]> {
+export async function criteriaUpdate(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria, asDatabaseCriteria = false): Promise<any[]> {
   let l = log.fn('update')
   l.param('table.name', table.name)
   l.param('criteria', criteria)
@@ -826,13 +872,13 @@ export async function criteriaUpdate(table: Table, db: string, queryFn: (sqlStri
   query.update(table.name)
 
   for (let column of table.columns) {
-    if (criteria[column.name] !== undefined) {
-      let value = criteria[column.name]
+    if (criteria[column.getName(asDatabaseCriteria)] !== undefined) {
+      let value = criteria[column.getName(asDatabaseCriteria)]
       query.set(column.name, value)
     }
   }
 
-  addCriteria(table, query, criteria['@criteria'])
+  addCriteria(table, query, criteria['@criteria'], asDatabaseCriteria)
 
   if (db == 'postgres') {
     query.returning('*')
@@ -850,14 +896,14 @@ export async function criteriaUpdate(table: Table, db: string, queryFn: (sqlStri
   return updatedRows
 }
 
-export async function criteriaDelete(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>, criteria: Criteria): Promise<any[]> {
+export async function criteriaDelete(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>, criteria: Criteria, asDatabaseCriteria = false): Promise<any[]> {
   let l = log.fn('delete_')
   l.param('table.name', table.name)
   l.param('criteria', criteria)
 
   let query = new Query
   query.deleteFrom(table.name)
-  addCriteria(table, query, criteria)
+  addCriteria(table, query, criteria, asDatabaseCriteria)
 
   if (db == 'postgres') {
     query.returning('*')
