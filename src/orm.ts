@@ -294,18 +294,15 @@ export async function store(
     l.location.pop()
   }
 
-  l.lib('Converting object to a database row...')
-  
   let row
   if (asDatabaseRow) {
     l.lib('Given object should be treated as a database row')
     row = obj
   }
   else {
-    l.lib('Given object should be treated as an instance')
+    l.lib('Given object should be treated as an instance. Converting to database row...')
     l.calling('Calling Table.instanceToRow...')
-    let reduced = reduceToPrimaryKey(table, obj)
-    row = table.instanceToRow(reduced, true)
+    row = table.instanceToRow(obj, true)
     l.called('Called Table.instanceToRow...')
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "knight-orm",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "A libary-style ORM",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

@@ -1,6 +1,6 @@
 import { Log } from 'knight-log'
 
-let log = new Log('schema.ts')
+let log = new Log('knight-orm/schema.ts')
 
 export class Schema {
   tables: Table[] = []
