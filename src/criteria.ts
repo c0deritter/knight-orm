@@ -765,7 +765,7 @@ export async function criteriaRead(table: Table, db: string, queryFn: (sqlString
   let relationshipsToLoad = determineRelationshipsToLoadSeparately(table, objects, criteria)
   l.called('Determined relationships to load for criteria...', criteria)
 
-  l.lib('Loading all relationships that need to be loaded in a seperate query...', Object.keys(relationshipsToLoad))
+  l.lib('Loading all relationships that need to be loaded separately...', Object.keys(relationshipsToLoad))
 
   for (let relationshipPath of Object.keys(relationshipsToLoad)) {
     l.lib('Loading relationships for path', relationshipPath)

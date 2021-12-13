@@ -353,8 +353,13 @@ export class Table {
   
     if (this.customInstanceToRow) {
       l.calling('Additionally applying custom instanceToRow function')
-      row = this.customInstanceToRow(instance, row)
-      l.called('Custom instanceToRow function applied', row)
+      let customRow = this.customInstanceToRow(instance, row)
+      l.called('Custom instanceToRow function applied')
+      
+      if (customRow) {
+        l.lib('A new row object was returned. Using it...')
+        row = customRow
+      }
     }
 
     if (withoutRelationships) {
@@ -439,8 +444,13 @@ export class Table {
   
     if (this.customRowToInstance) {
       l.calling('Additionally applying custom rowToInstance function')
-      instance = this.customRowToInstance(row, instance)
-      l.called('Custom rowToInstance function applied', instance)
+      let customInstance = this.customRowToInstance(row, instance)
+      l.called('Custom rowToInstance function applied')
+
+      if (customInstance) {
+        l.lib('A custom instance was returned. Using it...')
+        instance = customInstance
+      }
     }
   
     alreadyConverted.add(instance, row)

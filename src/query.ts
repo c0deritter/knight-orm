@@ -82,7 +82,7 @@ export async function databaseIndependentQuery(
     }
   
     if (db == 'mysql' || db == 'maria') {
-      if (! ('affectedRows' in dbResult) || typeof dbResult.rowCount != 'number' || isNaN(dbResult.rowCount)) {
+      if (! ('affectedRows' in dbResult) || typeof dbResult.affectedRows != 'number' || isNaN(dbResult.affectedRows)) {
         throw new Error('Result returned by MySQL did not contain a valid \'affectedRows\'. Expected a number. Enable logging for more information.')
       }
   
