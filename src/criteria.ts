@@ -2,7 +2,7 @@ import { Criteria, CriteriaObject, isCriteriaComparison, Operator, OrderBy } fro
 import { Log } from 'knight-log'
 import { comparison, Condition, Query } from 'knight-sql'
 import { JoinAlias } from './join'
-import { databaseIndependentQuery, selectAllColumnsExplicitly, SelectResult } from './query'
+import { selectAllColumnsExplicitly } from './query'
 import { Relationship, Table } from './schema'
 
 let log = new Log('knight-orm/criteria.ts')
@@ -43,7 +43,7 @@ export function validateCriteria(table: Table, criteria: Criteria, asDatabaseRow
       }
 
       if (key == '@not' || key == '@load' || key == '@loadSeparately' || key == '@count' ||
-          key == '@min' || key == '@max' || key == '@orderBy' || key == '@limit' || key == '@offset') {
+          key == '@min' || key == '@max' || key == '@orderBy' || key == '@limit' || key == '@offset') {
         continue
       }
 
@@ -92,7 +92,7 @@ export function instanceCriteriaToRowCriteria(table: Table, instanceCriteria: Cr
         l.lib('Adding converted criteria')
         rowCriteria.push(rowCriterium)
       }
-      else if (instanceCriterium == 'AND' || instanceCriterium == 'OR' || instanceCriterium == 'XOR') {
+      else if (instanceCriterium == 'AND' || instanceCriterium == 'OR' || instanceCriterium == 'XOR') {
         l.lib('Adding logical operator', instanceCriterium)
         rowCriteria.push(instanceCriterium)
       }
@@ -104,7 +104,7 @@ export function instanceCriteriaToRowCriteria(table: Table, instanceCriteria: Cr
     return rowCriteria
   }
 
-  else if (typeof instanceCriteria == 'object' && instanceCriteria !== null) {
+  else if (typeof instanceCriteria == 'object' && instanceCriteria !== null) {
     l.lib('Given instance criteria are of type object')
     let rowCriteria: CriteriaObject = {}
 
@@ -145,7 +145,7 @@ export function instanceCriteriaToRowCriteria(table: Table, instanceCriteria: Cr
     }
   
     for (let propertyName of Object.keys(instanceCriteria)) {
-      if (propertyName == '@not' || propertyName == '@load' || propertyName == '@loadSeparately' || 
+      if (propertyName == '@not' || propertyName == '@load' || propertyName == '@loadSeparately' ||
           propertyName == '@count' || propertyName == '@min' || propertyName == '@max' ||
           propertyName == '@limit' || propertyName == '@offset') {
 
@@ -734,192 +734,9 @@ export function buildCriteriaReadQuery(table: Table, criteria: Criteria, asDatab
   return query
 }
 
-export async function criteriaRead(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria, asDatabaseCriteria = false): Promise<any[]> {
-  let l = log.fn('criteriaRead')
-  l.location = [ table.name ]
-  l.param('criteria', criteria)
-
-  let query = buildCriteriaReadQuery(table, criteria, asDatabaseCriteria)
-  l.dev('Built SELECT query', query)
-
-  l.lib('Querying database with given SQL string and values...')
-  let joinedRows
-
-  try {
-    joinedRows = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as SelectResult
-  }
-  catch (e) {
-    throw new Error(e as any)
-  }
-
-  l.dev('Received rows', joinedRows)
-
-  let joinAlias = new JoinAlias(table)
-
-  l.calling('Unjoining rows for criteria...')
-  let objects = joinAlias.unjoinRows(joinedRows, criteria, asDatabaseCriteria)
-  l.called('Unjoined objects for criteria...', criteria)
-  l.dev('Unjoined objects', objects)
-
-  l.calling('Determine relationships to load...')
-  let relationshipsToLoad = determineRelationshipsToLoadSeparately(table, objects, criteria)
-  l.called('Determined relationships to load for criteria...', criteria)
-
-  l.lib('Loading all relationships that need to be loaded separately...', Object.keys(relationshipsToLoad))
-
-  for (let relationshipPath of Object.keys(relationshipsToLoad)) {
-    l.lib('Loading relationships for path', relationshipPath)
-
-    let relationshipToLoad = relationshipsToLoad[relationshipPath]
-    
-    let relationship = relationshipToLoad.relationship
-    l.lib('Relationship table', relationship.table.name)
-    l.lib('Relationship name', relationship.name)
-
-    let idsToLoad: any[] = []
-    for (let obj of relationshipToLoad.objs) {
-      if (obj[relationship.thisId.name] !== undefined) {
-        if (idsToLoad.indexOf(obj[relationship.thisId.getName(asDatabaseCriteria)]) == -1) {
-          idsToLoad.push(obj[relationship.thisId.getName(asDatabaseCriteria)])
-        }
-      }
-    }
-
-    let criteria = {
-      ...relationshipToLoad.relationshipCriteria
-    }
-
-    criteria[relationship.otherId.getName(asDatabaseCriteria)] = idsToLoad
-
-    l.calling('Loading relationship objects with the following criteria', criteria)
-    let loadedRelationships = await criteriaRead(relationship.otherTable, db, queryFn, criteria, asDatabaseCriteria)
-    l.called('Loaded relationship rows for criteria', criteria)
-    l.dev('Loaded relationship objects', loadedRelationships)
-
-    l.lib('Attaching relationship objects...')
-
-    for (let obj of relationshipToLoad.objs) {
-      l.dev('Attaching relationship row', obj)
-
-      if (relationship.oneToMany === true) {
-        obj[relationship.name] = []
-      }
-      else {
-        obj[relationship.name] = null
-      }
-
-      for (let loadedRelationship of loadedRelationships) {
-        if (obj[relationship.thisId.getName(asDatabaseCriteria)] == loadedRelationship[relationship.otherId.getName(asDatabaseCriteria)]) {
-          if (relationship.oneToMany === true) {
-            l.dev('Pushing into array of one-to-many...', loadedRelationship)
-            obj[relationship.name].push(loadedRelationship)
-          }
-          else {
-            l.dev('Setting property of many-to-one..', loadedRelationship)
-            obj[relationship.name] = loadedRelationship
-          }
-        }
-      }
-    }
-  }
-
-  l.returning('Returning objects...', objects)
-  return objects
-}
-
 export function buildCriteriaCountQuery(table: Table, criteria: Criteria, asDatabaseCriteria = false): Query {
   let query = new Query
   query.from(table.name, table.name).select('COUNT(*) as count')
   addCriteria(table, query, criteria, asDatabaseCriteria)
   return query
-}
-
-export async function criteriaCount(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: Criteria, asDatabaseCriteria = false): Promise<number> {
-  let query = buildCriteriaCountQuery(table, criteria, asDatabaseCriteria)
-
-  let rows
-  try {
-    rows = await databaseIndependentQuery(db, queryFn, query.sql(db), query.values()) as SelectResult
-  }
-  catch (e) {
-    throw new Error(e as any)
-  }
-
-  let count = rows[0].count
-
-  try {
-    parseInt(count)
-  }
-  catch (e) {
-    throw new Error(e as any)
-  }
-  
-  return count
-}
-
-export interface UpdateCriteria {
-  [column: string]: any
-  '@criteria': Criteria
-}
-
-export async function criteriaUpdate(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, criteria: UpdateCriteria, asDatabaseCriteria = false): Promise<any> {
-  let l = log.fn('criteriaUpdate')
-  l.param('table.name', table.name)
-  l.param('criteria', criteria)
-
-  let query = new Query
-  query.update(table.name)
-
-  for (let column of table.columns) {
-    if (criteria[column.getName(asDatabaseCriteria)] !== undefined) {
-      let value = criteria[column.getName(asDatabaseCriteria)]
-      query.set(column.name, value)
-    }
-  }
-
-  addCriteria(table, query, criteria['@criteria'], asDatabaseCriteria)
-
-  let sqlString = query.sql(db)
-  let values = query.values()
-
-  l.lib('SQL string', sqlString)
-  l.lib('Values', values)
-
-  let result
-  try {
-    result = await queryFn(sqlString, values)
-  }
-  catch (e) {
-    throw new Error(e as any)
-  }
-  
-  l.returning('Returning result...', result)
-  return result
-}
-
-export async function criteriaDelete(table: Table, db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>, criteria: Criteria, asDatabaseCriteria = false): Promise<any> {
-  let l = log.fn('criteriaDelete')
-  l.param('table.name', table.name)
-  l.param('criteria', criteria)
-
-  let query = new Query
-  query.deleteFrom(table.name)
-  addCriteria(table, query, criteria, asDatabaseCriteria)
-
-  let sqlString = query.sql(db)
-  let values = query.values()
-
-  l.lib('SQL string', sqlString)
-  l.lib('Values', values)
-
-  let result
-  try {
-    result = await queryFn(sqlString, values)
-  }
-  catch (e) {
-    throw new Error(e as any)
-  }
-  
-  l.returning('Returning result...', result)
-  return result
 }
