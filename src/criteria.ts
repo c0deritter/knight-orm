@@ -12,7 +12,7 @@ export interface CriteriaIssue {
   message: string
 }
 
-export function validateCriteria(table: Table, criteria: Criteria, asDatabaseRow = false, path: string = ''): CriteriaIssue[] {
+export function validateCriteria(table: Table, criteria: Criteria, asDatabaseCriteria = false, path: string = ''): CriteriaIssue[] {
   let issues: CriteriaIssue[] = []
 
   if (criteria == undefined) {
@@ -22,7 +22,7 @@ export function validateCriteria(table: Table, criteria: Criteria, asDatabaseRow
   if (criteria instanceof Array) {
     for (let criterium of criteria) {
       if (typeof criterium == 'object') {
-        let criteriumIssues = validateCriteria(table, criterium, asDatabaseRow)
+        let criteriumIssues = validateCriteria(table, criterium, asDatabaseCriteria)
         issues.push(...criteriumIssues)
       }
     }
@@ -30,11 +30,11 @@ export function validateCriteria(table: Table, criteria: Criteria, asDatabaseRow
 
   else if (typeof criteria == 'object' && criteria !== null) {
     for (let key of Object.keys(criteria)) {
-      if (! asDatabaseRow && table.propertyNames.indexOf(key) > -1) {
+      if (! asDatabaseCriteria && table.propertyNames.indexOf(key) > -1) {
         continue
       }
 
-      if (asDatabaseRow && table.columnNames.indexOf(key) > -1) {
+      if (asDatabaseCriteria && table.columnNames.indexOf(key) > -1) {
         continue
       }
 
@@ -49,7 +49,7 @@ export function validateCriteria(table: Table, criteria: Criteria, asDatabaseRow
 
       issues.push({
         location: path + key,
-        message: asDatabaseRow ?
+        message: asDatabaseCriteria ?
           'Given column, relationship or @-property does not exist' : 
           'Given property, relationship or @-property does not exist'
       })
@@ -57,7 +57,7 @@ export function validateCriteria(table: Table, criteria: Criteria, asDatabaseRow
 
     for (let relationship of table.relationships) {
       if (criteria[relationship.name] != undefined) {
-        let relationshipIssues = validateCriteria(relationship.otherTable, criteria[relationship.name], asDatabaseRow, path + relationship.name + '.')
+        let relationshipIssues = validateCriteria(relationship.otherTable, criteria[relationship.name], asDatabaseCriteria, path + relationship.name + '.')
         issues.push(...relationshipIssues)
       }
     }

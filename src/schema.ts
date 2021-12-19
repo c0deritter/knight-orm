@@ -112,7 +112,7 @@ let tableLogger = log.cls('Table')
 export class Table {
   schema: Schema
   name: string
-  columns: Column[] = []
+  columns: Column[] = []
   relationships: Relationship[] = []
 
   private _className?: string

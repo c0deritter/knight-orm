@@ -50,7 +50,7 @@ export async function databaseIndependentQuery(
 
   if (sqlString.substring(0, 6).toUpperCase() == 'SELECT') {
     if (db == 'postgres') {
-      if (! ('rows' in dbResult) || ! (dbResult.rows instanceof Array)) {
+      if (! ('rows' in dbResult) || ! (dbResult.rows instanceof Array)) {
         throw new Error('Result returned by PostgeSQL did not contain a valid \'rows\'. Expected an array. Enable logging for more information.')
       }
   
@@ -74,7 +74,7 @@ export async function databaseIndependentQuery(
     let affectedRows
 
     if (db == 'postgres') {
-      if (! ('rowCount' in dbResult) || typeof dbResult.rowCount != 'number' || isNaN(dbResult.rowCount)) {
+      if (! ('rowCount' in dbResult) || typeof dbResult.rowCount != 'number' || isNaN(dbResult.rowCount)) {
         throw new Error('Result returned by PostgeSQL did not contain a valid \'rowCount\'. Expected a number. Enable logging for more information.')
       }
   
@@ -82,7 +82,7 @@ export async function databaseIndependentQuery(
     }
   
     if (db == 'mysql' || db == 'maria') {
-      if (! ('affectedRows' in dbResult) || typeof dbResult.affectedRows != 'number' || isNaN(dbResult.affectedRows)) {
+      if (! ('affectedRows' in dbResult) || typeof dbResult.affectedRows != 'number' || isNaN(dbResult.affectedRows)) {
         throw new Error('Result returned by MySQL did not contain a valid \'affectedRows\'. Expected a number. Enable logging for more information.')
       }
   
