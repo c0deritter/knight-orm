@@ -7,12 +7,36 @@ import { Relationship, Table } from './schema'
 
 let log = new Log('knight-orm/criteria.ts')
 
+/**
+ * Describes the properties of one criteria issue. Criteria can have
+ * issues if for example the referenced object properties or database columns
+ * do not exist.
+ */
 export interface CriteriaIssue {
   location: string
   message: string
 }
 
-export function validateCriteria(table: Table, criteria: Criteria, asDatabaseCriteria = false, path: string = ''): CriteriaIssue[] {
+/**
+ * Can be used to check given criteria for their correctness.
+ * 
+ * The function will warn if a a property did not reference a valid object property
+ * (or database column if the parameter asDatabaseCriteria is true), a valid relationship
+ * nor a valid @-property like '@load' or '@orderBy.
+ * 
+ * @param table The table the criteria was created for
+ * @param criteria The criteria
+ * @param asDatabaseCriteria Set to true if the criteria reference database columns instead of object properties
+ * @param path An internal parameter which is used for creating the location in the resulting CriteriaIssue object
+ * @returns A list of CriteriaIssue objects
+ */
+export function validateCriteria(
+  table: Table, 
+  criteria: Criteria, 
+  asDatabaseCriteria = false, 
+  path: string = ''
+): CriteriaIssue[] {
+
   let issues: CriteriaIssue[] = []
 
   if (criteria == undefined) {
@@ -219,6 +243,16 @@ export function instanceCriteriaToRowCriteria(table: Table, instanceCriteria: Cr
   return instanceCriteria
 }
 
+/**
+ * Fill a knight-sql query with criteria.
+ * 
+ * @param table The table the criteria was created for
+ * @param query A knight-sql query object
+ * @param criteria The criteria
+ * @param asDatabaseCriteria Set to true if the criteria reference database columns instead of object properties
+ * @param joinAlias An internal parameter which is used to create the appropriate aliases for joined tables
+ * @param sqlCondition An internal parameter which is a knight-sql condition that is used to sourround parts of the condition with brackets
+ */
 export function addCriteria(
   table: Table, 
   query: Query, 
@@ -596,16 +630,51 @@ export function addCriteria(
   }
 }
 
+/**
+ * The result of 'determineRelationshipsToLoadSeparately'. It contains the
+ * relationship itself, the criteria with which the relationship objects are
+ * to be loaded and a list of objects for which the relationships are
+ * to be loaded.
+ * 
+ * With this information it is possible to load every relationship object
+ * for every given relationship owning object with only one database query.
+ */
 export interface RelationshipToLoad {
   relationship: Relationship
   relationshipCriteria: CriteriaObject
   objs: any[]
 }
 
+/**
+ * It contains a mapping from a relationship path to an object
+ * following the interface 'RelationshipToLoad'.
+ * 
+ * The path itself is not a mandatory information which would be
+ * needed to load the relationships. Its purpose is to inform
+ * the programmer about the exact place of the relationship.
+ */
 export interface RelationshipsToLoad {
   [ relationshipPath: string ]: RelationshipToLoad
 }
 
+/**
+ * Determines the relationships that are to be loaded separately
+ * according to the given criteria.
+ * 
+ * It also determines the specific instances or database rows for
+ * which the relationships have to be loaded.
+ * 
+ * The result is a mapping from a relationship path to an object
+ * containing all the information needed to load the relationship
+ * objects. It follows the interface 'RelationshipsToLoad'.
+ * 
+ * @param table The table the criteria was created for
+ * @param objs A list of objects for which the relationships are to be loaded
+ * @param criteria The criteria which contains the information about which relationships are to be loaded separately
+ * @param relationshipPath An internal parameter to keep track of the relationship path
+ * @param relationshipsToLoad An internal parameter which is the result that will be returned at the end
+ * @returns A mapping from a relationship path to an object containing every information to load the objects of an relationship. It follows the 'RelationshipsToLoad' interface.
+ */
 export function determineRelationshipsToLoadSeparately(
   table: Table, 
   objs: any[], 
@@ -639,9 +708,9 @@ export function determineRelationshipsToLoadSeparately(
 
     for (let criterium of criteria) {
       if (criterium instanceof Array || typeof criterium == 'object') {
-        l.lib('Determining relationships to load of', criterium)
+        l.calling('Determining relationships to load of', criterium)
         determineRelationshipsToLoadSeparately(table, objs, criterium, relationshipPath, relationshipsToLoad)
-        l.lib('Determined relationships to load of', criterium)
+        l.called('Determined relationships to load of', criterium)
       }
     }
   }
@@ -692,7 +761,7 @@ export function determineRelationshipsToLoadSeparately(
           }
         }
   
-        l.lib('Relationship was already loaded through a JOIN. Determining relationships of the relationship. Going into recursion...')
+        l.calling('Relationship was already loaded through a JOIN. Determining relationships of the relationship. Going into recursion...')
   
         determineRelationshipsToLoadSeparately(
           relationship.otherTable, 
@@ -702,7 +771,7 @@ export function determineRelationshipsToLoadSeparately(
           relationshipsToLoad
         )
   
-        l.lib('Returning from recursion...')
+        l.called('Returning from recursion...')
       }
       else {
         l.lib('Relationship should not be loaded')
@@ -724,17 +793,40 @@ export function determineRelationshipsToLoadSeparately(
   return relationshipsToLoad
 }
 
+/**
+ * Builds an SQL SELECT query which will select every column also of
+ * every given relationship that is to be loaded. The result is a 
+ * knight-sql query object.
+ * 
+ * This query object is ready to be transformed into SQL along with the
+ * values that were specified in the criteria.
+ * 
+ * @param table The table the criteria was specified for
+ * @param criteria The criteria
+ * @param asDatabaseCriteria If set to true, the given criteria can directly reference database columns instead of instance properties
+ * @returns A knight-sql query object
+ */
 export function buildCriteriaReadQuery(table: Table, criteria: Criteria, asDatabaseCriteria = false): Query {
   let query = new Query
   query.from(table.name, table.name)
-
   addCriteria(table, query, criteria, asDatabaseCriteria)
   selectAllColumnsExplicitly(table.schema, query)
-
   return query
 }
 
-export function buildCriteriaCountQuery(table: Table, criteria: Criteria, asDatabaseCriteria = false): Query {
+/**
+ * Builds an SQL SELECT query which will select the COUNT(*) in the 
+ * form of a knight-sql query object which contains all the given criteria.
+ * 
+ * This query object is ready to be transformed into SQL along with the
+ * values that were specified in the criteria.
+ * 
+ * @param table The table the criteria was specified for
+ * @param criteria The criteria
+ * @param asDatabaseCriteria If set to true, the given criteria can directly reference database columns instead of instance properties
+ * @returns A knight-sql query object
+ */
+ export function buildCriteriaCountQuery(table: Table, criteria: Criteria, asDatabaseCriteria = false): Query {
   let query = new Query
   query.from(table.name, table.name).select('COUNT(*) as count')
   addCriteria(table, query, criteria, asDatabaseCriteria)

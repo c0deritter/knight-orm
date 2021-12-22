@@ -7,16 +7,62 @@ let log = new Log('knight-orm/join.ts')
 
 let joinAliasLogger = log.cls('JoinAlias')
 
+/**
+ * A class for creating an alias when joining tables in an SQL query.
+ * 
+ * The initial JoinAlias instance creates a root alias for the table
+ * which is stated in an SQL FROM clause. If the table name is 'user'
+ * then the resulting alias is 'user'.
+ * 
+ * Based on the root alias, arbitrary join aliases can be created by
+ * using the method 'join'. If you join the relationship 'address', then
+ * the resulting alias will be 'user__address'.
+ * 
+ * The properties 'joinAlias' and 'columnAlias' then can be used when
+ * aliasing a joined a table or when aliasing a selected column.
+ * 
+ * The method 'unjoinRows' will create an object tree out of a given
+ * database result which can contain arbitrary joined columns. It is
+ * important, that the column where aliased in the SQL SELECT clause
+ * using the 'columnAlias' property of this class. This is the key
+ * for unjoining rows.
+ */
 export class JoinAlias {
+
+  /**
+   * The table as it was stated in the FROM clause.
+   */
   rootTable: Table
+
+  /**
+   * A parent JoinAlias instance or null if it is the root alias.
+   */
   parent: JoinAlias|null
+
+  /**
+   * The relationship for which the instance create an alias for.
+   */
   relationship: Relationship|null
   
   private _alias?: string
   private _joinAlias?: string
   private _columnAlias?: string
 
+  /**
+   * This constructor is used to create the initial root alias which
+   * is the base for all following join aliases.
+   * 
+   * @param table The table which was defined in the SQL FROM clause
+   */
   constructor(table: Table)
+
+  /**
+   * This constructor is used for creating a join alias, either using
+   * the root alias as its base or any join alias.
+   * 
+   * @param parent Any JoinAlias instance
+   * @param relationship The relationship which is joined
+   */
   constructor(parent: JoinAlias, relationship: Relationship)
 
   constructor(...args: any[]) {
@@ -37,7 +83,7 @@ export class JoinAlias {
       let arg2 = args[1]
 
       if (arg1 instanceof JoinAlias && arg2 instanceof Relationship) {
-        this.rootTable = arg1.table
+        this.rootTable = arg1.rootTable
         this.parent = arg1
         this.relationship = arg2
       }
@@ -50,6 +96,9 @@ export class JoinAlias {
     }
   }
 
+  /**
+   * Either the table which was given as the base 
+   */
   get table(): Table {
     if (this.relationship) {
       return this.relationship.otherTable
@@ -58,6 +107,10 @@ export class JoinAlias {
     return this.rootTable
   }
 
+  /**
+   * The alias which contains all the aliases from all parents, concatenated by 
+   * a double underscore.
+   */
   get alias(): string {
     if (! this._alias) {
       if (this.parent && this.relationship) {
@@ -71,6 +124,9 @@ export class JoinAlias {
     return this._alias
   }
 
+  /** The alias for usage in an SQL query when aliasing the joined table. It
+   * is the 'alias' property with an appended dot.
+   */
   get joinAlias(): string {
     if (! this._joinAlias) {
       this._joinAlias = this.alias + '.'
@@ -79,6 +135,9 @@ export class JoinAlias {
     return this._joinAlias
   }
 
+  /** The alias for usage in an SQL query when creating an aliasing a column in a 
+   * select statement. It is the 'alias' property with appended double underscore.
+   */
   get columnAlias(): string {
     if (! this._columnAlias) {
       this._columnAlias = this.alias + '__'
@@ -87,6 +146,14 @@ export class JoinAlias {
     return this._columnAlias
   }
 
+  /**
+   * Create a new JoinAlias instance by joining a new relationship. The source
+   * relationship will be refered by this new instance as the parent. The alias
+   * property will contain the parent alias.
+   * 
+   * @param relationship The relationship to join
+   * @returns A new JoinAlias instance representing the alias for the joined relationship
+   */
   join(relationship: Relationship): JoinAlias {
     let relationshipAliasSchema = new JoinAlias(this, relationship)
     return relationshipAliasSchema
@@ -99,8 +166,7 @@ export class JoinAlias {
    * @param table The table which is to be extracted from the given row
    * @param joinedRow A row which contains columns of multiple joined tables
    * @param alias The alias which was used to prefix every column of the given table
-   * @returns An object which has only those properties who represent the columns of the given table.
-   * If the row did not contain any column of the given table, undefined is returned.
+   * @returns An object which has only those properties who represent the columns of the given table. If the row did not contain any column of the given table, undefined is returned.
    */
   unjoinTable(joinedRow: any, returnUndefinedIfEveryColumnIsNull = false): any {
     let unjoinedRow: any = undefined
