@@ -1,6 +1,6 @@
 import { Criteria, summarizeCriteria } from 'knight-criteria'
 import { Log } from 'knight-log'
-import { objectsRepresentSameEntity } from './row'
+import { ObjectTools } from '.'
 import { Relationship, Table } from './schema'
 
 let log = new Log('knight-orm/join.ts')
@@ -216,6 +216,11 @@ export class JoinAlias {
     l.location = [ this.columnAlias ]
     l.locationSeparator = ' > '
 
+    // Kind of a hacky approach to be able to use one the functions which
+    // do not need any of vaules given by the parameters of the constructor.
+    // There might be a better solution in the future.
+    let objectTools = new ObjectTools(undefined as any)
+
     let relationshipToObjects: { [relationshipName: string]: any[] } = {}
 
     let summarizedCriteria = summarizeCriteria(criteria)
@@ -293,7 +298,7 @@ export class JoinAlias {
 
       let objAlreadyUnjoined = false
       for (let alreadyUnjoinedRow of unjoinedObjs) {
-        if (objectsRepresentSameEntity(this.table, alreadyUnjoinedRow, unjoinedObj, asDatabaseCriteria)) {
+        if (objectTools.objectsRepresentSameEntity(this.table, alreadyUnjoinedRow, unjoinedObj, asDatabaseCriteria)) {
           objAlreadyUnjoined = true
           break
         }

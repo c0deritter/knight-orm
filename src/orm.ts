@@ -1,9 +1,10 @@
 import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { comparison, Query } from 'knight-sql'
-import { addCriteria, buildCriteriaCountQuery, buildCriteriaReadQuery, determineRelationshipsToLoadSeparately, JoinAlias, SelectResult } from '.'
-import { databaseIndependentQuery, InsertUpdateDeleteResult } from './query'
-import { isPrimaryKeySet, isUpdate, reduceToPrimaryKey } from './row'
+import { CriteriaTools, QueryTools } from '.'
+import { JoinAlias } from './join'
+import { ObjectTools } from './object'
+import { InsertUpdateDeleteResult, SelectResult } from './query'
 import { Schema, Table } from './schema'
 
 let log = new Log('knight-orm/orm.ts')
@@ -125,9 +126,17 @@ export class Orm {
     store?: StoreFunction
   }} = {}
 
+  criteriaTools: CriteriaTools
+  objectTools: ObjectTools
+  queryTools: QueryTools
+
   constructor(schema: Schema, db: string) {
     this.schema = schema
     this.db = db
+
+    this.criteriaTools = new CriteriaTools(this)
+    this.objectTools = new ObjectTools(this)
+    this.queryTools = new QueryTools(this)
   }
 
   get customStoreFunctions(): { [className: string]: StoreFunction } {
@@ -142,6 +151,34 @@ export class Orm {
     return result
   }
 
+  /**
+   * Stores the given object including all its relationship objects
+   * into the database. The object might reference object properties
+   * or database columns.
+   * 
+   * It uses 'isUpdate' to determine if an object is to be stored with
+   * an SQL INSERT or an UPDATE.
+   * 
+   * The many-to-one relationships are stored first which will give you
+   * the chance to use foreign key constraints. Beware that there are
+   * circumstances where the many-to-ony relationship object will be stored
+   * after the relationship owning object, i.e. when the relationship 
+   * refers to the relationship owning object itself.
+   * 
+   * The one-to-many relationships are stored after storing the given object
+   * and additionally the one-to-one relationship ids are set.
+   * 
+   * The database is queried through the function 'databaseIndependentQuery'
+   * which will return a unified result between all databases.
+   * 
+   * @param queryFn 
+   * @param classNameOrTable 
+   * @param obj 
+   * @param asDatabaseRow 
+   * @param storedObjects 
+   * @param relationshipPath 
+   * @returns 
+   */
   async store(
     queryFn: (sqlString: string, values?: any[]) => Promise<any>, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
@@ -275,7 +312,7 @@ export class Orm {
   
               l.lib('Converting instance to row')
               l.calling('Calling Table.instanceToRow...')
-              reduced = reduceToPrimaryKey(table, obj)
+              reduced = this.objectTools.reduceToPrimaryKey(table, obj)
               row = table.instanceToRow(reduced, true)
               l.called('Called Table.instanceToRow...')
             }
@@ -294,7 +331,7 @@ export class Orm {
     
             let result
             try {
-              result = await databaseIndependentQuery(this.db, queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
+              result = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
             }
             catch (e) {
               throw new Error(e as any)
@@ -330,7 +367,7 @@ export class Orm {
   
     l.lib('Determining if to store or to update the given row...', row)
     
-    let doUpdate = await isUpdate(table, this.db, queryFn, row, asDatabaseRow)
+    let doUpdate = await this.objectTools.isUpdate(table, queryFn, row, asDatabaseRow)
   
     if (doUpdate) {
       l.lib('Updating the given row...')
@@ -348,7 +385,7 @@ export class Orm {
   
       let result
       try {
-        result = await databaseIndependentQuery(this.db, queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
+        result = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
       }
       catch (e) {
         throw new Error(e as any)
@@ -380,7 +417,7 @@ export class Orm {
   
       let result
       try {
-        result = await databaseIndependentQuery(this.db, queryFn, query.sql(this.db), query.values(), generatedPrimaryKey?.name) as InsertUpdateDeleteResult
+        result = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values(), generatedPrimaryKey?.name) as InsertUpdateDeleteResult
       }
       catch (e) {
         throw new Error(e as any)
@@ -477,7 +514,7 @@ export class Orm {
   
               l.lib('Converting one-to-one instance to row')
               l.calling('Calling Table.instanceToRow...')
-              reduced = reduceToPrimaryKey(table, oneToOneObj)
+              reduced = this.objectTools.reduceToPrimaryKey(table, oneToOneObj)
               oneToOneRow = table.instanceToRow(reduced, true)
               l.called('Called Table.instanceToRow...')
             }
@@ -500,7 +537,7 @@ export class Orm {
     
             let result
             try {
-              result = await databaseIndependentQuery(this.db, queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
+              result = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
             }
             catch (e) {
               throw new Error(e as any)
@@ -608,7 +645,7 @@ export class Orm {
       
                   l.lib('Converting one-to-many instance to row')
                   l.calling('Calling Table.instanceToRow...')
-                  reduced = reduceToPrimaryKey(table, oneToManyObj)
+                  reduced = this.objectTools.reduceToPrimaryKey(table, oneToManyObj)
                   oneToManyRow = table.instanceToRow(reduced, true)
                   l.called('Called Table.instanceToRow...')
                 }
@@ -631,7 +668,7 @@ export class Orm {
         
                 let result
                 try {
-                  result = await databaseIndependentQuery(this.db, queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
+                  result = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
                 }
                 catch (e) {
                   throw new Error(e as any)
@@ -658,6 +695,20 @@ export class Orm {
     return storeInfo
   }
 
+  /**
+   * Deletes the given object.
+   * 
+   * If the primary key is not set it will throw an error.
+   * 
+   * The database is queried through the function 'databaseIndependentQuery'
+   * which will return a unified result between all databases.
+   * 
+   * @param queryFn 
+   * @param classNameOrTable 
+   * @param obj 
+   * @param asDatabaseRow 
+   * @returns 
+   */
   async delete(
     queryFn: (sqlString: string, values?: any[]) => Promise<any>, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
@@ -677,7 +728,7 @@ export class Orm {
       table = classNameOrTable
     }
 
-    if (! isPrimaryKeySet(table, obj)) {
+    if (! this.objectTools.isPrimaryKeySet(table, obj)) {
       throw new Error('Could not delete object because the primary key is not set.')
     }
   
@@ -691,7 +742,7 @@ export class Orm {
   
     let result
     try {
-      result = await databaseIndependentQuery(this.db, queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
+      result = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
     }
     catch (e) {
       throw new Error(e as any)
@@ -705,6 +756,14 @@ export class Orm {
     return deleteInfo
   }
 
+  /**
+   * 
+   * @param queryFn 
+   * @param classNameOrTable 
+   * @param criteria 
+   * @param asDatabaseCriteria 
+   * @returns 
+   */
   async criteriaRead(
     queryFn: (sqlString: string, values?: any[]) => Promise<any>, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
@@ -725,14 +784,14 @@ export class Orm {
 
     l.location = [ table.name ]
 
-    let query = buildCriteriaReadQuery(table, criteria, asDatabaseCriteria)
+    let query = this.criteriaTools.buildCriteriaReadQuery(table, criteria, asDatabaseCriteria)
     l.dev('Built SELECT query', query)
   
     l.lib('Querying database with given SQL string and values...')
     let joinedRows
   
     try {
-      joinedRows = await databaseIndependentQuery(this.db, queryFn, query.sql(this.db), query.values()) as SelectResult
+      joinedRows = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as SelectResult
     }
     catch (e) {
       throw new Error(e as any)
@@ -748,7 +807,7 @@ export class Orm {
     l.dev('Unjoined objects', objects)
   
     l.calling('Determine relationships to load...')
-    let relationshipsToLoad = determineRelationshipsToLoadSeparately(table, objects, criteria)
+    let relationshipsToLoad = this.criteriaTools.determineRelationshipsToLoadSeparately(table, objects, criteria)
     l.called('Determined relationships to load for criteria...', criteria)
   
     l.lib('Loading all relationships that need to be loaded separately...', Object.keys(relationshipsToLoad))
@@ -828,11 +887,11 @@ export class Orm {
       table = classNameOrTable
     }
 
-    let query = buildCriteriaCountQuery(table, criteria, asDatabaseCriteria)
+    let query = this.criteriaTools.buildCriteriaCountQuery(table, criteria, asDatabaseCriteria)
 
     let rows
     try {
-      rows = await databaseIndependentQuery(this.db, queryFn, query.sql(this.db), query.values()) as SelectResult
+      rows = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as SelectResult
     }
     catch (e) {
       throw new Error(e as any)
@@ -879,7 +938,7 @@ export class Orm {
       }
     }
   
-    addCriteria(table, query, criteria['@criteria'], asDatabaseCriteria)
+    this.criteriaTools.addCriteria(table, query, criteria['@criteria'], asDatabaseCriteria)
   
     let sqlString = query.sql(this.db)
     let values = query.values()
@@ -920,7 +979,7 @@ export class Orm {
 
     let query = new Query
     query.deleteFrom(table.name)
-    addCriteria(table, query, criteria, asDatabaseCriteria)
+    this.criteriaTools.addCriteria(table, query, criteria, asDatabaseCriteria)
   
     let sqlString = query.sql(this.db)
     let values = query.values()

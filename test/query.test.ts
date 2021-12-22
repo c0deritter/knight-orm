@@ -1,7 +1,9 @@
 import { expect } from 'chai'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
-import { databaseIndependentQuery } from '../src/query'
+import { Orm } from '../src'
+import { QueryTools } from '../src/query'
+import { schema } from './testSchema'
 
 let pool: Pool = new Pool({
   host: 'postgres',
@@ -13,6 +15,8 @@ let pool: Pool = new Pool({
 function pgQueryFn(sqlString: string, values?: any[]): Promise<any> {
   return pool.query(sqlString, values)
 }
+
+let queryTools = new QueryTools(new Orm(schema, 'postgres'))
 
 describe('query', function() {
   after(async function() {
@@ -40,7 +44,7 @@ describe('query', function() {
         await pgQueryFn('INSERT INTO table1 DEFAULT VALUES')
         await pgQueryFn('INSERT INTO table1 DEFAULT VALUES')
 
-        let result = await databaseIndependentQuery('postgres', pgQueryFn, 'SELECT * FROM table1 ORDER BY id')
+        let result = await queryTools.databaseIndependentQuery(pgQueryFn, 'SELECT * FROM table1 ORDER BY id')
 
         expect(result).to.deep.equal([
           {
@@ -80,7 +84,7 @@ describe('query', function() {
       })
 
       it('should insert a row', async function() {
-        let result = await databaseIndependentQuery('postgres', pgQueryFn, 'INSERT INTO table2 (id, column1) VALUES ($1, $2)', ['x', 'a'])
+        let result = await queryTools.databaseIndependentQuery(pgQueryFn, 'INSERT INTO table2 (id, column1) VALUES ($1, $2)', ['x', 'a'])
 
         expect(result).to.deep.equal({
           affectedRows: 1
@@ -88,7 +92,7 @@ describe('query', function() {
       })
 
       it('should insert a row and return the generated id', async function() {
-        let result = await databaseIndependentQuery('postgres', pgQueryFn, 'INSERT INTO table1 (column1) VALUES ($1)', ['a'], 'id')
+        let result = await queryTools.databaseIndependentQuery(pgQueryFn, 'INSERT INTO table1 (column1) VALUES ($1)', ['a'], 'id')
 
         expect(result).to.deep.equal({
           affectedRows: 1,
@@ -101,7 +105,7 @@ describe('query', function() {
         await pgQueryFn('INSERT INTO table1 DEFAULT VALUES')
         await pgQueryFn('INSERT INTO table1 DEFAULT VALUES')
 
-        let result = await databaseIndependentQuery('postgres', pgQueryFn, 'UPDATE table1 SET column1=$1', ['a'])
+        let result = await queryTools.databaseIndependentQuery(pgQueryFn, 'UPDATE table1 SET column1=$1', ['a'])
 
         expect(result).to.deep.equal({
           affectedRows: 3
@@ -113,7 +117,7 @@ describe('query', function() {
         await pgQueryFn('INSERT INTO table1 DEFAULT VALUES')
         await pgQueryFn('INSERT INTO table1 DEFAULT VALUES')
 
-        let result = await databaseIndependentQuery('postgres', pgQueryFn, 'DELETE FROM table1')
+        let result = await queryTools.databaseIndependentQuery(pgQueryFn, 'DELETE FROM table1')
 
         expect(result).to.deep.equal({
           affectedRows: 3
