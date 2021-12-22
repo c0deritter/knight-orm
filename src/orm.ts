@@ -784,7 +784,7 @@ export class Orm {
 
     l.location = [ table.name ]
 
-    let query = this.criteriaTools.buildCriteriaReadQuery(table, criteria, asDatabaseCriteria)
+    let query = this.queryTools.buildCriteriaReadQuery(table, criteria, asDatabaseCriteria)
     l.dev('Built SELECT query', query)
   
     l.lib('Querying database with given SQL string and values...')
@@ -887,7 +887,7 @@ export class Orm {
       table = classNameOrTable
     }
 
-    let query = this.criteriaTools.buildCriteriaCountQuery(table, criteria, asDatabaseCriteria)
+    let query = this.queryTools.buildCriteriaCountQuery(table, criteria, asDatabaseCriteria)
 
     let rows
     try {
@@ -938,7 +938,7 @@ export class Orm {
       }
     }
   
-    this.criteriaTools.addCriteria(table, query, criteria['@criteria'], asDatabaseCriteria)
+    this.queryTools.addCriteria(table, query, criteria['@criteria'], asDatabaseCriteria)
   
     let sqlString = query.sql(this.db)
     let values = query.values()
@@ -979,7 +979,7 @@ export class Orm {
 
     let query = new Query
     query.deleteFrom(table.name)
-    this.criteriaTools.addCriteria(table, query, criteria, asDatabaseCriteria)
+    this.queryTools.addCriteria(table, query, criteria, asDatabaseCriteria)
   
     let sqlString = query.sql(this.db)
     let values = query.values()
