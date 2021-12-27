@@ -912,7 +912,7 @@ export class Orm {
   }
 
   async criteriaUpdate(
-    queryFn: (sqlString: string, values?: any[]) => Promise<any[]>, 
+    queryFn: QueryFn, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
     criteria: UpdateCriteria, 
     asDatabaseCriteria = false
