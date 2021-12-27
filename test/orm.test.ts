@@ -1329,7 +1329,7 @@ describe('orm', function() {
     })
   })
 
-  describe('criteriaRead', function() {
+  describe('load', function() {
     it('should select all rows', async function() {
       let date1 = new Date
       let date2 = new Date
@@ -1338,7 +1338,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'b', column2: 2, column3: date2 }, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'c', column2: 3, column3: date3 }, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), {}, true)
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), {}, true)
 
       expect(rows.length).to.equal(3)
 
@@ -1387,7 +1387,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'b', column2: 2, column3: date2 }, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'c', column2: 3, column3: date3 }, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), {
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), {
         '@orderBy': {
           field: 'column2',
           direction: 'DESC'
@@ -1441,7 +1441,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'b', column2: 2, column3: date2 }, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'c', column2: 3, column3: date3 }, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), {
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), {
         '@limit': 2
       }, true)
 
@@ -1480,7 +1480,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'b', column2: 2, column3: date2 }, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'c', column2: 3, column3: date3 }, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), {
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), {
         '@offset': 2
       }, true)
 
@@ -1504,7 +1504,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', manyToOneObject1: { column2: 2 }}, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', manyToOneObject1: { column2: 3 }}, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), {
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), {
         column1: 'a',
         manyToOneObject1: {
           column2: 1
@@ -1531,7 +1531,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { manyToOneObject1: { }}, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { manyToOneObject1: { }}, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), {
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), {
         manyToOneObject1: {
           id: 1
         }
@@ -1557,7 +1557,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', manyToOneObject1: { column2: 2 }}, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', manyToOneObject1: { column2: 3 }}, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), {
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), {
         column1: 'a',
         manyToOneObject1: {
           '@load': true,
@@ -1596,7 +1596,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', manyToOneObject1: { column2: 2 }}, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', manyToOneObject1: { column2: 3 }}, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), {
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), {
         column1: 'a',
         manyToOneObject1: {
           '@loadSeparately': true,
@@ -1661,7 +1661,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), {
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), {
         column1: 'a',
         oneToManyObject1: {
           column1: 'd'
@@ -1688,7 +1688,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), {
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), {
         column1: 'a',
         oneToManyObject1: {
           '@load': true,
@@ -1729,7 +1729,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), {
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), {
         column1: 'a',
         oneToManyObject1: {
           '@loadSeparately': true,
@@ -1796,7 +1796,7 @@ describe('orm', function() {
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', manyToOneObject1: { column2: 2 }, oneToManyObject1: [ { column1: 'f' }, { column1: 'g' } ]}, true)
       await pgOrm.store(pgQueryFn, schema.getTable('table1'), { column1: 'a', manyToOneObject1: { column2: 3 }, oneToManyObject1: [ { column1: 'h' }, { column1: 'i' } ]}, true)
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table1'), [
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table1'), [
         {
           column1: 'a',
           manyToOneObject1: {
@@ -1905,7 +1905,7 @@ describe('orm', function() {
       await pgQueryFn('INSERT INTO table2 DEFAULT VALUES')
       await pgQueryFn('INSERT INTO table2 DEFAULT VALUES')
 
-      let rows = await pgOrm.criteriaRead(pgQueryFn, schema.getTable('table2'), {}, true)
+      let rows = await pgOrm.load(pgQueryFn, schema.getTable('table2'), {}, true)
 
       expect(rows.length).to.equal(0)
     })

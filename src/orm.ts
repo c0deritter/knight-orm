@@ -766,7 +766,7 @@ export class Orm {
    * @param asDatabaseCriteria 
    * @returns 
    */
-  async criteriaRead(
+  async load(
     queryFn: QueryFn, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
     criteria: Criteria, 
@@ -839,7 +839,7 @@ export class Orm {
       criteria[relationship.otherId.getName(asDatabaseCriteria)] = idsToLoad
   
       l.calling('Loading relationship objects with the following criteria', criteria)
-      let loadedRelationships = await this.criteriaRead(queryFn, table, criteria, asDatabaseCriteria)
+      let loadedRelationships = await this.load(queryFn, table, criteria, asDatabaseCriteria)
       l.called('Loaded relationship rows for criteria', criteria)
       l.dev('Loaded relationship objects', loadedRelationships)
   
@@ -874,7 +874,7 @@ export class Orm {
     return objects
   }
 
-  async criteriaCount(
+  async count(
     queryFn: QueryFn, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
     criteria: Criteria, 
