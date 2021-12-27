@@ -1,13 +1,15 @@
 import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { comparison, Query } from 'knight-sql'
-import { CriteriaTools, QueryTools } from '.'
+import { CriteriaTools } from './criteria'
 import { JoinAlias } from './join'
 import { ObjectTools } from './object'
-import { InsertUpdateDeleteResult, SelectResult } from './query'
+import { InsertUpdateDeleteResult, QueryTools, SelectResult } from './query'
 import { Schema, Table } from './schema'
 
 let log = new Log('knight-orm/orm.ts')
+
+export type QueryFn = (sqlString: string, values?: any[]) => Promise<any>
 
 export interface StoredObjectsEntry {
   stored: boolean,
@@ -105,7 +107,7 @@ export class StoredObjects {
 }
 
 export type StoreFunction = (
-  queryFn: (sqlString: string, values?: any[]) => Promise<any>, 
+  queryFn: QueryFn, 
   classNameOrTable: (new (...args: any[]) => any)|Table, 
   obj: any, 
   asDatabaseRow?: boolean, 
@@ -180,7 +182,7 @@ export class Orm {
    * @returns 
    */
   async store(
-    queryFn: (sqlString: string, values?: any[]) => Promise<any>, 
+    queryFn: QueryFn, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
     obj: any, 
     asDatabaseRow = false, 
@@ -710,7 +712,7 @@ export class Orm {
    * @returns 
    */
   async delete(
-    queryFn: (sqlString: string, values?: any[]) => Promise<any>, 
+    queryFn: QueryFn, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
     obj: any, 
     asDatabaseRow = false
@@ -765,7 +767,7 @@ export class Orm {
    * @returns 
    */
   async criteriaRead(
-    queryFn: (sqlString: string, values?: any[]) => Promise<any>, 
+    queryFn: QueryFn, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
     criteria: Criteria, 
     asDatabaseCriteria = false
@@ -873,7 +875,7 @@ export class Orm {
   }
 
   async criteriaCount(
-    queryFn: (sqlString: string, values?: any[]) => Promise<any>, 
+    queryFn: QueryFn, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
     criteria: Criteria, 
     asDatabaseCriteria = false
@@ -959,7 +961,7 @@ export class Orm {
   }
   
   async criteriaDelete(
-    queryFn: (sqlString: string, values?: any[]) => Promise<any>, 
+    queryFn: QueryFn, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
     criteria: Criteria, 
     asDatabaseCriteria = false
