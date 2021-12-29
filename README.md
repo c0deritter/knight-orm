@@ -227,7 +227,7 @@ orm.store(queryFn, knight)
 orm.load(queryFn, Knight, { livesInCastle: { '@load': true }})
 ```
 
-### One-To-Many
+#### One-To-Many
 
 A `one-to-many` relationship is, when the row of one table is explicitely referenced many times by `many-to-one` relationships of rows from another table. This means, that this kind of a relationship is the implicit counterpart of a `many-to-one` relationship. If you define a `many-to-one` relationship, the `one-to-many` relationship is inherently there.
 
@@ -275,7 +275,7 @@ orm.store(queryFn, knight)
 orm.load(queryFn, Knight, { knightsLivingHere: { '@load': true }})
 ```
 
-### Many-To-Many
+#### Many-To-Many
 
 The `many-to-many` relationship is when both tables refer to each other in an `one-to-many` relationship. To achieve this, another table is placed in between which explicitely refers to each table with two `many-to-one` relationships. Of course, the table in between might even refer to more than two tables.
 
@@ -421,7 +421,7 @@ orm.load(queryFn, KnightLivingInCastle, {
 })
 ```
 
-### One-To-One
+#### One-To-One
 
 ## Using the Orm
 
