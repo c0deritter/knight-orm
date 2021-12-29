@@ -110,7 +110,7 @@ schema.addTable('knight', {
 })
 ```
 
-The schema class has a method `check` which can be used to find inconstencies within the mapping. It will throw an error with a sophisticated error message which will help you debugging.
+The schema class has a method `check` which can be used to find inconsistencies within the mapping. It will throw an error with a sophisticated error message which will help you debugging.
 
 ```typescript
 schema.check()
@@ -220,7 +220,7 @@ schema.addTable('knight', {
 })
 ```
 
-Now, when you store a knight, the ORM will also store the castle. When you load the knight and you explictely declared it, the ORM will also load the castle into the `livesInCastle` property.
+Now, when you store a `Knight` instance, the ORM will also store the `Castle` instance. When you load a `Knight` and you explictely declared it, the ORM will also load the related `Castle` instance into the `livesInCastle` property.
 
 ```typescript
 orm.store(queryFn, knight)
@@ -268,7 +268,7 @@ schema.addTable('castle', {
 })
 ```
 
-Now, when you store a castle, the ORM will also store the knights living there. When you load a castle and you explictely declared it, the ORM will also load the knights into the `knightsLivingHere` property.
+Now, when you store a `Castle` instance, the ORM will also store the referenced `Knight` instances living there. When you load a `Castle` instance and you explictely declared it, the ORM will also load the `Knight` instances into the `knightsLivingHere` array property.
 
 ```typescript
 orm.store(queryFn, knight)
@@ -277,7 +277,149 @@ orm.load(queryFn, Knight, { knightsLivingHere: { '@load': true }})
 
 ### Many-To-Many
 
-The `many-to-many` relationship is when 
+The `many-to-many` relationship is when both tables refer to each other in an `one-to-many` relationship. To achieve this, another table is placed in between which explicitely refers to each table with two `many-to-one` relationships. Of course, the table in between might even refer to more than two tables.
+
+Again using our example from above, we also want to store the date a knight moved into a castle. With that data structure, we do not only know in which castle a knight lives right know, but we are also getting a history of castles a knight was living in.
+
+We add the table in between.
+
+```sql
+CREATE TABLE knight_living_in_castle (knight_id INTEGER, castle_id INTEGER, moved_in DATE);
+```
+
+We add a domain object for the table in between and adjust the `Knight` and `Castle` classes to refer to the new domain object in between.
+
+```typescript
+class Knight {
+  id: number
+  name: string
+  
+  livesInCastles: KnightLivingInCastle[]
+}
+
+class Castle {
+  id: number
+  name: string
+
+  knightsLivingHere: KnightLivingInCastle[]
+}
+
+class KnightLivingInCastle {
+  knightId: number
+  castleId: number
+  movedIn: Date
+
+  knight: Knight
+  castle: Castle
+}
+
+let knight = new Knight('Luisa')
+let castle = new Castle('Kingstone')
+let livingIn = new KnightLivingInCastle(knight, castle)
+knight.livesInCastles = [ livingIn ]
+castle.knightsLivingHere = [ livingIn ]
+```
+
+As you can see, the `Knight` and the `Castle` refer to a list of `KnightLivingInCastle`, while the latter refers to exactly one of the former.
+
+Let us map this.
+
+```typescript
+import { Schema } from 'knight-orm'
+
+let schema = new Schema
+
+schema.addTable('knight', {
+  columns: {
+    'id': { property: 'id', primaryKey: true, generated: true },
+    'name': 'name'
+  },
+  relationships: {
+    'livesInCastles': {
+      oneToMany: true,
+      thisId: 'id',
+      otherTable: 'knight_living_in_castle',
+      otherId: 'knight_id'
+    }
+  },
+  newInstance: () => new Knight
+})
+
+schema.addTable('castle', {
+  columns: {
+    'id': { property: 'id', primaryKey: true, generated: true },
+    'name': 'name'
+  },
+  relationships: {
+    'knightsLivingHere': {
+      oneToMany: true,
+      thisId: 'id',
+      otherTable: 'knight_living_in_castle',
+      otherId: 'castle_id'
+    }
+  },
+  newInstance: () => new Castle
+})
+
+schema.addTable('knight_living_in_castle', {
+  columns: {
+    'knight_id': { property: 'knightId', primaryKey: true },
+    'castle_id': { property: 'castleId', primaryKey: true },
+    'moved_in': 'movedIn'
+  },
+  relationships: {
+    'knight': {
+      manyToOne: true,
+      thisId: 'knight_id',
+      otherTable: 'knight',
+      otherId: 'id'
+    },
+    'castle': {
+      manyToOne: true,
+      thisId: 'castle_id',
+      otherTable: 'castle',
+      otherId: 'id'
+    }
+  },
+  newInstance: () => new KnightLivingInCastle
+})
+```
+
+Now, when you store a `Knight`, a `Castle` or a `KnightLivingInCastle`, the ORM will also store the referenced instances belonging to the `many-to-many` relationship. When you load one of the mentioned and you explictely declared it, the ORM will also load every instance related to the `many-to-many` relationship into its corresponding properties.
+
+```typescript
+// you only need one the three calls to store
+orm.store(queryFn, knight)
+orm.store(queryFn, castle)
+orm.store(queryFn, livingIn)
+
+orm.load(queryFn, Knight, {
+  livesInCastles: {
+    '@load': true,
+    castle: {
+      '@load': true
+    }
+  }
+})
+
+orm.load(queryFn, Castle, {
+  knightsLivingHere: {
+    '@load': true,
+    knight: {
+      '@load': true
+    }
+  }
+})
+
+orm.load(queryFn, KnightLivingInCastle, {
+  knight: {
+    '@load': true
+  },
+  castle: {
+    '@load': true
+  }
+})
+```
 
 ### One-To-One
 
@@ -328,10 +470,12 @@ This function is the key to be able to wrap the method calls of the ORM inside a
 
 ```typescript
 let client = await pool.connect()
+let queryFn = (sqlString: string, values?: any[]) => client.query(sqlString, values)
+
 await client.query('BEGIN')
 
 try {
-  await orm.store(knight, (sqlString: string, values?: any[]) => client.query(sqlString, values))
+  await orm.store(queryFn, knight)
   await client.query('COMMIT')
 }
 catch (e) {
