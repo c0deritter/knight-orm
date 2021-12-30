@@ -432,7 +432,10 @@ orm.load(queryFn, KnightLivingInCastle, {
 For the ORM to be able to create instances of the correct class after loading database rows, you need to give it functions that do this. These do not get any parameter and return a new instance of one of your domain object classes.
 
 ```typescript
-() => new Knight
+orm.addTable('knight', {
+  ...
+  'newInstance': () => new Knight
+})
 ```
 
 As you can see, you will need a no-argument constructor.
@@ -469,9 +472,25 @@ let knight = new Knight({ id: 1, name: 'Luisa' })
 
 ### Customizing the row/instance conversion
 
-#### Customizing instance to row conversion
+The ORM will automatically create database row objects out of your domain object instances and vice versa. It will do so by simply copying every value of the one object to the other while regarding the difference of the property names.
 
-#### Customizing row to instance conversion
+There will be occassions where you need to for example convert an object into a JSON string to store it into the database and parse that string into an object of you retrieve it from the database.
+
+To do so, you can attach two custom functions, one for converting an domain instance into a database row and one for the other way around.
+
+```typescript
+orm.addTable('knight', {
+  ...
+  'instanceToRow': (knight: Knight, row: any) => {
+    row.languages = JSON.stringify(knight.languages)
+  },
+  'rowToInstance': (row: any, knight: Knight) => {
+    knight.languages = JSON.parse(row.languages)
+  }
+})
+```
+
+Both of the functions get the source object as the first parameter and the ORM-converted object as the second parameter. That way, you only need to adjust what you really need to while you can leave the rest to the ORM.
 
 ## Using the Orm
 
