@@ -806,7 +806,7 @@ In the following example, we load only those knights which live in the castle wi
 ```typescript
 load(queryFn, Knight, {
   livesInCastle: {
-    id: 1
+    name: 'Kingstone'
   }
 })
 ```
@@ -817,7 +817,7 @@ It is also possible to load the castles by setting the `@load` property to true.
 load(queryFn, Knight, {
   livesInCastle: {
     '@load': true,
-    id: 1
+    name: 'Kingstone'
   }
 })
 ```
@@ -843,12 +843,12 @@ load(queryFn, Knight, [
   {
     livesInCastle: {
       '@load': true,
-      id: 1
+      name: 'Kingstone'
     }
   },
   {
     livesInCastle: {
-      id: 2
+      name: 'Albrechtscastle'
     }
   }
 ])
@@ -865,12 +865,29 @@ load(queryFn, Knight, [
   },
   {
     livesInCastle: {
-      id: 1
+      name: 'Kingstone'
     }
   },
   {
     livesInCastle: {
-      id: 2
+      name: 'Albrechtscastle'
+    }
+  }
+])
+```
+
+Of course, this example can be solved in a more elegant way, which we did not do because we just wanted to showcase the point.
+
+```typescript
+load(queryFn, Knight, [
+  {
+    livesInCastle: {
+      '@load': true
+    }
+  },
+  {
+    livesInCastle: {
+      name: ['Kingstone', 'Albrechtscastle']
     }
   }
 ])
