@@ -476,7 +476,7 @@ The ORM will automatically create database row objects out of your domain object
 
 There will be occassions where you need to for example convert an object into a JSON string to store it into the database and parse that string into an object of you retrieve it from the database.
 
-To do so, you can attach two custom functions, one for converting an domain instance into a database row and one for the other way around.
+To do so, you can attach two custom functions, one for converting a domain instance into a database row and one for the other way around.
 
 ```typescript
 orm.addTable('knight', {
@@ -709,6 +709,8 @@ knight.livesInCastleId = 1
 orm.store(queryFn, knight)
 ```
 
+To check relationship objects for correctness, take a look into the package [knight-validation](https://github.com/c0deritter/knight-validation). It allows to combine domain object specific validators.
+
 #### Use custom functions when storing relationship objects
 
 In a real application, you will programm your own code around the store functionality. For example, at first you might want to check, if the values of the given object are valid, or you want to add certain generated values before you store into the database.
@@ -725,6 +727,14 @@ To solve this, you can attach your own functions
 
 
 ### Deleting
+
+The `delete()` method takes a domain instance or a database row and deletes the corresponding entity from the database.
+
+```typescript
+orm.delete(queryFn, knight)
+```
+
+This method does not delete any relationships from the database. It only deletes the given entity. You need to implement it by yourself.
 
 ### Loading
 
