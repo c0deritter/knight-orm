@@ -726,7 +726,7 @@ The problem is, if you attach relationship objects, the store method will also s
 To solve this, you can attach your own functions 
 
 
-### Deleting
+### Delete
 
 The `delete()` method takes a domain instance or a database row and deletes the corresponding entity from the database.
 
@@ -736,12 +736,140 @@ orm.delete(queryFn, knight)
 
 This method does not delete any relationships from the database. It only deletes the given entity. You need to implement it by yourself.
 
-### Loading
+### Load
 
-### Counting
+The `load()` method uses [knight-criteria](https://github.com/c0deritter/knight-criteria) to offer a simple yet powerful way to define an SQL query. We will cover most of the possibilities in the upcoming sections, still we advise you to use the [documentation](https://github.com/c0deritter/knight-criteria#readme) when you create your own criteria.
 
-### Updating with criteria
+### Basics
 
-### Deleting with criteria
+You can specify criteria objects which properties will denote the properties of your domain object. Every defined criterium in one criteria object will be `AND` connected. The following examples are not exhaustive. Please refer to the [criteria documentation](https://github.com/c0deritter/knight-criteria#readme) to get the complete overview.
+
+```typescript
+// load all knights which id's are 1
+load(queryFn, Knight, { id: 1 })
+
+// load all knights which id's are between 1 and 10 and which names start with 'L'
+load(queryFn, Knight, {
+  id: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ],
+  name: {
+    '@operator': 'LIKE',
+    '@value': 'L%'
+  }
+})
+```
+
+You can order, limit and offset the result.
+
+```typescript
+load(queryFn, Knight, {
+  '@orderBy': 'name',
+  '@limit': 10,
+  '@offset': 10
+})
+```
+
+There is also a criteria array which contains criteria objects or further criteria arrays. Each element of the array is by default `OR` connected, but you can also specify the logical operator explicitely.
+
+```typescript
+// load all knights which id's are between 1 and 10 or which names start with 'L'
+load(queryFn, Knight, [
+  {
+    id: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+  },
+  'XOR',
+  {
+    name: {
+      '@operator': 'LIKE',
+      '@value': 'L%'
+    }
+  }
+])
+```
+
+### Relationships
+
+You can also define criteria for relationships. The load method will join the corresponding tables and will add the given criteria to the SQL query. This means, that the relationship criteria will have an effect on the number of loaded entities. If a relationship owning entity does not have at least one relationship entity that matches the given relationship criteria, it will not be loaded.
+
+In the following example, we load only those knights which live in the castle with `id = 1`.
+
+```typescript
+load(queryFn, Knight, {
+  livesInCastle: {
+    id: 1
+  }
+})
+```
+
+It is also possible to load the castles by setting the `@load` property to true.
+
+```typescript
+load(queryFn, Knight, {
+  livesInCastle: {
+    '@load': true,
+    id: 1
+  }
+})
+```
+
+If you do not want the relationship criteria to influence the number of loaded entities, you can also load the relationship entities in a separate SQL query. Here we load all castles and for every castle only those knights which names start with `L`.
+
+```typescript
+load(queryFn, Castle, {
+  knightsLivingHere: {
+    '@loadSeparately': true,
+    name: {
+      '@operator': 'LIKE',
+      '@value': 'L%'
+    }
+  }
+})
+```
+
+If you are using the criteria array, you can also specify if to load a relationship. You only need to specify it once and it does not matter in which place you do it.
+
+```typescript
+load(queryFn, Knight, [
+  {
+    livesInCastle: {
+      '@load': true,
+      id: 1
+    }
+  },
+  {
+    livesInCastle: {
+      id: 2
+    }
+  }
+])
+```
+
+If you are having a complex criteria array, you can use a dummy criteria object at the start, define every relationship that is to be loaded there and the rest afterwards.
+
+```typescript
+load(queryFn, Knight, [
+  {
+    livesInCastle: {
+      '@load': true
+    }
+  },
+  {
+    livesInCastle: {
+      id: 1
+    }
+  },
+  {
+    livesInCastle: {
+      id: 2
+    }
+  }
+])
+```
+
+
+### Count
+
+### Update with criteria
+
+### Delete with criteria
 
 ## Combine with knight-transaction
