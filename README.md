@@ -740,7 +740,7 @@ This method does not delete any relationships from the database. It only deletes
 
 The `load()` method uses [knight-criteria](https://github.com/c0deritter/knight-criteria) to offer a simple yet powerful way to define an SQL query. We will cover most of the possibilities in the upcoming sections, still we advise you to use the [documentation](https://github.com/c0deritter/knight-criteria#readme) when you create your own criteria.
 
-### Basics
+#### Basics
 
 You can specify criteria objects which properties will denote the properties of your domain object. Every defined criterium in one criteria object will be `AND` connected. The following examples are not exhaustive. Please refer to the [criteria documentation](https://github.com/c0deritter/knight-criteria#readme) to get the complete overview.
 
@@ -786,7 +786,7 @@ load(queryFn, Knight, [
 ])
 ```
 
-### Relationships
+#### Relationships
 
 You can also define criteria for relationships. The load method will join the corresponding tables and will add the given criteria to the SQL query. This means, that the relationship criteria will have an effect on the number of loaded entities. If a relationship owning entity does not have at least one relationship entity that matches the given relationship criteria, it will not be loaded.
 
@@ -864,7 +864,6 @@ load(queryFn, Knight, [
   }
 ])
 ```
-
 
 ### Count
 
