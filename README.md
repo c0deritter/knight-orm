@@ -620,7 +620,7 @@ let row = {
   name: 'Luisa'
 }
 
-// The last parameter is 'asDatabaseRow' and is set to true
+// The last parameter 'asDatabaseRow' is set to true
 let result = await orm.store(queryFn, schema.getTable('knight'), row, true)
 
 row.id == 1
@@ -786,6 +786,17 @@ load(queryFn, Knight, [
 ])
 ```
 
+#### Use criteria that denote database columns
+
+Instead of denoting domain object properties in the criteria objects, you can also denote database columns.
+
+```typescript
+// The last parameter 'asDatabaseCriteria' is set to true
+load(queryFn, Knight, {
+  'lives_in_castle_id': 1
+}, true)
+```
+
 #### Relationships
 
 You can also define criteria for relationships. The load method will join the corresponding tables and will add the given criteria to the SQL query. This means, that the relationship criteria will have an effect on the number of loaded entities. If a relationship owning entity does not have at least one relationship entity that matches the given relationship criteria, it will not be loaded.
@@ -864,6 +875,8 @@ load(queryFn, Knight, [
   }
 ])
 ```
+
+#### Use custom functions when loading relationship entities
 
 ### Count
 
