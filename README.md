@@ -79,6 +79,10 @@ The package consists of the following classes.
 - `Schema`: Holds the essential information to be able to map entities from the database world to the object world and vice verca.
 - `Orm`: It is the heart of this package. It contains the methods to store, delete, load and count entities, but also other useful tools to work with different aspects of the object-relational mapping.
 
+## Glossary
+
+
+
 ## Defining a schema
 
 The schema tells the ORM how the object world relates to the database world. With it, it can map one to the other and the other way around.
@@ -424,6 +428,44 @@ orm.load(queryFn, KnightLivingInCastle, {
 #### One-To-One
 
 ### Creating the instance
+
+For the ORM to be able to create instances of the correct class after loading database rows, you need to give it functions that do this. These do not get any parameter and return a new instance of one of your domain object classes.
+
+```typescript
+() => new Knight
+```
+
+As you can see, you will need a no-argument constructor.
+
+To achieve this in typescript scrict mode, you can set all of your properties to optional by using the question mark.
+
+```typescript
+class Knight {
+  id?: number
+  name?: number
+
+  constructor() {}
+}
+```
+
+This is bad if you want to give the user of the class guidance on which properties are mandatory, but then again, you should check every instance on correctness before it is stored into the database anyway. This validation will furthermore contain many more checks like that the `name` property of the knight must not exceed 100 characters.
+
+There is a knight library [knight-validation](https://github.com/c0deritter/knight-validation) for this task. There you can combine validators to be also able to check the attached relationship objects.
+
+Another handy thing to do it so allow partial instances of the same class in the constructor, which will allow to initialize an instance with less lines of code.
+
+```typescript
+class Knight {
+  id?: number
+  name?: number
+
+  constructor(knight?: Partial<Knight>) {
+    Object.assign(this, knight)
+  }
+}
+
+let knight = new Knight({ id: 1, name: 'Luisa' })
+```
 
 ### Customizing the row/instance conversion
 
