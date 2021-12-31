@@ -127,32 +127,38 @@ If you do not call this method, the checks will be done when the corresponding d
 Mapping columns is done through an object, which keys are database columns and which values are property names of your domain object.
 
 ```typescript
-let columns = {
-  'database_column': 'propertyName'
-}
+schema.addTable('table', {
+  columns: {
+    'database_column': 'propertyName'
+  }
+})
 ```
 
 You also need to define a primary key. The `store` method will check, if all primary key columns are set. If they are not, it will throw an error.
 
 ```typescript
-let columns = {
-  'id': {
-    property: 'id',
-    primaryKey: true
+schema.addTable('table', {
+  columns: {
+    'id': {
+      property: 'id',
+      primaryKey: true
+    }
   }
-}
+})
 ```
 
 Most of the database systems offer to generate an incremental id value. If you are using this feature, you need to declare it in the schema.
 
 ```typescript
-let columns = {
-  'id': {
-    property: 'id',
-    primaryKey: true,
+schema.addTable('table', {
+  columns: {
+    'id': {
+      property: 'id',
+      primaryKey: true
     generated: true
+    }
   }
-}
+})
 ```
 
 ### Mapping relationships
@@ -170,7 +176,7 @@ let instance = {
 
 #### Many-To-One
 
-A `many-to-one` relationship is when a row of table explicitely references a row of another table. Of course, the other table might also be the same table or the other row might also be the same row.
+A `many-to-one` relationship is when a row of a table explicitely references a row of another table. Of course, the other table might also be the same table or the other row might also be the same row.
 
 Let us assume, that a knight lives in exactly one castle. You will need an additional column `lives_in_castle_id` in the table `knight` which references a primary key column of the table `castle`.
 
@@ -179,7 +185,7 @@ CREATE TABLE knight (id SERIAL, name VARCHAR(100), lives_in_castle_id INTEGER);
 CREATE TABLE castle (id SERIAL, name VARCHAR(100));
 ```
 
-To be able to map that column into the object world, you also need an additional property `livesInCastleId` in the class `Knight`. To be able to work with the relationship in the object world, you also need a property `livesInCastle`, which references another instance of class `Castle`.
+To be able to map that column into the object world, you also need an additional property `livesInCastleId` in the class `Knight`. To be able to work with the relationship in the object world, you also need a property `livesInCastle`, which references an instance of class `Castle`.
 
 ```typescript
 class Knight {
@@ -195,8 +201,8 @@ class Castle {
   name: string
 }
 
-let knight = new Knight('Luisa')
-knight.livesInCastle = new Castle('Kingstone')
+let luisa = new Knight('Luisa')
+luisa.livesInCastle = new Castle('Kingstone')
 ```
 
 Now you can create the relationship mapping for the table `knight`. Relationships are defined in an object which keys are the names of the properties holding the referenced instances. In our `many-to-one` example it is the property `livesInCastle` of the class `Knight`. The referenced schema object defines the id `thisId` of this table, which references the id `otherId` of the `otherTable`.
@@ -281,7 +287,7 @@ orm.load(queryFn, Knight, { knightsLivingHere: { '@load': true }})
 
 #### Many-To-Many
 
-The `many-to-many` relationship is when both tables refer to each other in an `one-to-many` relationship. To achieve this, another table is placed in between which explicitely refers to each table with two `many-to-one` relationships. Of course, the table in between might even refer to more than two tables.
+The `many-to-many` relationship is when both tables refer to each other in an `one-to-many` relationship. To achieve this, another table is placed in between which refers to each table with a `many-to-one` relationship. Of course, the table in between might even refer to more than two tables.
 
 Again using our example from above, we also want to store the date a knight moved into a castle. With that data structure, we do not only know in which castle a knight lives right know, but we are also getting a history of castles a knight was living in.
 
@@ -317,11 +323,11 @@ class KnightLivingInCastle {
   castle: Castle
 }
 
-let knight = new Knight('Luisa')
-let castle = new Castle('Kingstone')
-let livingIn = new KnightLivingInCastle(knight, castle)
-knight.livesInCastles = [ livingIn ]
-castle.knightsLivingHere = [ livingIn ]
+let luisa = new Knight('Luisa')
+let kingstone = new Castle('Kingstone')
+let livingIn = new KnightLivingInCastle(luisa, kingstone)
+luisa.livesInCastles = [ livingIn ]
+kingstone.knightsLivingHere = [ livingIn ]
 ```
 
 As you can see, the `Knight` and the `Castle` refer to a list of `KnightLivingInCastle`, while the latter refers to exactly one of the former.
@@ -455,26 +461,11 @@ This is bad if you want to give the user of the class guidance on which properti
 
 There is a knight library [knight-validation](https://github.com/c0deritter/knight-validation) for this task. There you can combine validators to be also able to check the attached relationship objects.
 
-Another handy thing to do it so allow partial instances of the same class in the constructor, which will allow to initialize an instance with less lines of code.
-
-```typescript
-class Knight {
-  id?: number
-  name?: number
-
-  constructor(knight?: Partial<Knight>) {
-    Object.assign(this, knight)
-  }
-}
-
-let knight = new Knight({ id: 1, name: 'Luisa' })
-```
-
 ### Customizing the row/instance conversion
 
 The ORM will automatically create database row objects out of your domain object instances and vice versa. It will do so by simply copying every value of the one object to the other while regarding the difference of the property names.
 
-There will be occassions where you need to for example convert an object into a JSON string to store it into the database and parse that string into an object of you retrieve it from the database.
+There will be occassions where you need to for example convert an object into a JSON string to store it into the database and parse that string into an object when you retrieve it from the database.
 
 To do so, you can attach two custom functions, one for converting a domain instance into a database row and one for the other way around.
 
@@ -568,8 +559,8 @@ The `store()` method inserts or updates a given object, which can either be an i
 The store method will insert a given instance of a domain object class.
 
 ```typescript
-let knight = new Knight('Luisa')
-orm.store(queryFn, knight)
+let luisa = new Knight('Luisa')
+orm.store(queryFn, luisa)
 ```
 
 If a primary key column is generated by the database, it will set this generated id on the given object.
@@ -583,10 +574,10 @@ knight.id === 1
 If the primary key values on the given object are set, it will check if the given entity was already inserted into the database. In case of a generated primary key value, it will automatically assume that the entity was already inserted. In case of a not generated primary key value, it will do a database `SELECT` query to find out.
 
 ```typescript
-let knight = new Knight
-knight.id = 1
-knight.name = 'Ramon'
-orm.store(queryFn, knight)
+let ramon = new Knight
+ramon.id = 1
+ramon.name = 'Ramon'
+orm.store(queryFn, ramon)
 ```
 
 #### The return value
@@ -594,16 +585,16 @@ orm.store(queryFn, knight)
 It will return information about if the given objects were inserted or updated.
 
 ```typescript
-let knight = new Knight('Luisa')
-let result = await orm.store(queryFn, knight)
+let luisa = new Knight('Luisa')
+let result = await orm.store(queryFn, luisa)
 
 result == {
   id: 1,
   '@update': false
 }
 
-knight.name = 'Ramon'
-result = await orm.store(queryFn, knight)
+luisa.name = 'Ramon'
+result = await orm.store(queryFn, luisa)
 
 result == {
   id: 1,
@@ -613,7 +604,7 @@ result == {
 
 #### Use database row objects
 
-Instead of using instances of domain classes, you can also use objects representing database rows. In that case, every object property represents a database column name. The names of the relationship properties are the same though. The store method will also set the generated primary key values on the given row object and it will also return the same kind of result, but using column names for its properties.
+Instead of using instances of domain classes, you can also use objects representing database rows. In that case, every object property represents a database column name. The names of the relationship properties stay the same. The store method will also set the generated primary key values on the given row object and it will also return the same kind of result, but using column names for its properties.
 
 ```typescript
 let row = {
@@ -637,23 +628,23 @@ Instead of using the table object of the schema, you can also use the constructo
 orm.store(queryFn, Knight, row, true)
 ```
 
-#### Store relationships
+#### Relationships
 
-The store method will store every attached relationship objects, be it `many-to-one` or `one-to-many`. It will also set the values of the foreign key columns. The result will also contain the information, if the relationship object was inserted or updated.
+The store method will store every attached relationship objects, be it `many-to-one` or `one-to-many`. It will also set the values of the foreign key columns. The returned result will contain the information, if the relationship object was inserted or updated.
 
 Here, we store the instance of class `Castle` which is referenced by the `many-to-one` relationship `livesInCastle`.
 
 ```typescript
-let knight = new Knight('Luisa')
-let castle = new Castle('Kingstone')
-knight.livesInCastle = castle
+let luisa = new Knight('Luisa')
+let kingstone = new Castle('Kingstone')
+luisa.livesInCastle = kingstone
 
-let result = await orm.store(queryFn, knight)
+let result = await orm.store(queryFn, luisa)
 
-knight.id == 1
-// Set foreign key column value
-knight.livesInCastleId = 1
-castle.id == 1
+luisa.id == 1
+// The ORM set the foreign key column value
+luisa.livesInCastleId == 1
+kingstone.id == 1
 
 result == {
   id: 1,
@@ -668,12 +659,12 @@ result == {
 Here, we store the instances of class `Knight` which are referenced by the `one-to-many` relationship `knightsLivingHere`.
 
 ```typescript
-let castle = new Castle('Kingstone')
+let kingstone = new Castle('Kingstone')
 let luisa = new Knight('Luisa')
-let ramon = new Knight('Luisa')
-castle.knightsLivingHere = [ luisa, ramon ]
+let ramon = new Knight('Ramon')
+kingstone.knightsLivingHere = [ luisa, ramon ]
 
-let result = await orm.store(queryFn, knight)
+let result = await orm.store(queryFn, kingstone)
 
 castle.id == 1
 
@@ -704,9 +695,9 @@ The store function tries to store the `many-to-one` objects first, before it sto
 Of course, you do not have to reference another object to store a `many-to-one` relationship. You can also set the foreign key value directly.
 
 ```typescript
-let knight = new Knight('Luisa')
-knight.livesInCastleId = 1
-orm.store(queryFn, knight)
+let luisa = new Knight('Luisa')
+luisa.livesInCastleId = 1
+orm.store(queryFn, luisa)
 ```
 
 To check relationship objects for correctness, take a look into the package [knight-validation](https://github.com/c0deritter/knight-validation). It allows to combine domain object specific validators.
