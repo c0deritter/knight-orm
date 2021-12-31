@@ -81,7 +81,13 @@ The package consists of the following classes.
 
 ## Glossary
 
+We are using some terms here we try to be precise with.
 
+An **object** is a programming language concept. It comprises **properties** and **methods**. The composition of such an object is defined in a **class**, while the actual value you are working with is instantiated from a class and called **instance**. Thus, the programming language uses two constructs, classes and instances, to implement the concept object. If we do not care about the differentiation between a class and an instance, we just use the word object.
+
+Objects are used to define the concepts of a domain, for example knights and castles. Those objects are called **domain objects**. Objects are also used to represent a **row** of a database **table**, where every object property represents a database **column**. This is especially true in JavaScript/TypeScript, where objects can be composed on runtime without the need of instantiating from a class, while in other programming languages like Java you would use a map instead. Thus, it is difficult to denote the domain object of the programming language world as an object, the O of ORM, because an object is used for both, representing a domain object and a database row. We use the term instance instead.
+
+An **entity** is a word that comes from the database world, but it has the general meaning of a thing in existence. The term object also goes into that direction, but it is also has the programming language constructs implementing it in mind. Thus, entity is a more general term than object. In a database, we store entities, not objects. Since entity is this broad term, we refer to an entity stored in a database as a row. When it is clear, that we target the database world, we use the word entity.
 
 ## Defining a schema
 
@@ -435,7 +441,7 @@ orm.load(queryFn, KnightLivingInCastle, {
 
 ### Creating the instance
 
-For the ORM to be able to create instances of the correct class after loading database rows, you need to give it functions that do this. These do not get any parameter and return a new instance of one of your domain object classes.
+For the ORM to be able to create instances of the correct class after loading database rows, you need to give it functions that do this. These do not get any parameter and return a new instance of one of your domain classes.
 
 ```typescript
 orm.addTable('knight', {
@@ -463,7 +469,7 @@ There is a knight library [knight-validation](https://github.com/c0deritter/knig
 
 ### Customizing the row/instance conversion
 
-The ORM will automatically create database row objects out of your domain object instances and vice versa. It will do so by simply copying every value of the one object to the other while regarding the difference of the property names.
+The ORM will automatically create database row objects out of your domain instances and vice versa. It will do so by simply copying every value of the one object to the other while regarding the difference of the property names.
 
 There will be occassions where you need to for example convert an object into a JSON string to store it into the database and parse that string into an object when you retrieve it from the database.
 
@@ -552,7 +558,7 @@ Note that in case of PostgreSQL, the SQL string is extended with a `RETURNING` s
 
 ### Store
 
-The `store()` method inserts or updates a given object, which can either be an instance of a domain object class or an object representing a database row. It will also store every attached relationship objects.
+The `store()` method inserts or updates a given object, which can either be an instance of a domain class or an object representing a database row. It will also store every attached relationship objects.
 
 #### Insert
 
@@ -792,7 +798,7 @@ load(queryFn, Knight, {
 
 You can also define criteria for relationships. The load method will join the corresponding tables and will add the given criteria to the SQL query. This means, that the relationship criteria will have an effect on the number of loaded entities. If a relationship owning entity does not have at least one relationship entity that matches the given relationship criteria, it will not be loaded.
 
-In the following example, we load only those knights which live in the castle with `id = 1`.
+In the following example, we load only those knights which live in the castle with `name = 'Kingstone'`.
 
 ```typescript
 load(queryFn, Knight, {
