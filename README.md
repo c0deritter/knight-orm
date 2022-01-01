@@ -439,6 +439,103 @@ orm.load(queryFn, KnightLivingInCastle, {
 
 #### One-To-One
 
+A `one-to-one` relationship is when two `many-to-one` relationships refer to each other. This means, that the other side of the `many-to-one` relationship has also a `many-to-one` relationship, which refers back to the same entity.
+
+Let us create a relationship between a knight and its armor. One knight owns exactly one armor and one armor is exactly owned by one knight. We are defining a foreign key `owns_armor_id` for the table `knight` and a foreign key `owned_by_knight_id` for the table `armor`.
+
+```sql
+CREATE TABLE knight (id SERIAL, owns_armor_id INTEGER);
+CREATE TABLE armor (id SERIAL, owned_by_knight_id INTEGER);
+```
+
+When we create the domain objects, we add properties representing the database columns and properties which reference the domain object.
+
+```typescript
+class Knight {
+  id: number
+  ownsArmorId: number
+  ownsArmor: Armor
+}
+
+class Armor {
+  id: number
+  ownedByKnightId: number
+  ownedByKnight: Knight
+}
+
+let luisa = new Knight
+let armor = new Armor
+
+luisa.armor = armor
+armor.knight = luisa
+```
+
+When we map a `one-to-one` relationship, we specify an additional property `otherRelationship`, which denotes the other `many-to-one` relationship referencing back.
+
+```typescript
+import { Schema } from 'knight-orm'
+
+let schema = new Schema
+
+schema.addTable('knight', {
+  columns: {
+    'id': { property: 'id', primaryKey: true, generated: true },
+    'owns_armor_id': 'ownsArmorId'
+  },
+  relationships: {
+    'ownsArmor': {
+      manyToOne: true,
+      thisId: 'owns_armor_id',
+      otherTable: 'armor',
+      otherId: 'id',
+      otherRelationship: 'ownedByKnight'
+    }
+  },
+  newInstance: () => new Knight
+})
+
+schema.addTable('armor', {
+  columns: {
+    'id': { property: 'id', primaryKey: true, generated: true },
+    'owned_by_knight_id': 'ownedByKnightId'
+  },
+  relationships: {
+    'ownedByKnight': {
+      manyToOne: true,
+      thisId: 'owned_by_knight_id',
+      otherTable: 'knight',
+      otherId: 'id',
+      otherRelationship: 'ownsArmor'
+    }
+  },
+  newInstance: () => new Armor
+})
+```
+
+Now you can store a knight along with its armor and the ORM will automatically assign the involved foreign keys.
+
+```typescript
+let luisa = new Knight
+let armor = new Armor
+
+luisa.armor = armor
+armor.knight = luisa
+
+let result = await orm.store(luisa)
+
+luisa.ownsArmorId == 1
+knight.ownedByKnightId == 1
+
+result == {
+  id: 1,
+  '@update': false,
+  ownsArmor: {
+    id: 1,
+    '@update': false
+  }
+}
+```
+
 ### Creating the instance
 
 For the ORM to be able to create instances of the correct class after loading database rows, you need to give it functions that do this. These do not get any parameter and return a new instance of one of your domain classes.
