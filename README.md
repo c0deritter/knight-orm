@@ -1032,6 +1032,8 @@ The returned result is the one your database connector would return.
 Instead of denoting domain object properties, you can also denote database columns.
 
 ```typescript
+import { UpdateCriteria } from 'knight-orm'
+
 let updateCriteria: UpdateCriteria = {
   lives_in_castle_id: 2,
   '@criteria': {
@@ -1044,5 +1046,34 @@ let result = await orm.criteriaUpdate(queryFn, Knight, updateCriteria, true)
 ```
 
 ### Delete with criteria
+
+The `criteriaDelete()` method lets you create an SQL `DELETE` query by using criteria.
+
+Let us assume, that the castle with `id = 1` got overrun by the enemy and every knight in it died.
+
+```typescript
+import { Criteria } from 'knight-criteria'
+
+let criteria: Criteria = {
+  livesInCastleId: 1,
+}
+
+let result = await orm.criteriaDelete(queryFn, Knight, criteria)
+```
+
+The returned result is the one your database connector would return.
+
+Instead of denoting domain object properties, you can also denote database columns.
+
+```typescript
+import { Criteria } from 'knight-criteria'
+
+let criteria: Criteria = {
+  lives_in_castle_id: 1,
+}
+
+// The last parameter 'asDatabaseCriteria' is set to true
+let result = await orm.criteriaDelete(queryFn, Knight, criteria, true)
+```
 
 ## Combine with knight-transaction
