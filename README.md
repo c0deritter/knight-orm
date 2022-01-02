@@ -836,7 +836,7 @@ The `load()` method uses [knight-criteria](https://github.com/c0deritter/knight-
 
 #### Basics
 
-You can specify criteria objects which properties will denote the properties of your domain object. Every defined criterium in one criteria object will be `AND` connected. The following examples are not exhaustive. Please refer to the [criteria documentation](https://github.com/c0deritter/knight-criteria#readme) to get the complete overview.
+You can specify criteria objects which properties will denote the properties of your domain object. Every defined criterium in one criteria object will be `AND` connected. The following examples are not exhaustive. Please refer to the [knight-criteria documentation](https://github.com/c0deritter/knight-criteria#readme) to get the complete overview.
 
 ```typescript
 // load all knights which id's are 1
@@ -981,7 +981,7 @@ load(queryFn, Knight, [
   },
   {
     livesInCastle: {
-      name: ['Kingstone', 'Albrechtscastle']
+      name: [ 'Kingstone', 'Albrechtscastle' ]
     }
   }
 ])
@@ -990,6 +990,23 @@ load(queryFn, Knight, [
 #### Use custom functions when loading relationship entities
 
 ### Count
+
+The `count()` method also uses [knight-criteria](https://github.com/c0deritter/knight-criteria) to offer a simple yet powerful interface to count entities.
+
+It works just like the load method with the differences, that it returns a number.
+
+```typescript
+let count = await orm.count(queryFn, Knight, {
+  name: {
+    '@operator': 'LIKE',
+    '@value': 'L%'
+  }
+})
+```
+
+If you are specifying relationship criteria, setting the `@load` property to `true` will have no effect. If you set `@loadSeparately` to true, the relationship criteria are going to be ignored. Both of the properties only make sense in the context of the load method.
+
+For further information, refer to the [knight-criteria documentation](https://github.com/c0deritter/knight-criteria#readme).
 
 ### Update with criteria
 
