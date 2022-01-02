@@ -160,8 +160,8 @@ schema.addTable('table', {
   columns: {
     'id': {
       property: 'id',
-      primaryKey: true
-    generated: true
+      primaryKey: true,
+      generated: true
     }
   }
 })
@@ -1004,11 +1004,32 @@ let count = await orm.count(queryFn, Knight, {
 })
 ```
 
-If you are specifying relationship criteria, setting the `@load` property to `true` will have no effect. If you set `@loadSeparately` to true, the relationship criteria are going to be ignored. Both of the properties only make sense in the context of the load method.
+If you are specifying relationship criteria, setting the `@load` property to `true` will have no effect. If you set `@loadSeparately` to `true`, the relationship criteria are going to be ignored. Both of the properties only make sense in the context of the load method.
 
-For further information, refer to the [knight-criteria documentation](https://github.com/c0deritter/knight-criteria#readme).
+For further information on how to create criteria, refer to the [knight-criteria documentation](https://github.com/c0deritter/knight-criteria#readme).
 
 ### Update with criteria
+
+The `criteriaUpdate()` method lets you create an SQL `UPDATE` query by using criteria.
+
+At first you create an object following the `UpdateCriteria` interface. It lets you define the domain object properties that you want to update, together with criteria which will specify the entities that you want to set the given values on.
+
+```typescript
+import { UpdateCriteria } from 'knight-orm'
+
+let updateCriteria: UpdateCriteria = {
+  name: 'Ramon',
+  '@criteria': {
+    id: 1
+  }
+}
+```
+
+Instead of denoting domain object properties, you can also denote database columns.
+
+```typescript
+
+```
 
 ### Delete with criteria
 
