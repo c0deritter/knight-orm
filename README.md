@@ -1012,23 +1012,35 @@ For further information on how to create criteria, refer to the [knight-criteria
 
 The `criteriaUpdate()` method lets you create an SQL `UPDATE` query by using criteria.
 
-At first you create an object following the `UpdateCriteria` interface. It lets you define the domain object properties that you want to update, together with criteria which will specify the entities that you want to set the given values on.
+Let us assume, that all knights should move from the castle with `id = 1` to castle with `id = 2`. To do so, you define `UpdateCriteria` where you denote every property which should change and criteria which specify all the entities in the database for which the given values should be applied.
 
 ```typescript
 import { UpdateCriteria } from 'knight-orm'
 
 let updateCriteria: UpdateCriteria = {
-  name: 'Ramon',
+  livesInCastleId: 2,
   '@criteria': {
-    id: 1
+    livesInCastleId: 1
   }
 }
+
+let result = await orm.criteriaUpdate(queryFn, Knight, updateCriteria)
 ```
+
+The returned result is the one your database connector would return.
 
 Instead of denoting domain object properties, you can also denote database columns.
 
 ```typescript
+let updateCriteria: UpdateCriteria = {
+  lives_in_castle_id: 2,
+  '@criteria': {
+    lives_in_castle_id: 1
+  }
+}
 
+// The last parameter 'asDatabaseCriteria' is set to true
+let result = await orm.criteriaUpdate(queryFn, Knight, updateCriteria, true)
 ```
 
 ### Delete with criteria
