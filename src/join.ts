@@ -163,9 +163,8 @@ export class JoinAlias {
    * Gets a row consisting of multiple joined tables and unjoins a given table. It basically
    * means that it will extract the columns of the given table while removing their aliases.
    * 
-   * @param table The table which is to be extracted from the given row
    * @param joinedRow A row which contains columns of multiple joined tables
-   * @param alias The alias which was used to prefix every column of the given table
+   * @param returnUndefinedIfEveryColumnIsNull Return undefined if every column is null
    * @returns An object which has only those properties who represent the columns of the given table. If the row did not contain any column of the given table, undefined is returned.
    */
   unjoinTable(joinedRow: any, returnUndefinedIfEveryColumnIsNull = false): any {
@@ -200,14 +199,12 @@ export class JoinAlias {
    * joined columns which refer to the base table through a many-to-one or one-to-many
    * relationship. It will create the corresponding object tree out of it.
    * 
-   * @param schema The database schema which must contain the given table name
-   * @param tableName The name of the table which must be contained in the given database schema
    * @param joinedRows A array of row objects containing root columns and joined columns
    * @param criteria The criteria which were used to create the given rows
-   * @param alias The alias which was prepended to the column names in regard to the given table
-   * @returns An array of row objects which relationships are unjoined
+   * @param asDatabaseCriteria The given criteria denote database columns
+   * @returns An array of objects with relationship objects
    */
-  unjoinRows(joinedRows: any[], criteria: Criteria, asDatabaseCriteria: boolean): any[]  {
+  unjoinRows(joinedRows: any[], criteria: Criteria, asDatabaseCriteria = false): any[]  {
     let l = joinAliasLogger.fn('unjoinRows')
 
     l.param('criteria', criteria)
@@ -335,19 +332,19 @@ export class JoinAlias {
           unjoinedObj[relationship.name] = []
         }
 
-        l.dev('Iterating through every relationshop object...')
+        l.dev('Searching for relationshop objects...')
 
         for (let relationshipObj of relationshipToObjects[relationship.name]) {
           if (unjoinedObj[relationship.thisId.getName(asDatabaseCriteria)] === relationshipObj[relationship.otherId.getName(asDatabaseCriteria)]) {
             if (relationship.manyToOne) {
-              l.lib('Setting many-to-one', relationshipObj)
-              unjoinedRow[relationship.name] = relationshipObj
+              l.lib('Found and setting many-to-one', relationshipObj)
+              unjoinedObj[relationship.name] = relationshipObj
               break
             }
 
             else if (relationship.oneToMany) {
-              l.lib('Adding one-to-many', relationshipObj)
-              unjoinedRow[relationship.name].push(relationshipObj)
+              l.lib('Found and adding one-to-many', relationshipObj)
+              unjoinedObj[relationship.name].push(relationshipObj)
             }
           }
 
