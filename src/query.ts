@@ -323,8 +323,10 @@ export class QueryTools {
         }
         else if (typeof criteria['@orderBy'] == 'object') {
           if (typeof criteria['@orderBy'].field == 'string') {
-            if (table.hasColumn(criteria['@orderBy'].field)) {
-              let direction: string|undefined = undefined
+            if (asDatabaseCriteria && table.hasColumn(criteria['@orderBy'].field) ||
+                ! asDatabaseCriteria && table.hasColumnByProperty(criteria['@orderBy'].field)) {
+              
+                  let direction: string|undefined = undefined
 
               if (typeof criteria['@orderBy'].direction == 'string') {
                 let upperCase = criteria['@orderBy'].direction.toUpperCase()
@@ -353,11 +355,11 @@ export class QueryTools {
               }  
             }
             else {
-              l.lib('Not ORDER BY because the given column is not contained in the table', criteria['@orderBy'])
+              l.lib('Not adding ORDER BY because the given column or property is not contained in the table', criteria['@orderBy'])
             }
           }
           else {
-            l.lib('Not adding ORDER BY because the given field property is not a string', criteria['@orderBy'])
+            l.lib('Not adding ORDER BY because the given field \'property\' is not a string', criteria['@orderBy'])
           }
         }
         else {

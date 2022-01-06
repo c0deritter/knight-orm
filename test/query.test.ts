@@ -20,16 +20,16 @@ function pgQueryFn(sqlString: string, values?: any[]): Promise<any> {
 let queryTools = new QueryTools(new Orm(schema, 'postgres'))
 
 class TestCriteria {
-  column1 = 'a'
+  property1 = 'a'
 }
 
 class TestSubCriteria extends TestCriteria {
-  column2 = 1
+  property2 = 1
 }
 
 class TestPropertyMethods {
-  get column1() { return 'a' }
-  get column2() { return 1 }
+  get property1() { return 'a' }
+  get property2() { return 1 }
 }
 
 describe('query', function() {
@@ -143,11 +143,11 @@ describe('query', function() {
   describe('addCriteria', function() {
     it('should add a simple equals comparison', function() {
       let criteria = {
-        column1: 'a'
+        property1: 'a'
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
       expect(query._where!.mysql()).to.equal('table1.column1 = ?')
       expect(query._where!.values()).to.deep.equal(['a'])
@@ -155,12 +155,12 @@ describe('query', function() {
   
     it('should add two simple equals comparisons which are AND connected', function() {
       let criteria = {
-        column1: 'a',
-        column2: 1
+        property1: 'a',
+        property2: 1
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
       expect(query._where!.mysql()).to.equal('table1.column1 = ? AND table1.column2 = ?')
       expect(query._where!.values()).to.deep.equal(['a',1])
@@ -169,12 +169,12 @@ describe('query', function() {
     it('should add a NOT negating a criteria object', function() {
       let criteria = {
         '@not': true,
-        column1: 'a',
-        column2: 1
+        property1: 'a',
+        property2: 1
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
       expect(query._where!.mysql()).to.equal('NOT (table1.column1 = ? AND table1.column2 = ?)')
       expect(query._where!.values()).to.deep.equal(['a',1])
@@ -182,14 +182,14 @@ describe('query', function() {
   
     it('should add a comparison', function() {
       let criteria = {
-        column1: {
+        property1: {
           '@operator': '<>',
           '@value': 'a'
         }
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
       expect(query._where!.mysql()).to.equal('table1.column1 <> ?')
       expect(query._where!.values()).to.deep.equal(['a'])
@@ -197,7 +197,7 @@ describe('query', function() {
   
     it('should add a comparison with not', function() {
       let criteria = {
-        column1: {
+        property1: {
           '@not': true,
           '@operator': '<>',
           '@value': 'a'
@@ -205,7 +205,7 @@ describe('query', function() {
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
       expect(query._where!.mysql()).to.equal('NOT table1.column1 <> ?')
       expect(query._where!.values()).to.deep.equal(['a'])
@@ -213,29 +213,29 @@ describe('query', function() {
   
     it('should add a simple comparison and a comparison object', function() {
       let criteria1 = {
-        column1: {
+        property1: {
           '@operator': '<>',
           '@value': 'a'
         },
-        column2: 1
+        property2: 1
       }
   
       let query1 = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query1, criteria1, true)
+      queryTools.addCriteria(schema.getTable('table1'), query1, criteria1)
       
       expect(query1._where!.mysql()).to.equal('table1.column1 <> ? AND table1.column2 = ?')
       expect(query1._where!.values()).to.deep.equal(['a',1])
 
       let criteria2 = {
-        column1: 'a',
-        column2: {
+        property1: 'a',
+        property2: {
           '@operator': '<>',
           '@value': 1
         }
       }
   
       let query2 = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query2, criteria2, true)
+      queryTools.addCriteria(schema.getTable('table1'), query2, criteria2)
       
       expect(query2._where!.mysql()).to.equal('table1.column1 = ? AND table1.column2 <> ?')
       expect(query2._where!.values()).to.deep.equal(['a',1])
@@ -243,14 +243,14 @@ describe('query', function() {
   
     it('should not add a comparison if the operator is not supported', function() {
       let criteria = {
-        column1: {
+        property1: {
           '@operator': '; DELETE FROM table1;',
           '@value': 'a'
         }
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
       expect(query._where!.mysql()).to.equal('')
       expect(query._where!.values()).to.deep.equal([])
@@ -258,64 +258,64 @@ describe('query', function() {
   
     it('should not add a property and value citerium if the value is undefined', function() {
       let criteria = {
-        column1: {
+        property1: {
           '@operator': '<>',
           '@value': undefined
         }
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
       expect(query._where!.mysql()).to.equal('')
     })
 
     it('should add a null criterium', function() {
       let criteria1 = {
-        column1: null
+        property1: null
       }
   
       let query1 = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query1, criteria1, true)
+      queryTools.addCriteria(schema.getTable('table1'), query1, criteria1)
   
       expect(query1._where!.mysql()).to.equal('table1.column1 IS NULL')
       expect(query1._where!.values()).to.deep.equal([])
   
       let criteria2 = {
-        column1: {
+        property1: {
           '@operator': '=',
           '@value': null
         }
       }
   
       let query2 = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query2, criteria2, true)
+      queryTools.addCriteria(schema.getTable('table1'), query2, criteria2)
       
       expect(query2._where!.mysql()).to.equal('table1.column1 IS NULL')
       expect(query2._where!.values()).to.deep.equal([])
 
       let criteria3 = {
-        column1: {
+        property1: {
           '@operator': '!=',
           '@value': null
         }
       }
   
       let query3 = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query3, criteria3, true)
+      queryTools.addCriteria(schema.getTable('table1'), query3, criteria3)
       
       expect(query3._where!.mysql()).to.equal('table1.column1 IS NOT NULL')
       expect(query3._where!.values()).to.deep.equal([])
 
       let criteria4 = {
-        column1: {
+        property1: {
           '@operator': '<>',
           '@value': null
         }
       }
   
       let query4 = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query4, criteria4, true)
+      queryTools.addCriteria(schema.getTable('table1'), query4, criteria4)
       
       expect(query4._where!.mysql()).to.equal('table1.column1 IS NOT NULL')
       expect(query4._where!.values()).to.deep.equal([])
@@ -323,21 +323,21 @@ describe('query', function() {
   
     it('should create an IN operator of an array of values', function() {
       let criteria1 = {
-        column1: [1, 2, 3, 4]
+        property1: [1, 2, 3, 4]
       }
   
       let query1 = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query1, criteria1, true)
+      queryTools.addCriteria(schema.getTable('table1'), query1, criteria1)
       
       expect(query1._where!.mysql()).to.equal('table1.column1 IN (?, ?, ?, ?)')
       expect(query1._where!.values()).to.deep.equal([1,2,3,4])
 
       let criteria2 = {
-        column1: ['a', 'b', 'c', 'd']
+        property1: ['a', 'b', 'c', 'd']
       }
   
       let query2 = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query2, criteria2, true)
+      queryTools.addCriteria(schema.getTable('table1'), query2, criteria2)
       
       expect(query2._where!.mysql()).to.equal('table1.column1 IN (?, ?, ?, ?)')
       expect(query2._where!.values()).to.deep.equal(['a', 'b', 'c', 'd'])
@@ -346,11 +346,11 @@ describe('query', function() {
       let date2 = new Date
   
       let criteria3 = {
-        column1: [date1, date2]
+        property1: [date1, date2]
       }
   
       let query3 = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query3, criteria3, true)
+      queryTools.addCriteria(schema.getTable('table1'), query3, criteria3)
       
       expect(query3._where!.mysql()).to.equal('table1.column1 IN (?, ?)')
       expect(query3._where!.values()).to.deep.equal([date1, date2])
@@ -358,7 +358,7 @@ describe('query', function() {
 
     it('should accept an array of comparisons', function() {
       let criteria = {
-        column2: [
+        property2: [
           {
             '@operator': '<',
             '@value': 1
@@ -372,7 +372,7 @@ describe('query', function() {
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
       expect(query._where!.mysql()).to.equal('(table1.column2 < ? OR NOT table1.column2 > ?)')
       expect(query._where!.values()).to.deep.equal([1, 10])
@@ -380,7 +380,7 @@ describe('query', function() {
   
     it('should add an array of one comparison', function() {
       let criteria = {
-        column2: [
+        property2: [
           {
             '@operator': '<',
             '@value': 1
@@ -389,7 +389,7 @@ describe('query', function() {
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
       expect(query._where!.mysql()).to.equal('(table1.column2 < ?)')
       expect(query._where!.values()).to.deep.equal([1])
@@ -397,7 +397,7 @@ describe('query', function() {
   
     it('should not add an array of one comparison if the operator is not supported', function() {
       let criteria = {
-        column2: [
+        property2: [
           {
             '@operator': '; DELETE FROM table1;',
             '@value': 1
@@ -406,7 +406,7 @@ describe('query', function() {
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
       expect(query._where!.mysql()).to.equal('')
       expect(query._where!.values()).to.deep.equal([])
@@ -414,7 +414,7 @@ describe('query', function() {
   
     it('should accept an array of comparisons and ignore those which values are undefined', function() {
       let criteria = {
-        column2: [
+        property2: [
           {
             '@operator': '>',
             '@value': undefined
@@ -431,7 +431,7 @@ describe('query', function() {
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
       expect(query._where!.mysql()).to.equal('(table1.column2 < ?)')
       expect(query._where!.values()).to.deep.equal([1])
@@ -439,7 +439,7 @@ describe('query', function() {
   
     it('should accept an array comparisons which values are undefined', function() {
       let criteria = {
-        column2: [
+        property2: [
           {
             '@operator': '>',
             '@value': undefined
@@ -452,7 +452,7 @@ describe('query', function() {
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
       expect(query._where!.mysql()).to.equal('')
       expect(query._where!.values()).to.deep.equal([])
@@ -460,11 +460,11 @@ describe('query', function() {
 
     it('should set an empty array as always being false', function() {
       let criteria = {
-        column1: []
+        property1: []
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
       expect(query._where!.mysql()).to.equal('1 = 2')
       expect(query._where!.values()).to.deep.equal([])
@@ -472,7 +472,7 @@ describe('query', function() {
   
     it('should accept an array of comparisons which value is an empty array', function() {
       let criteria = {
-        column2: [
+        property2: [
           {
             '@operator': '=',
             '@value': []
@@ -502,7 +502,7 @@ describe('query', function() {
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
       expect(query._where!.mysql()).to.equal('(1 = 2 OR 1 = 2 OR 1 = 1 OR 1 = 1 OR 1 = 1 OR NOT 1 = 2)')
       expect(query._where!.values()).to.deep.equal([])
@@ -510,7 +510,7 @@ describe('query', function() {
   
     it('should accept an array of comparisons which are AND connected', function() {
       let criteria = {
-        column2: [
+        property2: [
           'AND',
           {
             '@operator': '>',
@@ -527,7 +527,7 @@ describe('query', function() {
       }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
       expect(query._where!.mysql()).to.equal('(table1.column2 > ? AND NOT table1.column2 < ?)')
       expect(query._where!.values()).to.deep.equal([1, 10])
@@ -537,7 +537,7 @@ describe('query', function() {
       let criteria = new TestSubCriteria
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
       expect(query._where!.mysql()).to.equal('table1.column1 = ? AND table1.column2 = ?')
       expect(query._where!.values()).to.deep.equal(['a', 1])
@@ -547,7 +547,7 @@ describe('query', function() {
       let criteria = new TestPropertyMethods
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
       expect(query._where!.mysql()).to.equal('table1.column1 = ? AND table1.column2 = ?')
       expect(query._where!.values()).to.deep.equal(['a', 1])
@@ -555,10 +555,10 @@ describe('query', function() {
   
     it('should add Date comparisons', function() {
       let now = new Date
-      let criteria = { column1: now }
+      let criteria = { property1: now }
   
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
       expect(query._where!.mysql()).to.equal('table1.column1 = ?')
       expect(query._where!.values()).to.deep.equal([now])
@@ -567,12 +567,12 @@ describe('query', function() {
     it('should join criteria for a relationship', function() {
       let criteria = {
         manyToManyObject2: {
-          column1: 'a'
+          property1: 'a'
         }
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._join!.pieces!.length).to.equal(1)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
@@ -587,12 +587,12 @@ describe('query', function() {
       let criteria = {
         manyToManyObject2: {
           '@load': true,
-          column1: 'a'
+          property1: 'a'
         }
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._join!.pieces!.length).to.equal(1)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
@@ -607,12 +607,12 @@ describe('query', function() {
       let criteria = {
         manyToManyObject2: {
           '@loadSeparately': true,
-          column1: 'a'
+          property1: 'a'
         }
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._join).to.be.undefined
       expect(query._where!.sql('mysql')).to.equal('')
@@ -621,15 +621,15 @@ describe('query', function() {
     it('should join criteria for a relationship of a relationship', function() {
       let criteria = {
         manyToManyObject2: {
-          column1: 'a',
+          property1: 'a',
           object1: {
-            column1: 'b'
+            property1: 'b'
           }
         }
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._join!.pieces!.length).to.equal(2)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
@@ -647,16 +647,16 @@ describe('query', function() {
     it('should not join criteria for a relationship of a relationship', function() {
       let criteria = {
         manyToManyObject2: {
-          column1: 'a',
+          property1: 'a',
           object1: {
             '@loadSeparately': true,
-            column1: 'b'
+            property1: 'b'
           }
         }
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._join!.pieces!.length).to.equal(1)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
@@ -671,19 +671,19 @@ describe('query', function() {
       let criteria = [
         'AND',
         {
-          column1: 'a',
-          column2: 1
+          property1: 'a',
+          property2: 1
         },
         'XOR',
         {
-          column1: 'b',
-          column2: 2
+          property1: 'b',
+          property2: 2
         },
         'OR'
       ]
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._where!.mysql()).to.equal('(table1.column1 = ? AND table1.column2 = ?) XOR (table1.column1 = ? AND table1.column2 = ?)')
       expect(query._where!.values()).to.deep.equal(['a',1,'b',2])
@@ -692,24 +692,24 @@ describe('query', function() {
     it('should accept an criteria array inside an criteria array', function() {
       let criteria = [
         {
-          column1: 'a',
-          column2: 1
+          property1: 'a',
+          property2: 1
         },
         'XOR',
         [
           {
-            column1: 'b',
-            column2: 2
+            property1: 'b',
+            property2: 2
           },
           {
-            column1: 'c',
-            column2: 3
+            property1: 'c',
+            property2: 3
           }
         ]
       ]
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._where!.mysql()).to.equal('(table1.column1 = ? AND table1.column2 = ?) XOR ((table1.column1 = ? AND table1.column2 = ?) OR (table1.column1 = ? AND table1.column2 = ?))')
       expect(query._where!.values()).to.deep.equal(['a',1,'b',2,'c',3])
@@ -719,18 +719,18 @@ describe('query', function() {
       let criteria = [
         {
           manyToOneObject2: {
-            column1: 'a'
+            property1: 'a'
           }
         },
         {
           manyToOneObject2: {
-            column1: 'b'
+            property1: 'b'
           }
         }
       ]
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._join!.pieces!.length).to.equal(1)
       expect(query._join!.pieces![0]).to.deep.equal({
@@ -745,11 +745,11 @@ describe('query', function() {
 
     it('should add an order by condition', function() {
       let criteria = {
-        '@orderBy': 'column1'
+        '@orderBy': 'property1'
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('table1.column1')
@@ -757,25 +757,25 @@ describe('query', function() {
 
     it('should not add an order by condition if the column is invalid', function() {
       let criteria = {
-        '@orderBy': 'column4'
+        '@orderBy': 'property4'
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.undefined
     })
 
     it('should alias an order by condition in case of a relationship', function() {
       let criteria = {
-        '@orderBy': 'column1',
+        '@orderBy': 'property1',
         manyToManyObject2: {
-          '@orderBy': 'column1'
+          '@orderBy': 'property1'
         }
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('table1.column1, table1__manyToManyObject2.column1')
@@ -783,11 +783,11 @@ describe('query', function() {
 
     it('should add multiple order by conditions', function() {
       let criteria = {
-        '@orderBy': ['column1', 'column2']
+        '@orderBy': ['property1', 'property2']
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('table1.column1, table1.column2')
@@ -795,14 +795,14 @@ describe('query', function() {
 
     it('should alias multiple order by conditions in case of a relationship', function() {
       let criteria = {
-        '@orderBy': ['column1', 'column2'],
+        '@orderBy': ['property1', 'property2'],
         manyToManyObject2: {
-          '@orderBy': ['column1']
+          '@orderBy': ['property1']
         }
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('table1.column1, table1.column2, table1__manyToManyObject2.column1')
@@ -810,11 +810,11 @@ describe('query', function() {
 
     it('should not add multiple order by conditions if they are invalid', function() {
       let criteria = {
-        '@orderBy': ['column4', 'column5']
+        '@orderBy': ['property4', 'property5']
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.undefined
     })
@@ -822,13 +822,13 @@ describe('query', function() {
     it('should add an order by condition with a given direction', function() {
       let criteria = {
         '@orderBy': {
-          field: 'column1',
+          field: 'property1',
           direction: 'DESC'
         }
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('table1.column1 DESC')
@@ -837,19 +837,19 @@ describe('query', function() {
     it('should alias an order by condition with a given direction in case of a relationship', function() {
       let criteria = {
         '@orderBy': {
-          field: 'column1',
+          field: 'property1',
           direction: 'DESC'
         },
         manyToManyObject2: {
           '@orderBy': {
-            field: 'column1',
+            field: 'property1',
             direction: 'ASC'
           }
         }
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('table1.column1 DESC, table1__manyToManyObject2.column1 ASC')
@@ -858,13 +858,13 @@ describe('query', function() {
     it('should not add an order by condition with a given direction if the column is invalid', function() {
       let criteria = {
         '@orderBy': {
-          field: 'column4',
+          field: 'property4',
           direction: 'DESC'
         }
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.undefined
     })
@@ -873,18 +873,18 @@ describe('query', function() {
       let criteria = {
         '@orderBy': [
           {
-            field: 'column1',
+            field: 'property1',
             direction: 'DESC'
           },
           {
-            field: 'column2',
+            field: 'property2',
             direction: 'ASC'
           }
         ]
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('table1.column1 DESC, table1.column2 ASC')
@@ -894,18 +894,18 @@ describe('query', function() {
       let criteria = {
         '@orderBy': [
           {
-            field: 'column1',
+            field: 'property1',
             direction: 'DESC'
           },
           {
-            field: 'column2',
+            field: 'property2',
             direction: 'ASC'
           }
         ],
         manyToManyObject2: {
           '@orderBy': [
             {
-              field: 'column1',
+              field: 'property1',
               direction: 'ASC'
             }
           ]
@@ -913,7 +913,7 @@ describe('query', function() {
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
       expect(query._orderBy!.sql('mysql')).to.equal('table1.column1 DESC, table1.column2 ASC, table1__manyToManyObject2.column1 ASC')
@@ -923,18 +923,18 @@ describe('query', function() {
       let criteria = {
         '@orderBy': [
           {
-            field: 'column4',
+            field: 'property4',
             direction: 'DESC'
           },
           {
-            field: 'column5',
+            field: 'property5',
             direction: 'ASC'
           }
         ]
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.undefined
     })
@@ -945,7 +945,7 @@ describe('query', function() {
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._limit).to.equal(10)
     })
@@ -957,7 +957,7 @@ describe('query', function() {
 
       let query = new Query
       query.limit(5)
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._limit).to.equal(5)
     })
@@ -971,7 +971,7 @@ describe('query', function() {
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._limit).to.equal(10)
     })
@@ -982,7 +982,7 @@ describe('query', function() {
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._offset).to.equal(10)
     })
@@ -994,7 +994,7 @@ describe('query', function() {
 
       let query = new Query
       query.offset(5)
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._offset).to.equal(5)
     })
@@ -1008,7 +1008,7 @@ describe('query', function() {
       }
 
       let query = new Query
-      queryTools.addCriteria(schema.getTable('table1'), query, criteria, true)
+      queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._offset).to.equal(10)
     })
@@ -1016,26 +1016,26 @@ describe('query', function() {
 
   describe('buildCriteriaReadQuery', function() {
     it('should handle a simple select query', function() {
-      let criteria = { column1: 'a', column2: 1 }
-      let query = queryTools.buildCriteriaReadQuery(schema.getTable('table1'), criteria, true)
+      let criteria = { property1: 'a', property2: 1 }
+      let query = queryTools.buildCriteriaReadQuery(schema.getTable('table1'), criteria)
       expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.column3 "table1__column3", table1.many_to_one_object1_id "table1__many_to_one_object1_id", table1.many_to_one_object2_id "table1__many_to_one_object2_id", table1.one_to_one_object1_id "table1__one_to_one_object1_id", table1.one_to_one_object2_id "table1__one_to_one_object2_id", table1.one_to_many_object1_many_to_one_id "table1__one_to_many_object1_many_to_one_id" FROM table1 table1 WHERE table1.column1 = ? AND table1.column2 = ?')
     })
   
     it('should handle inter table relationships', function() {
       let criteria = {
         id: 1,
-        column1: 'a',
+        property1: 'a',
         manyToManyObject2: {
           '@load': true,
-          column1: 'b',
+          property1: 'b',
           object2: {
             '@load': true,
-            column1: 'c'
+            property1: 'c'
           }
         }
       }
   
-      let query = queryTools.buildCriteriaReadQuery(schema.getTable('table1'), criteria, true)
+      let query = queryTools.buildCriteriaReadQuery(schema.getTable('table1'), criteria)
   
       expect(query._select!.pieces!.length).to.equal(20)
       expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
@@ -1069,7 +1069,7 @@ describe('query', function() {
         }
       }
   
-      let query = queryTools.buildCriteriaReadQuery(schema.getTable('table1'), criteria, true)
+      let query = queryTools.buildCriteriaReadQuery(schema.getTable('table1'), criteria)
   
       expect(query._select!.pieces!.length).to.equal(20)
       expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
