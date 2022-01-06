@@ -773,7 +773,7 @@ export class Orm {
     asDatabaseCriteria = false
   ): Promise<any[]> {
 
-    let l = log.mt('criteriaRead')
+    let l = log.mt('load')
     l.param('criteria', criteria)
     
     let table: Table
@@ -786,18 +786,25 @@ export class Orm {
 
     l.location = [ table.name ]
 
+    l.calling('Calling knight-orm/query.ts > QueryTools.buildCriteriaReadQuery')
     let query = this.queryTools.buildCriteriaReadQuery(table, criteria, asDatabaseCriteria)
+    l.called('Calling knight-orm/query.ts > QueryTools.buildCriteriaReadQuery')
+    
     l.dev('Built SELECT query', query)
   
-    l.lib('Querying database with given SQL string and values...')
+    l.lib('Querying database with given SQL string and values')
     let joinedRows
   
+    l.calling('Calling knight-orm/query.ts > QueryTools.databaseIndependentQuery')
+
     try {
       joinedRows = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as SelectResult
     }
     catch (e) {
       throw new Error(e as any)
     }
+
+    l.called('Called knight-orm/query.ts > QueryTools.databaseIndependentQuery')
   
     l.dev('Received rows', joinedRows)
   
