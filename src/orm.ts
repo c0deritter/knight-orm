@@ -120,6 +120,8 @@ export interface UpdateCriteria {
   '@criteria': Criteria
 }
 
+let ormLog = log.cls('StoredObjects')
+
 export class Orm {
   schema: Schema
   db: string
@@ -190,7 +192,7 @@ export class Orm {
     relationshipPath: string = 'root'
   ): Promise<any> {
 
-    let l = log.fn('store')
+    let l = ormLog.fn('store')
     l.locationSeparator = ' > '
   
     if (relationshipPath != undefined) {
@@ -718,7 +720,7 @@ export class Orm {
     asDatabaseRow = false
   ): Promise<any> {
 
-    let l = log.mt('delete')
+    let l = ormLog.mt('delete')
     l.param('obj', obj)
     l.param('asDatabaseRow', asDatabaseRow)
   
@@ -773,7 +775,7 @@ export class Orm {
     asDatabaseCriteria = false
   ): Promise<any[]> {
 
-    let l = log.mt('load')
+    let l = ormLog.mt('load')
     l.param('criteria', criteria)
     
     let table: Table
@@ -925,7 +927,7 @@ export class Orm {
     asDatabaseCriteria = false
   ): Promise<any> {
 
-    let l = log.fn('criteriaUpdate')
+    let l = ormLog.fn('criteriaUpdate')
     l.param('criteria', criteria)
     l.param('asDatabaseCriteria', asDatabaseCriteria)
   
@@ -974,7 +976,7 @@ export class Orm {
     asDatabaseCriteria = false
   ): Promise<any> {
 
-    let l = log.fn('criteriaDelete')
+    let l = ormLog.fn('criteriaDelete')
     l.param('criteria', criteria)
     l.param('asDatabaseCriteria', asDatabaseCriteria)
     
