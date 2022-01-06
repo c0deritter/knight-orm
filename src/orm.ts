@@ -246,8 +246,6 @@ export class Orm {
           continue
         }
   
-        l.lib('Relationship', relationship)
-  
         if (! storedObjects.isContained(manyToOneObj)) {
           l.lib('There is a relationship object and it was not stored yet')
   
@@ -291,35 +289,38 @@ export class Orm {
   
           storedObjects.addAfterStorageHandler(manyToOneObj, async (justStoredManyToOneObj: any) => {
             let l = log.fn('afterStorageHandler')
+            l.lib('Setting many-to-one id...')
             l.param('justStoredManyToOneObject', justStoredManyToOneObj)
-            l.param('relationship', relationship)
-  
-            l.lib('Converting just stored object to a database row...')
+            l.param('relationship.name', relationship.name)
   
             let row
             let justStoredManyToOneRow
             if (asDatabaseRow) {
               row = obj
               justStoredManyToOneRow = justStoredManyToOneObj
-              l.lib('Given object should be treated as a database row')
             }
             else {
-              l.lib('Converting instance to row')
-              l.calling('Calling Table.instanceToRow...')
               let reduced = {
-                [relationship.otherId.name]: obj[relationship.otherId.name]
+                [relationship.otherId.name]: justStoredManyToOneObj[relationship.otherId.name]
               }
+              
+              l.lib('Converting reduced just stored object to a database row...', reduced)
+              
+              l.calling('Calling Table.instanceToRow...')
               justStoredManyToOneRow = table.instanceToRow(reduced, true)
               l.called('Called Table.instanceToRow...')
+
+              l.lib('Converted reduced just stored object to row', justStoredManyToOneRow)
   
-              l.lib('Converting instance to row')
-              l.calling('Calling Table.instanceToRow...')
               reduced = this.objectTools.reduceToPrimaryKey(table, obj)
+              l.lib('Converting reduced object to set the many-to-one id on to row', reduced)
+
+              l.calling('Calling Table.instanceToRow...')
               row = table.instanceToRow(reduced, true)
               l.called('Called Table.instanceToRow...')
             }
   
-            l.lib('Updating row...', row)
+            l.lib('Setting missing many-to-one id on row...', row)
   
             let query = sql.update(table.name)
   
@@ -329,7 +330,7 @@ export class Orm {
   
             query.set(relationship.thisId.name, justStoredManyToOneRow[relationship.otherId.name])
   
-            l.calling('Calling update...')
+            l.calling('Calling databaseIndependentQuery')
     
             let result
             try {
@@ -339,7 +340,7 @@ export class Orm {
               throw new Error(e as any)
             }
   
-            l.called('Called update...')
+            l.called('Called databaseIndependentQuery...')
         
             if (result.affectedRows != 1) {
               throw new Error('Expected row count does not equal 1')
@@ -369,7 +370,7 @@ export class Orm {
   
     l.lib('Determining if to store or to update the given row...', row)
     
-    let doUpdate = await this.objectTools.isUpdate(table, queryFn, row, asDatabaseRow)
+    let doUpdate = await this.objectTools.isUpdate(table, queryFn, row, true)
   
     if (doUpdate) {
       l.lib('Updating the given row...')
@@ -479,7 +480,6 @@ export class Orm {
             continue
           }
   
-          l.lib('Relationship', relationship)
           let otherRelationship = relationship.otherRelationship
   
           if (! storedObjects.isContained(oneToOneObj)) {
