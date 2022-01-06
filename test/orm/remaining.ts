@@ -10,14 +10,13 @@ const expect = chai.expect
 export function remainingTests(db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>) {
   let orm = new Orm(schema, db)
   let table1 = schema.getTable('table1')
-  let table2 = schema.getTable('table2')
 
   describe('delete', function() {
     it('should delete an entity', async function() {
-      await queryFn('INSERT INTO table1 (property1) VALUES ($1)', ['a'])
-      await queryFn('INSERT INTO table1 (property1) VALUES ($1)', ['b'])
+      await queryFn('INSERT INTO table1 (column1) VALUES ($1)', ['a'])
+      await queryFn('INSERT INTO table1 (column1) VALUES ($1)', ['b'])
 
-      let result = await orm.delete(queryFn, table1, { id: 1 }, true)
+      let result = await orm.delete(queryFn, table1, { id: 1 })
 
       expect(result).to.deep.equal({
         id: 1
@@ -28,9 +27,9 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
       expect(table1Result.rows.length).to.equal(1)
       expect(table1Result.rows[0]).to.deep.equal({
         id: 2,
-        property1: 'b',
-        property2: null,
-        property3: null,
+        column1: 'b',
+        column2: null,
+        column3: null,
         many_to_one_object1_id: null,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
@@ -40,19 +39,19 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
     })
 
     it('should not delete anything if the primary key is missing', async function() {
-      await queryFn('INSERT INTO table1 (property1) VALUES ($1)', ['a'])
-      await queryFn('INSERT INTO table1 (property1) VALUES ($1)', ['b'])
+      await queryFn('INSERT INTO table1 (column1) VALUES ($1)', ['a'])
+      await queryFn('INSERT INTO table1 (column1) VALUES ($1)', ['b'])
 
-      expect(orm.delete(queryFn, table1, { }, true)).to.be.rejectedWith('Could not delete object because the primary key is not set.')
+      expect(orm.delete(queryFn, table1, { })).to.be.rejectedWith('Could not delete object because the primary key is not set.')
 
       let table1Result = await queryFn('SELECT * FROM table1 ORDER BY id')
 
       expect(table1Result.rows.length).to.equal(2)
       expect(table1Result.rows[0]).to.deep.equal({
         id: 1,
-        property1: 'a',
-        property2: null,
-        property3: null,
+        column1: 'a',
+        column2: null,
+        column3: null,
         many_to_one_object1_id: null,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
@@ -62,9 +61,9 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
 
       expect(table1Result.rows[1]).to.deep.equal({
         id: 2,
-        property1: 'b',
-        property2: null,
-        property3: null,
+        column1: 'b',
+        column2: null,
+        column3: null,
         many_to_one_object1_id: null,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
@@ -79,13 +78,13 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
       await orm.store(queryFn, table1, { property1: 'a', property2: 1 })
       await orm.store(queryFn, table1, { property1: 'b', property2: 2 })
 
-      let deletedRows = await orm.criteriaDelete(queryFn, table1, { id: 1 }, true)
+      let deletedRows = await orm.criteriaDelete(queryFn, table1, { id: 1 })
 
       expect(deletedRows).to.deep.equal([{
         id: 1,
-        property1: 'a',
-        property2: 1,
-        property3: null,
+        column1: 'a',
+        column2: 1,
+        column3: null,
         many_to_one_object1_id: null,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
@@ -98,9 +97,9 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
       expect(table1Result.rows.length).to.equal(1)
       expect(table1Result).to.deep.equal([{
         id: 2,
-        property1: 'b',
-        property2: 2,
-        property3: null,
+        column1: 'b',
+        column2: 2,
+        column3: null,
         many_to_one_object1_id: null,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
@@ -113,13 +112,13 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
       await orm.store(queryFn, table1, { property1: 'a', property2: 1 })
       await orm.store(queryFn, table1, { property1: 'b', property2: 2 })
 
-      let deletedRows = await orm.criteriaDelete(queryFn, table1, { property1: 'a' }, true)
+      let deletedRows = await orm.criteriaDelete(queryFn, table1, { property1: 'a' })
 
       expect(deletedRows).to.deep.equal([{
         id: 1,
-        property1: 'a',
-        property2: 1,
-        property3: null,
+        column1: 'a',
+        column2: 1,
+        column3: null,
         many_to_one_object1_id: null,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
@@ -132,9 +131,9 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
       expect(table1Result.rows.length).to.equal(1)
       expect(table1Result).to.deep.equal([{
         id: 2,
-        property1: 'b',
-        property2: 2,
-        property3: null,
+        column1: 'b',
+        column2: 2,
+        column3: null,
         many_to_one_object1_id: null,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
@@ -155,9 +154,9 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
       expect(table1Result).to.deep.equal([
         {
           id: 1,
-          property1: 'a',
-          property2: 1,
-          property3: null,
+          column1: 'a',
+          column2: 1,
+          column3: null,
           many_to_one_object1_id: null,
           many_to_one_object2_id: null,
           one_to_one_object1_id: null,
@@ -166,9 +165,9 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
           },
         {
           id: 2,
-          property1: 'b',
-          property2: 2,
-          property3: null,
+          column1: 'b',
+          column2: 2,
+          column3: null,
           many_to_one_object1_id: null,
           many_to_one_object2_id: null,
           one_to_one_object1_id: null,
