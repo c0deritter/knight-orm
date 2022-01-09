@@ -362,9 +362,11 @@ export class CriteriaTools {
 
       for (let criterium of criteria) {
         if (criterium instanceof Array || typeof criterium == 'object') {
-          l.calling('Determining relationships to load of', criterium)
+          l.lib('Determining relationships to load of', criterium)
+          l.calling('Calling \'knight-orm/criteria.ts CriteriaTools.determineRelationshipsToLoadSeparately\'')
           this.determineRelationshipsToLoadSeparately(table, objs, criterium, relationshipPath, relationshipsToLoad)
-          l.called('Determined relationships to load of', criterium)
+          l.called('Calling \'knight-orm/criteria.ts CriteriaTools.determineRelationshipsToLoadSeparately\'')
+          l.lib('Determined relationships to load of', criterium)
         }
       }
     }
@@ -384,17 +386,21 @@ export class CriteriaTools {
         l.lib('Found criteria', relationshipCriteria)
     
         let subRelationshipPath = relationshipPath + '.' + relationship.name
-        l.lib('Creating relationship path', subRelationshipPath)
+        l.lib('Created relationship path', subRelationshipPath)
     
         if (relationshipCriteria['@loadSeparately'] === true) {
-          l.lib('Relationship should be loaded separately')
+          l.lib('Relationship should be loaded separately. Adding to result.')
     
           if (relationshipsToLoad[subRelationshipPath] == undefined) {
+            l.dev('Relationship path does not exist on result. Adding...')
             relationshipsToLoad[subRelationshipPath] = {
               relationship: relationship,
               relationshipCriteria: relationshipCriteria,
               objs: objs
             }
+          }
+          else {
+            l.dev('Relationship path does exist on result. Not adding to the result.', relationshipsToLoad[subRelationshipPath])
           }
         }
         else if (relationshipCriteria['@load'] === true) {

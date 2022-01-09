@@ -797,17 +797,15 @@ export class Orm {
     l.lib('Querying database with given SQL string and values')
     let joinedRows
   
-    l.calling('Calling knight-orm/query.ts > QueryTools.databaseIndependentQuery')
-
     try {
+      l.calling('Calling knight-orm/query.ts > QueryTools.databaseIndependentQuery')
       joinedRows = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as SelectResult
+      l.called('Called knight-orm/query.ts > QueryTools.databaseIndependentQuery')
     }
     catch (e) {
       throw new Error(e as any)
     }
 
-    l.called('Called knight-orm/query.ts > QueryTools.databaseIndependentQuery')
-  
     l.dev('Received rows', joinedRows)
   
     let joinAlias = new JoinAlias(table)
@@ -817,9 +815,9 @@ export class Orm {
     l.called('Unjoined objects for criteria...', criteria)
     l.dev('Unjoined objects', objects)
   
-    l.calling('Determine relationships to load...')
+    l.calling('Calling \'knight-orm/criteria.ts CriteriaTools.determineRelationshipsToLoadSeparately\'')
     let relationshipsToLoad = this.criteriaTools.determineRelationshipsToLoadSeparately(table, objects, criteria)
-    l.called('Determined relationships to load for criteria...', criteria)
+    l.calling('Called \'knight-orm/criteria.ts CriteriaTools.determineRelationshipsToLoadSeparately\'')
   
     l.lib('Loading all relationships that need to be loaded separately...', Object.keys(relationshipsToLoad))
   
@@ -831,6 +829,7 @@ export class Orm {
       let relationship = relationshipToLoad.relationship
       l.lib('Relationship table', relationship.table.name)
       l.lib('Relationship name', relationship.name)
+      l.dev('Objects to load relationship objects for', relationshipToLoad.objs)
   
       let idsToLoad: any[] = []
       for (let obj of relationshipToLoad.objs) {
@@ -840,6 +839,8 @@ export class Orm {
           }
         }
       }
+
+      l.dev('Id\'s of these objects', idsToLoad)
   
       let criteria = {
         ...relationshipToLoad.relationshipCriteria
