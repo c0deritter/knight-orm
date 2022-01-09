@@ -788,9 +788,9 @@ export class Orm {
 
     l.location = [ table.name ]
 
-    l.calling('Calling knight-orm/query.ts > QueryTools.buildCriteriaReadQuery')
-    let query = this.queryTools.buildCriteriaReadQuery(table, criteria, asDatabaseCriteria)
-    l.called('Calling knight-orm/query.ts > QueryTools.buildCriteriaReadQuery')
+    l.calling('Calling knight-orm/query.ts > QueryTools.buildLoadQuery')
+    let query = this.queryTools.buildLoadQuery(table, criteria, asDatabaseCriteria)
+    l.called('Calling knight-orm/query.ts > QueryTools.buildLoadQuery')
     
     l.dev('Built SELECT query', query)
   

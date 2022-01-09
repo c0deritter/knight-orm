@@ -598,7 +598,7 @@ export class QueryTools {
    * @param asDatabaseCriteria If set to true, the given criteria can directly reference database columns instead of instance properties
    * @returns A knight-sql query object
    */
-  buildCriteriaReadQuery(
+  buildLoadQuery(
     classNameOrTable: (new (...args: any[]) => any)|Table, 
     criteria: Criteria, 
     asDatabaseCriteria = false

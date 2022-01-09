@@ -1014,10 +1014,10 @@ describe('query', function() {
     })
   })
 
-  describe('buildCriteriaReadQuery', function() {
+  describe('buildLoadQuery', function() {
     it('should handle a simple select query', function() {
       let criteria = { property1: 'a', property2: 1 }
-      let query = queryTools.buildCriteriaReadQuery(schema.getTable('table1'), criteria)
+      let query = queryTools.buildLoadQuery(schema.getTable('table1'), criteria)
       expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.column3 "table1__column3", table1.many_to_one_object1_id "table1__many_to_one_object1_id", table1.many_to_one_object2_id "table1__many_to_one_object2_id", table1.one_to_one_object1_id "table1__one_to_one_object1_id", table1.one_to_one_object2_id "table1__one_to_one_object2_id", table1.one_to_many_object1_many_to_one_id "table1__one_to_many_object1_many_to_one_id" FROM table1 table1 WHERE table1.column1 = ? AND table1.column2 = ?')
     })
   
@@ -1035,7 +1035,7 @@ describe('query', function() {
         }
       }
   
-      let query = queryTools.buildCriteriaReadQuery(schema.getTable('table1'), criteria)
+      let query = queryTools.buildLoadQuery(schema.getTable('table1'), criteria)
   
       expect(query._select!.pieces!.length).to.equal(20)
       expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
@@ -1069,7 +1069,7 @@ describe('query', function() {
         }
       }
   
-      let query = queryTools.buildCriteriaReadQuery(schema.getTable('table1'), criteria)
+      let query = queryTools.buildLoadQuery(schema.getTable('table1'), criteria)
   
       expect(query._select!.pieces!.length).to.equal(20)
       expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
