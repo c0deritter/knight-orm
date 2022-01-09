@@ -582,9 +582,16 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
     })
 
     it('should not load rows which columns are null', async function() {
-      await queryFn('INSERT INTO table2 DEFAULT VALUES')
-      await queryFn('INSERT INTO table2 DEFAULT VALUES')
-      await queryFn('INSERT INTO table2 DEFAULT VALUES')
+      if (db == 'postgres') {
+        await queryFn('INSERT INTO table2 DEFAULT VALUES')
+        await queryFn('INSERT INTO table2 DEFAULT VALUES')
+        await queryFn('INSERT INTO table2 DEFAULT VALUES')  
+      }
+      else {
+        await queryFn('INSERT INTO table2 VALUES ()')
+        await queryFn('INSERT INTO table2 VALUES ()')
+        await queryFn('INSERT INTO table2 VALUES ()')
+      }
 
       let rows = await orm.load(queryFn, Object2, {})
 

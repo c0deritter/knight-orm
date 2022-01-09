@@ -15,7 +15,7 @@ function queryFn(sqlString: string, values?: any[]): Promise<any> {
   return pool.query(sqlString, values)
 }
 
-describe('orm (MariaDb 10)', function() {
+describe.only('orm (MariaDb 10)', function() {
   after(async function() {
     await pool.end()
   })
