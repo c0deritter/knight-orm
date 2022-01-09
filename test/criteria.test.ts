@@ -20,9 +20,9 @@ describe('criteria', function() {
     it('should not find issues if the given criteria are valid', function() {
       expect(criteriaTools.validateCriteria(schema.getTable('table1'), {
         id: 1,
-        column1: 'a',
+        property1: 'a',
         manyToOneObject2: {
-          column2: 1,
+          property2: 1,
           '@orderBy': 'id',
           '@limit': 5,
           '@offset': 10
@@ -30,27 +30,27 @@ describe('criteria', function() {
         '@orderBy': 'id',
         '@limit': 5,
         '@offset': 10
-      }, true)).to.deep.equal([])
+      })).to.deep.equal([])
     })
 
     it('should not find issues if the given comparison is valid', function() {
       expect(criteriaTools.validateCriteria(schema.getTable('table1'), {
-        column1: {
+        property1: {
           '@operator': '=',
           '@value': 'a'
         },
-        column2: {
+        property2: {
           '@operator': '>'
         }
-      }, true)).to.deep.equal([])
+      })).to.deep.equal([])
     })
 
     it('should not find issues if the given criteria which are given as an array are valid', function() {
       expect(criteriaTools.validateCriteria(schema.getTable('table1'), [{
         id: 1,
-        column1: 'a',
+        property1: 'a',
         manyToOneObject2: {
-          column2: 1,
+          property2: 1,
           '@orderBy': 'id',
           '@limit': 5,
           '@offset': 10  
@@ -58,7 +58,7 @@ describe('criteria', function() {
         '@orderBy': 'id',
         '@limit': 5,
         '@offset': 10
-      }], true)).to.deep.equal([])
+      }])).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @load', function() {
@@ -66,7 +66,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@load': true
         }
-      }, true)).to.deep.equal([])
+      })).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @loadSeparately', function() {
@@ -74,7 +74,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@loadSeparately': true
         }
-      }, true)).to.deep.equal([])
+      })).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @not', function() {
@@ -82,7 +82,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@not': true
         }
-      }, true)).to.deep.equal([])
+      })).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @count', function() {
@@ -90,7 +90,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@count': true
         }
-      }, true)).to.deep.equal([])
+      })).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @max', function() {
@@ -98,7 +98,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@max': true
         }
-      }, true)).to.deep.equal([])
+      })).to.deep.equal([])
     })
 
     it('should not find issues if the given relationship has an @min', function() {
@@ -106,7 +106,7 @@ describe('criteria', function() {
         manyToOneObject2: {
           '@min': true
         }
-      }, true)).to.deep.equal([])
+      })).to.deep.equal([])
     })
 
     it('should find an issue if a column, relationship or @property does not exist', function() {
@@ -114,18 +114,18 @@ describe('criteria', function() {
         column: 'a',
         object: {},
         '@invalid': true
-      }, true)).to.deep.equal([
+      })).to.deep.equal([
         {
           location: 'column',
-          message: 'Given column, relationship or @-property does not exist'
+          message: 'Given property, relationship or @-property does not exist'
         },
         {
           location: 'object',
-          message: 'Given column, relationship or @-property does not exist'
+          message: 'Given property, relationship or @-property does not exist'
         },
         {
           location: '@invalid',
-          message: 'Given column, relationship or @-property does not exist'
+          message: 'Given property, relationship or @-property does not exist'
         }
       ])
     })
@@ -137,18 +137,18 @@ describe('criteria', function() {
           object: {},
           '@invalid': true
         }
-      }, true)).to.deep.equal([
+      })).to.deep.equal([
         {
           location: 'manyToOneObject2.column',
-          message: 'Given column, relationship or @-property does not exist'
+          message: 'Given property, relationship or @-property does not exist'
         },
         {
           location: 'manyToOneObject2.object',
-          message: 'Given column, relationship or @-property does not exist'
+          message: 'Given property, relationship or @-property does not exist'
         },
         {
           location: 'manyToOneObject2.@invalid',
-          message: 'Given column, relationship or @-property does not exist'
+          message: 'Given property, relationship or @-property does not exist'
         }
       ])
     })
@@ -160,18 +160,18 @@ describe('criteria', function() {
           object: {},
           '@invalid': true
         }
-      }], true)).to.deep.equal([
+      }])).to.deep.equal([
         {
           location: 'manyToOneObject2.column',
-          message: 'Given column, relationship or @-property does not exist'
+          message: 'Given property, relationship or @-property does not exist'
         },
         {
           location: 'manyToOneObject2.object',
-          message: 'Given column, relationship or @-property does not exist'
+          message: 'Given property, relationship or @-property does not exist'
         },
         {
           location: 'manyToOneObject2.@invalid',
-          message: 'Given column, relationship or @-property does not exist'
+          message: 'Given property, relationship or @-property does not exist'
         }
       ])
     })
