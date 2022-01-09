@@ -73,7 +73,7 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
     })
   })
 
-  describe('criteriaDelete', function() {
+  describe.skip('criteriaDelete', function() {
     it('should delete a simple obj1 by id', async function() {
       await orm.store(queryFn, table1, { property1: 'a', property2: 1 })
       await orm.store(queryFn, table1, { property1: 'b', property2: 2 })

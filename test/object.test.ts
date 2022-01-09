@@ -5,7 +5,7 @@ import { ObjectTools, Orm } from '../src'
 import { schema } from './testSchema'
 
 let pool: Pool = new Pool({
-  host: 'postgres',
+  host: 'postgres14',
   database: 'orm',
   user: 'orm',
   password: 'orm'

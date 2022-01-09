@@ -1219,7 +1219,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
     it('update many-to-one primary key not generated', async function() {
       await queryFn('INSERT INTO table1 (column1) VALUES (\'a\')')
-      await queryFn('INSERT INTO table2 (id, column1) VALUES (\'x\', \'b\')', ['x', 'b'])
+      await queryFn('INSERT INTO table2 (id, column1) VALUES (\'x\', \'b\')')
 
       let obj1 = {
         id: 1,
