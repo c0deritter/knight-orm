@@ -1,7 +1,7 @@
 import * as chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
-import { Orm } from '../../src'
+import { Orm, SelectResult } from '../../src'
 import { Object1, schema } from '../testSchema'
 
 chai.use(chaiAsPromised)
@@ -23,10 +23,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         '@update': false
       })
 
-      let result = await queryFn('SELECT * FROM table1')
+      let result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(result.rows.length).to.equal(1)
-      expect(result.rows[0]).to.deep.equal({
+      expect(result.length).to.equal(1)
+      expect(result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -58,10 +58,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1 ORDER BY id')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(2)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(2)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'b',
         column2: null,
@@ -73,7 +73,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      expect(table1Result.rows[1]).to.deep.equal({
+      expect(table1Result[1]).to.deep.equal({
         id: 2,
         column1: 'a',
         column2: null,
@@ -107,10 +107,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -122,10 +122,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null,
       })
 
-      let table2Result = await queryFn('SELECT * FROM table2')
+      let table2Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table2') as SelectResult
 
-      expect(table2Result.rows.length).to.equal(1)
-      expect(table2Result.rows[0]).to.deep.equal({
+      expect(table2Result.length).to.equal(1)
+      expect(table2Result[0]).to.deep.equal({
         id: 'x',
         column1: 'b',
         column2: null,
@@ -154,10 +154,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1 ORDER BY id')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(2)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(2)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'b',
         column2: null,
@@ -169,7 +169,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      expect(table1Result.rows[1]).to.deep.equal({
+      expect(table1Result[1]).to.deep.equal({
         id: 2,
         column1: 'a',
         column2: null,
@@ -204,10 +204,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1 ORDER BY id')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(2)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(2)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'b',
         column2: null,
@@ -219,7 +219,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      expect(table1Result.rows[1]).to.deep.equal({
+      expect(table1Result[1]).to.deep.equal({
         id: 2,
         column1: 'a',
         column2: null,
@@ -247,10 +247,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         '@update': false
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1 ORDER BY id')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -283,10 +283,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -298,10 +298,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      let table2Result = await queryFn('SELECT * FROM table2')
+      let table2Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table2') as SelectResult
 
-      expect(table2Result.rows.length).to.equal(1)
-      expect(table2Result.rows[0]).to.deep.equal({
+      expect(table2Result.length).to.equal(1)
+      expect(table2Result[0]).to.deep.equal({
         id: 'x',
         column1: 'b',
         column2: null,
@@ -334,10 +334,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -349,10 +349,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      let table2Result = await queryFn('SELECT * FROM table2')
+      let table2Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table2') as SelectResult
 
-      expect(table2Result.rows.length).to.equal(1)
-      expect(table2Result.rows[0]).to.deep.equal({
+      expect(table2Result.length).to.equal(1)
+      expect(table2Result[0]).to.deep.equal({
         id: 'x',
         column1: 'b',
         column2: null,
@@ -392,11 +392,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(3)
+      expect(table1Result.length).to.equal(3)
 
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -408,7 +408,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      expect(table1Result.rows[1]).to.deep.equal({
+      expect(table1Result[1]).to.deep.equal({
         id: 2,
         column1: 'b',
         column2: null,
@@ -420,7 +420,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: 1
       })
 
-      expect(table1Result.rows[2]).to.deep.equal({
+      expect(table1Result[2]).to.deep.equal({
         id: 3,
         column1: 'c',
         column2: null,
@@ -468,11 +468,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(3)
+      expect(table1Result.length).to.equal(3)
 
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -484,7 +484,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      expect(table1Result.rows[1]).to.deep.equal({
+      expect(table1Result[1]).to.deep.equal({
         id: 2,
         column1: 'b',
         column2: null,
@@ -496,7 +496,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: 1
       })
 
-      expect(table1Result.rows[2]).to.deep.equal({
+      expect(table1Result[2]).to.deep.equal({
         id: 3,
         column1: 'c',
         column2: null,
@@ -541,10 +541,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -556,11 +556,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      let table2Result = await queryFn('SELECT * FROM table2')
+      let table2Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table2') as SelectResult
 
-      expect(table2Result.rows.length).to.equal(2)
+      expect(table2Result.length).to.equal(2)
       
-      expect(table2Result.rows[0]).to.deep.equal({
+      expect(table2Result[0]).to.deep.equal({
         id: 'x',
         column1: 'b',
         column2: null,
@@ -569,7 +569,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object2_many_to_one_id: 1
       })
 
-      expect(table2Result.rows[1]).to.deep.equal({
+      expect(table2Result[1]).to.deep.equal({
         id: 'y',
         column1: 'c',
         column2: null,
@@ -616,10 +616,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -631,11 +631,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      let table2Result = await queryFn('SELECT * FROM table2')
+      let table2Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table2') as SelectResult
 
-      expect(table2Result.rows.length).to.equal(2)
+      expect(table2Result.length).to.equal(2)
       
-      expect(table2Result.rows[0]).to.deep.equal({
+      expect(table2Result[0]).to.deep.equal({
         id: 'x',
         column1: 'b',
         column2: null,
@@ -644,7 +644,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object2_many_to_one_id: 1
       })
 
-      expect(table2Result.rows[1]).to.deep.equal({
+      expect(table2Result[1]).to.deep.equal({
         id: 'y',
         column1: 'c',
         column2: null,
@@ -669,11 +669,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         '@update': false
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
+      expect(table1Result.length).to.equal(1)
 
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -732,11 +732,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1 ORDER BY id')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(3)
+      expect(table1Result.length).to.equal(3)
 
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -748,7 +748,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      expect(table1Result.rows[1]).to.deep.equal({
+      expect(table1Result[1]).to.deep.equal({
         id: 2,
         column1: 'c',
         column2: null,
@@ -760,7 +760,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      expect(table1Result.rows[2]).to.deep.equal({
+      expect(table1Result[2]).to.deep.equal({
         id: 3,
         column1: 'e',
         column2: null,
@@ -772,11 +772,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      let tableManyResult = await queryFn('SELECT * FROM many_to_many_table1 ORDER BY table1_id1')
+      let tableManyResult = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM many_to_many_table1 ORDER BY table1_id1') as SelectResult
 
-      expect(tableManyResult.rows.length).to.equal(2)
+      expect(tableManyResult.length).to.equal(2)
 
-      expect(tableManyResult.rows[0]).to.deep.equal({
+      expect(tableManyResult[0]).to.deep.equal({
         table1_id1: 1,
         table1_id2: 2,
         column1: 'b',
@@ -784,7 +784,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         column3: null
       })
 
-      expect(tableManyResult.rows[1]).to.deep.equal({
+      expect(tableManyResult[1]).to.deep.equal({
         table1_id1: 1,
         table1_id2: 3,
         column1: 'd',
@@ -848,11 +848,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1 ORDER BY id')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(3)
+      expect(table1Result.length).to.equal(3)
 
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -864,7 +864,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      expect(table1Result.rows[1]).to.deep.equal({
+      expect(table1Result[1]).to.deep.equal({
         id: 2,
         column1: 'c',
         column2: null,
@@ -876,7 +876,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      expect(table1Result.rows[2]).to.deep.equal({
+      expect(table1Result[2]).to.deep.equal({
         id: 3,
         column1: 'e',
         column2: null,
@@ -888,11 +888,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      let tableManyResult = await queryFn('SELECT * FROM many_to_many_table1 ORDER BY table1_id1')
+      let tableManyResult = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM many_to_many_table1 ORDER BY table1_id1') as SelectResult
 
-      expect(tableManyResult.rows.length).to.equal(2)
+      expect(tableManyResult.length).to.equal(2)
 
-      expect(tableManyResult.rows[0]).to.deep.equal({
+      expect(tableManyResult[0]).to.deep.equal({
         table1_id1: 1,
         table1_id2: 2,
         column1: 'b',
@@ -900,7 +900,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         column3: null
       })
 
-      expect(tableManyResult.rows[1]).to.deep.equal({
+      expect(tableManyResult[1]).to.deep.equal({
         table1_id1: 1,
         table1_id2: 3,
         column1: 'd',
@@ -936,11 +936,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1 ORDER BY id')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
+      expect(table1Result.length).to.equal(1)
 
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -952,11 +952,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      let tableManyResult = await queryFn('SELECT * FROM many_to_many_table1 ORDER BY column1')
+      let tableManyResult = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM many_to_many_table1 ORDER BY column1') as SelectResult
 
-      expect(tableManyResult.rows.length).to.equal(1)
+      expect(tableManyResult.length).to.equal(1)
 
-      expect(tableManyResult.rows[0]).to.deep.equal({
+      expect(tableManyResult[0]).to.deep.equal({
         table1_id1: 1,
         table1_id2: 1,
         column1: 'b',
@@ -1013,10 +1013,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -1028,11 +1028,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      let tableManyResult = await queryFn('SELECT * FROM many_to_many_table2 ORDER BY table1_id')
+      let tableManyResult = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM many_to_many_table2 ORDER BY table1_id') as SelectResult
 
-      expect(tableManyResult.rows.length).to.equal(2)
+      expect(tableManyResult.length).to.equal(2)
 
-      expect(tableManyResult.rows[0]).to.deep.equal({
+      expect(tableManyResult[0]).to.deep.equal({
         table1_id: 1,
         table2_id: 'x',
         column1: 'b',
@@ -1040,7 +1040,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         column3: null
       })
 
-      expect(tableManyResult.rows[1]).to.deep.equal({
+      expect(tableManyResult[1]).to.deep.equal({
         table1_id: 1,
         table2_id: 'y',
         column1: 'd',
@@ -1048,11 +1048,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         column3: null
       })
 
-      let table2Result = await queryFn('SELECT * FROM table2 ORDER BY id')
+      let table2Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table2 ORDER BY id') as SelectResult
 
-      expect(table2Result.rows.length).to.equal(2)
+      expect(table2Result.length).to.equal(2)
       
-      expect(table2Result.rows[0]).to.deep.equal({
+      expect(table2Result[0]).to.deep.equal({
         id: 'x',
         column1: 'c',
         column2: null,
@@ -1061,7 +1061,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object2_many_to_one_id: null
       })
 
-      expect(table2Result.rows[1]).to.deep.equal({
+      expect(table2Result[1]).to.deep.equal({
         id: 'y',
         column1: 'e',
         column2: null,
@@ -1128,10 +1128,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -1143,11 +1143,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null
       })
 
-      let tableManyResult = await queryFn('SELECT * FROM many_to_many_table2 ORDER BY table1_id')
+      let tableManyResult = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM many_to_many_table2 ORDER BY table1_id') as SelectResult
 
-      expect(tableManyResult.rows.length).to.equal(2)
+      expect(tableManyResult.length).to.equal(2)
 
-      expect(tableManyResult.rows[0]).to.deep.equal({
+      expect(tableManyResult[0]).to.deep.equal({
         table1_id: 1,
         table2_id: 'x',
         column1: 'b',
@@ -1155,7 +1155,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         column3: null
       })
 
-      expect(tableManyResult.rows[1]).to.deep.equal({
+      expect(tableManyResult[1]).to.deep.equal({
         table1_id: 1,
         table2_id: 'y',
         column1: 'd',
@@ -1163,11 +1163,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         column3: null
       })
 
-      let table2Result = await queryFn('SELECT * FROM table2 ORDER BY id')
+      let table2Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table2 ORDER BY id') as SelectResult
 
-      expect(table2Result.rows.length).to.equal(2)
+      expect(table2Result.length).to.equal(2)
       
-      expect(table2Result.rows[0]).to.deep.equal({
+      expect(table2Result[0]).to.deep.equal({
         id: 'x',
         column1: 'c',
         column2: null,
@@ -1176,7 +1176,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object2_many_to_one_id: null
       })
 
-      expect(table2Result.rows[1]).to.deep.equal({
+      expect(table2Result[1]).to.deep.equal({
         id: 'y',
         column1: 'e',
         column2: null,
@@ -1187,7 +1187,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
     })
 
     it('update simple obj', async function() {
-      await queryFn('INSERT INTO table1 (column1) VALUES ($1)', ['a'])
+      await queryFn('INSERT INTO table1 (column1) VALUES (\'a\')')
 
       let obj1 = {
         id: 1,
@@ -1201,10 +1201,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         '@update': true
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'b',
         column2: null,
@@ -1218,8 +1218,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
     })
 
     it('update many-to-one primary key not generated', async function() {
-      await queryFn('INSERT INTO table1 (column1) VALUES ($1)', ['a'])
-      await queryFn('INSERT INTO table2 (id, column1) VALUES ($1, $2)', ['x', 'b'])
+      await queryFn('INSERT INTO table1 (column1) VALUES (\'a\')')
+      await queryFn('INSERT INTO table2 (id, column1) VALUES (\'x\', \'b\')', ['x', 'b'])
 
       let obj1 = {
         id: 1,
@@ -1241,10 +1241,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'b',
         column2: null,
@@ -1256,10 +1256,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object1_many_to_one_id: null,
       })
 
-      let table2Result = await queryFn('SELECT * FROM table2')
+      let table2Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table2') as SelectResult
 
-      expect(table2Result.rows.length).to.equal(1)
-      expect(table2Result.rows[0]).to.deep.equal({
+      expect(table2Result.length).to.equal(1)
+      expect(table2Result[0]).to.deep.equal({
         id: 'x',
         column1: 'c',
         column2: null,

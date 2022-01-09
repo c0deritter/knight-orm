@@ -12,9 +12,9 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
 
   describe('load', function() {
     it('should load all rows', async function() {
-      let date1 = new Date
-      let date2 = new Date
-      let date3 = new Date
+      let date1 = new Date(2011, 1, 1, 1, 1, 1, 0)
+      let date2 = new Date(2022, 2, 2, 2, 2, 2, 0)
+      let date3 = new Date(2033, 3, 3, 3, 3, 3, 0)
       await orm.store(queryFn, Object1, { property1: 'a', property2: 1, property3: date1 })
       await orm.store(queryFn, Object1, { property1: 'b', property2: 2, property3: date2 })
       await orm.store(queryFn, Object1, { property1: 'c', property2: 3, property3: date3 })
@@ -61,9 +61,9 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
     })
 
     it('should order by a column', async function() {
-      let date1 = new Date
-      let date2 = new Date
-      let date3 = new Date
+      let date1 = new Date(2011, 1, 1, 1, 1, 1, 0)
+      let date2 = new Date(2022, 2, 2, 2, 2, 2, 0)
+      let date3 = new Date(2033, 3, 3, 3, 3, 3, 0)
       await orm.store(queryFn, Object1, { property1: 'a', property2: 1, property3: date1 })
       await orm.store(queryFn, Object1, { property1: 'b', property2: 2, property3: date2 })
       await orm.store(queryFn, Object1, { property1: 'c', property2: 3, property3: date3 })
@@ -115,9 +115,9 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
     })
 
     it('should limit the results', async function() {
-      let date1 = new Date
-      let date2 = new Date
-      let date3 = new Date
+      let date1 = new Date(2011, 1, 1, 1, 1, 1, 0)
+      let date2 = new Date(2022, 2, 2, 2, 2, 2, 0)
+      let date3 = new Date(2033, 3, 3, 3, 3, 3, 0)
       await orm.store(queryFn, Object1, { property1: 'a', property2: 1, property3: date1 })
       await orm.store(queryFn, Object1, { property1: 'b', property2: 2, property3: date2 })
       await orm.store(queryFn, Object1, { property1: 'c', property2: 3, property3: date3 })
@@ -154,9 +154,9 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
     })
 
     it('should offset the results', async function() {
-      let date1 = new Date
-      let date2 = new Date
-      let date3 = new Date
+      let date1 = new Date(2011, 1, 1, 1, 1, 1, 0)
+      let date2 = new Date(2022, 2, 2, 2, 2, 2, 0)
+      let date3 = new Date(2033, 3, 3, 3, 3, 3, 0)
       await orm.store(queryFn, Object1, { property1: 'a', property2: 1, property3: date1 })
       await orm.store(queryFn, Object1, { property1: 'b', property2: 2, property3: date2 })
       await orm.store(queryFn, Object1, { property1: 'c', property2: 3, property3: date3 })

@@ -7,17 +7,69 @@ services:
     volumes:
       - './:/hostdir'
     depends_on: 
-      - postgres
-      # - mysql
-  postgres:
-    image: 'postgres'
+      - postgres9
+      - postgres10
+      - postgres11
+      - postgres12
+      - postgres13
+      - postgres14
+      - mysql5
+      - mysql8
+      - mariadb10
+  postgres9:
+    image: 'postgres:9'
     environment:
-      - POSTGRES_DB=sqlorm_test
-      - POSTGRES_USER=sqlorm_test
-      - POSTGRES_PASSWORD=sqlorm_test
-  # mysql:
-  #   image: 'mysql'
-  #   environment:
-  #     - MYSQL_DATABASE=sqlorm_test
-  #     - MYSQL_USER=sqlorm_test
-  #     - MYSQL_PASSWORD=sqlorm_test
+      - POSTGRES_DB=orm
+      - POSTGRES_USER=orm
+      - POSTGRES_PASSWORD=orm
+  postgres10:
+    image: 'postgres:10'
+    environment:
+      - POSTGRES_DB=orm
+      - POSTGRES_USER=orm
+      - POSTGRES_PASSWORD=orm
+  postgres11:
+    image: 'postgres:11'
+    environment:
+      - POSTGRES_DB=orm
+      - POSTGRES_USER=orm
+      - POSTGRES_PASSWORD=orm
+  postgres12:
+    image: 'postgres:12'
+    environment:
+      - POSTGRES_DB=orm
+      - POSTGRES_USER=orm
+      - POSTGRES_PASSWORD=orm
+  postgres13:
+    image: 'postgres:13'
+    environment:
+      - POSTGRES_DB=orm
+      - POSTGRES_USER=orm
+      - POSTGRES_PASSWORD=orm
+  postgres14:
+    image: 'postgres:14'
+    environment:
+      - POSTGRES_DB=orm
+      - POSTGRES_USER=orm
+      - POSTGRES_PASSWORD=orm
+  mysql5:
+    image: 'mysql:5'
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=true
+      - MYSQL_DATABASE=orm
+      - MYSQL_USER=orm
+      - MYSQL_PASSWORD=orm
+  mysql8:
+    image: 'mysql:8'
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=true
+      - MYSQL_DATABASE=orm
+      - MYSQL_USER=orm
+      - MYSQL_PASSWORD=orm
+  mariadb10:
+    image: 'mariadb:10'
+    environment:
+      - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=true
+      - MARIADB_DATABASE=orm
+      - MARIADB_USER=orm
+      - MARIADB_PASSWORD=orm

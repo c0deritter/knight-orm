@@ -1,24 +1,21 @@
-import * as chai from 'chai'
-import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
-import { storeTests } from '../store'
-
-chai.use(chaiAsPromised)
-const expect = chai.expect
+import { loadTests } from './load'
+import { remainingTests } from './remaining'
+import { storeTests } from './store'
 
 let pool: Pool = new Pool({
-  host: 'postgres',
-  database: 'sqlorm_test',
-  user: 'sqlorm_test',
-  password: 'sqlorm_test'
+  host: 'postgres10',
+  database: 'orm',
+  user: 'orm',
+  password: 'orm'
 } as PoolConfig)
 
 function queryFn(sqlString: string, values?: any[]): Promise<any> {
   return pool.query(sqlString, values)
 }
 
-describe('orm', function() {
+describe('orm (PostgreSQL 10)', function() {
   after(async function() {
     await pool.end()
   })
@@ -38,4 +35,6 @@ describe('orm', function() {
   })
 
   storeTests('postgres', queryFn)
+  loadTests('postgres', queryFn)
+  remainingTests('postgres', queryFn)
 })

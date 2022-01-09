@@ -8,9 +8,9 @@ import { schema } from './testSchema'
 
 let pool: Pool = new Pool({
   host: 'postgres',
-  database: 'sqlorm_test',
-  user: 'sqlorm_test',
-  password: 'sqlorm_test'
+  database: 'orm',
+  user: 'orm',
+  password: 'orm'
 } as PoolConfig)
 
 function pgQueryFn(sqlString: string, values?: any[]): Promise<any> {

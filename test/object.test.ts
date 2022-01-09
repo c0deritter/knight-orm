@@ -6,9 +6,9 @@ import { schema } from './testSchema'
 
 let pool: Pool = new Pool({
   host: 'postgres',
-  database: 'sqlorm_test',
-  user: 'sqlorm_test',
-  password: 'sqlorm_test'
+  database: 'orm',
+  user: 'orm',
+  password: 'orm'
 } as PoolConfig)
 
 let objectTools = new ObjectTools(new Orm(schema, 'postgres'))

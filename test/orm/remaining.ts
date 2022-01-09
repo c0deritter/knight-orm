@@ -1,8 +1,8 @@
 import * as chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
-import { Orm } from '../../src'
-import { schema } from '../testSchema'
+import { Orm, SelectResult } from '../../src'
+import { Object1, schema } from '../testSchema'
 
 chai.use(chaiAsPromised)
 const expect = chai.expect
@@ -13,8 +13,8 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
 
   describe('delete', function() {
     it('should delete an entity', async function() {
-      await queryFn('INSERT INTO table1 (column1) VALUES ($1)', ['a'])
-      await queryFn('INSERT INTO table1 (column1) VALUES ($1)', ['b'])
+      await orm.store(queryFn, Object1, { property1: 'a' })
+      await orm.store(queryFn, Object1, { property1: 'b' })
 
       let result = await orm.delete(queryFn, table1, { id: 1 })
 
@@ -22,10 +22,10 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
         id: 1
       })
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
         id: 2,
         column1: 'b',
         column2: null,
@@ -39,15 +39,15 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
     })
 
     it('should not delete anything if the primary key is missing', async function() {
-      await queryFn('INSERT INTO table1 (column1) VALUES ($1)', ['a'])
-      await queryFn('INSERT INTO table1 (column1) VALUES ($1)', ['b'])
+      await orm.store(queryFn, Object1, { property1: 'a' })
+      await orm.store(queryFn, Object1, { property1: 'b' })
 
       expect(orm.delete(queryFn, table1, { })).to.be.rejectedWith('Could not delete object because the primary key is not set.')
 
-      let table1Result = await queryFn('SELECT * FROM table1 ORDER BY id')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(2)
-      expect(table1Result.rows[0]).to.deep.equal({
+      expect(table1Result.length).to.equal(2)
+      expect(table1Result[0]).to.deep.equal({
         id: 1,
         column1: 'a',
         column2: null,
@@ -59,7 +59,7 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
         one_to_many_object1_many_to_one_id: null,
       })
 
-      expect(table1Result.rows[1]).to.deep.equal({
+      expect(table1Result[1]).to.deep.equal({
         id: 2,
         column1: 'b',
         column2: null,
@@ -92,9 +92,9 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
         one_to_many_object1_many_to_one_id: null
       }])
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
+      expect(table1Result.length).to.equal(1)
       expect(table1Result).to.deep.equal([{
         id: 2,
         column1: 'b',
@@ -126,9 +126,9 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
         one_to_many_object1_many_to_one_id: null
       }])
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(1)
+      expect(table1Result.length).to.equal(1)
       expect(table1Result).to.deep.equal([{
         id: 2,
         column1: 'b',
@@ -148,9 +148,9 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
 
       expect(orm.criteriaDelete(queryFn, table1, { invalid: 'invalid' }, true)).to.be.rejectedWith(Error)
 
-      let table1Result = await queryFn('SELECT * FROM table1')
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
-      expect(table1Result.rows.length).to.equal(2)
+      expect(table1Result.length).to.equal(2)
       expect(table1Result).to.deep.equal([
         {
           id: 1,
