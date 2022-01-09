@@ -15,7 +15,7 @@ function queryFn(sqlString: string, values?: any[]): Promise<any> {
   return pool.query(sqlString, values)
 }
 
-describe.only('orm (MariaDb 10)', function() {
+describe('orm (MariaDb 10)', function() {
   after(async function() {
     await pool.end()
   })
@@ -34,7 +34,7 @@ describe.only('orm (MariaDb 10)', function() {
     await pool.query('DROP TABLE IF EXISTS many_to_many_table2 CASCADE')
   })
 
-  storeTests('maria', queryFn)
-  loadTests('maria', queryFn)
-  remainingTests('maria', queryFn)
+  storeTests('mariadb', queryFn)
+  loadTests('mariadb', queryFn)
+  remainingTests('mariadb', queryFn)
 })

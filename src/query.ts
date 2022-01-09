@@ -75,7 +75,7 @@ export class QueryTools {
         return dbResult.rows as SelectResult
       }
     
-      if (this.db == 'mysql' || this.db == 'maria') {
+      if (this.db == 'mysql' || this.db == 'mariadb') {
         if (! (dbResult instanceof Array)) {
           throw new Error('Result returned by MySQL was not any array. Enable logging for more information.')
         }
@@ -98,7 +98,7 @@ export class QueryTools {
         affectedRows = dbResult.rowCount
       }
     
-      if (this.db == 'mysql' || this.db == 'maria') {
+      if (this.db == 'mysql' || this.db == 'mariadb') {
         if (! ('affectedRows' in dbResult) || typeof dbResult.affectedRows != 'number' || isNaN(dbResult.affectedRows)) {
           throw new Error('Result returned by MySQL did not contain a valid \'affectedRows\'. Expected a number. Enable logging for more information.')
         }
@@ -134,7 +134,7 @@ export class QueryTools {
         return result
       }
   
-      if (this.db == 'mysql' || this.db == 'maria') {
+      if (this.db == 'mysql' || this.db == 'mariadb') {
         if (dbResult.insertId != undefined) {
           let result = {
             affectedRows: affectedRows,
