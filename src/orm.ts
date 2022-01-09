@@ -833,7 +833,7 @@ export class Orm {
   
       let idsToLoad: any[] = []
       for (let obj of relationshipToLoad.objs) {
-        if (obj[relationship.thisId.name] !== undefined) {
+        if (obj[relationship.thisId.getName(asDatabaseCriteria)] !== undefined) {
           if (idsToLoad.indexOf(obj[relationship.thisId.getName(asDatabaseCriteria)]) == -1) {
             idsToLoad.push(obj[relationship.thisId.getName(asDatabaseCriteria)])
           }
