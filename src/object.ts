@@ -6,6 +6,8 @@ import { Schema, Table } from './schema'
 
 let log = new Log('knight-orm/row.ts')
 
+let objectToolsLog = log.cls('ObjectTools')
+
 export class ObjectTools {
   orm: Orm
 
@@ -28,7 +30,7 @@ export class ObjectTools {
     asDatabaseRow = false
   ): Promise<boolean> {
     
-    let l = log.fn('isUpdate')
+    let l = objectToolsLog.mt('isUpdate')
     l.param('obj', obj)
   
     let table: Table

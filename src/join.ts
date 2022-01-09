@@ -205,7 +205,7 @@ export class JoinAlias {
    * @returns An array of objects with relationship objects
    */
   unjoinRows(joinedRows: any[], criteria: Criteria, asDatabaseCriteria = false): any[]  {
-    let l = joinAliasLogger.fn('unjoinRows')
+    let l = joinAliasLogger.mt('unjoinRows')
 
     l.param('criteria', criteria)
     l.param('asDatabaseCriteria', asDatabaseCriteria)

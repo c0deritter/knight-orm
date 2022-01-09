@@ -42,6 +42,8 @@ export interface RelationshipsToLoad {
   [ relationshipPath: string ]: RelationshipToLoad
 }
 
+let criteriaToolsLog = log.cls('CriteriaTools')
+
 export class CriteriaTools {
   orm: Orm
 
@@ -152,7 +154,7 @@ export class CriteriaTools {
     instanceCriteria: Criteria
   ): Criteria {
 
-    let l = log.fn('instanceCriteriaToRowCriteria')
+    let l = criteriaToolsLog.mt('instanceCriteriaToRowCriteria')
     l.param('instanceCriteria', instanceCriteria)
     
     let table: Table
@@ -328,7 +330,7 @@ export class CriteriaTools {
     relationshipsToLoad: RelationshipsToLoad = {}
   ): RelationshipsToLoad {
 
-    let l = log.fn('determineRelationshipsToLoadSeparately')
+    let l = criteriaToolsLog.mt('determineRelationshipsToLoadSeparately')
     
     if (relationshipPath.length > 0) {
       l.location = [ relationshipPath ]
@@ -368,8 +370,6 @@ export class CriteriaTools {
     }
     else if (typeof criteria == 'object') {
       l.lib('Criteria is an object')
-      l.lib('Iterating through all possible relationships', Object.keys(table.relationships))
-      
       l.location.push('->')
 
       for (let relationship of table.relationships) {

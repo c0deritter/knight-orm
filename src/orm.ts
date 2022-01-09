@@ -120,7 +120,7 @@ export interface UpdateCriteria {
   '@criteria': Criteria
 }
 
-let ormLog = log.cls('StoredObjects')
+let ormLog = log.cls('Orm')
 
 export class Orm {
   schema: Schema
@@ -192,7 +192,7 @@ export class Orm {
     relationshipPath: string = 'root'
   ): Promise<any> {
 
-    let l = ormLog.fn('store')
+    let l = ormLog.mt('store')
     l.locationSeparator = ' > '
   
     if (relationshipPath != undefined) {
@@ -290,7 +290,7 @@ export class Orm {
           l.lib('Object is about to be stored somewhere up the recursion chain. Adding handler which sets the id on the relationship owning object as soon as the relationship object is stored.')
   
           storedObjects.addAfterStorageHandler(manyToOneObj, async (justStoredManyToOneObj: any) => {
-            let l = log.fn('afterStorageHandler')
+            let l = ormLog.fn('afterStorageHandler')
             l.lib('Setting many-to-one id...')
             l.param('justStoredManyToOneObject', justStoredManyToOneObj)
             l.param('relationship.name', relationship.name)
@@ -927,7 +927,7 @@ export class Orm {
     asDatabaseCriteria = false
   ): Promise<any> {
 
-    let l = ormLog.fn('criteriaUpdate')
+    let l = ormLog.mt('criteriaUpdate')
     l.param('criteria', criteria)
     l.param('asDatabaseCriteria', asDatabaseCriteria)
   
@@ -976,7 +976,7 @@ export class Orm {
     asDatabaseCriteria = false
   ): Promise<any> {
 
-    let l = ormLog.fn('criteriaDelete')
+    let l = ormLog.mt('criteriaDelete')
     l.param('criteria', criteria)
     l.param('asDatabaseCriteria', asDatabaseCriteria)
     

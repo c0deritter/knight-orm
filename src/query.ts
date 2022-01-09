@@ -13,6 +13,8 @@ export interface InsertUpdateDeleteResult {
 
 export type SelectResult = any[]
 
+let queryToolsLog = log.cls('QueryTools')
+
 export class QueryTools {
   orm: Orm
 
@@ -35,7 +37,7 @@ export class QueryTools {
     insertIdColumnName?: string
   ): Promise<InsertUpdateDeleteResult | SelectResult> {
   
-    let l = log.fn('databaseIndependentQuery')
+    let l = queryToolsLog.mt('databaseIndependentQuery')
     l.param('sqlString', sqlString)
     l.param('values', values)
     l.param('insertIdColumnName', insertIdColumnName)
@@ -173,7 +175,7 @@ export class QueryTools {
     joinAlias?: JoinAlias, 
     sqlCondition?: Condition
   ) {
-    let l = log.fn('addCriteria')
+    let l = queryToolsLog.mt('addCriteria')
     l.param('query', query)
     l.param('criteria', criteria)
     l.param('joinAlias', joinAlias)
