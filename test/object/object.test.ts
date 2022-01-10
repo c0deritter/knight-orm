@@ -1,8 +1,8 @@
 import { expect } from 'chai'
 import 'mocha'
 import { Pool, PoolConfig } from 'pg'
-import { ObjectTools, Orm } from '../src'
-import { schema } from './testSchema'
+import { ObjectTools, Orm } from '../../src'
+import { schema } from '../testSchema'
 
 let pool: Pool = new Pool({
   host: 'postgres14',
