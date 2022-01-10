@@ -375,35 +375,44 @@ export class Orm {
     let doUpdate = await this.objectTools.isUpdate(table, queryFn, row, true)
   
     if (doUpdate) {
-      l.lib('Updating the given row...')
+      if (this.objectTools.isAtLeastOneNotPrimaryKeyColumnSet(table, row, true)) {
+        l.lib('Updating the given row...')
   
-      let query = sql.update(table.name)
-  
-      for (let column of table.columns) {
-        if (column.primaryKey) {
-          query.where(comparison(column.name, row[column.name]), 'AND')
-        }
-        else if (row[column.name] !== undefined) {
-          query.value(column.name, row[column.name])
-        }
-      }
-  
-      let result
-      try {
-        result = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
-      }
-      catch (e) {
-        throw new Error(e as any)
-      }
+        let query = sql.update(table.name)
     
-      if (result.affectedRows != 1) {
-        throw new Error(`Updated ${result.affectedRows} rows for ${relationshipPath}. Should have been exactly one row. Please enable logging for more information.`)
+        for (let column of table.columns) {
+          if (column.primaryKey) {
+            query.where(comparison(column.name, row[column.name]), 'AND')
+          }
+          else if (row[column.name] !== undefined) {
+            query.value(column.name, row[column.name])
+          }
+        }
+    
+        let result
+        try {
+          result = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
+        }
+        catch (e) {
+          throw new Error(e as any)
+        }
+      
+        if (result.affectedRows != 1) {
+          throw new Error(`Updated ${result.affectedRows} rows for ${relationshipPath}. Should have been exactly one row. Please enable logging for more information.`)
+        }
+    
+        storeInfo['@update'] = true
+    
+        for (let column of table.primaryKey) {
+          storeInfo[column.name] = obj[column.name]
+        }  
       }
-  
-      storeInfo['@update'] = true
-  
-      for (let column of table.primaryKey) {
-        storeInfo[column.name] = obj[column.name]
+      else {
+        l.lib('Not updating the given row because there is no column set which does not belong to the primary key')
+        
+        for (let column of table.primaryKey) {
+          storeInfo[column.name] = obj[column.name]
+        }
       }
     }
   

@@ -13,7 +13,7 @@ function queryFn(sqlString: string, values?: any[]): Promise<any> {
   return pool.query(sqlString, values)
 }
 
-describe('object (PostgreSQL 13)', function() {
+describe('ObjectTools (PostgreSQL 13)', function() {
   after(async function() {
     await pool.end()
   })

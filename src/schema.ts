@@ -119,6 +119,7 @@ export class Table {
   private _primaryKey?: Column[]
   private _generatedPrimaryKey?: Column|null = null
   private _notGeneratedPrimaryKey?: Column[]
+  private _notPrimaryKey?: Column[]
   private _columnNames?: string[]
   private _propertyNames?: string[]
   private _relationshipNames?: string[]
@@ -257,6 +258,20 @@ export class Table {
     }
     
     return this._notGeneratedPrimaryKey
+  }
+
+  get notPrimaryKey(): Column[] {
+    if (! this._notPrimaryKey) {
+      this._notPrimaryKey = []
+  
+      for (let column of this.columns) {
+        if (! column.primaryKey) {
+          this._notPrimaryKey.push(column)
+        }
+      }  
+    }
+  
+    return this._notPrimaryKey
   }
 
   get columnNames(): string[] {

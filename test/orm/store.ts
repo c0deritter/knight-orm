@@ -1217,6 +1217,35 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       })
     })
 
+    it('not update simple obj if nothing to set is given', async function() {
+      await queryFn('INSERT INTO table1 (column1) VALUES (\'a\')')
+
+      let obj1 = {
+        id: 1
+      }
+
+      let storeInfo = await orm.store(queryFn, Object1, obj1)
+
+      expect(storeInfo).to.deep.equal({
+        id: 1
+      })
+
+      let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
+
+      expect(table1Result.length).to.equal(1)
+      expect(table1Result[0]).to.deep.equal({
+        id: 1,
+        column1: 'a',
+        column2: null,
+        column3: null,
+        many_to_one_object1_id: null,
+        many_to_one_object2_id: null,
+        one_to_one_object1_id: null,
+        one_to_one_object2_id: null,
+        one_to_many_object1_many_to_one_id: null,
+      })
+    })
+
     it('update many-to-one primary key not generated', async function() {
       await queryFn('INSERT INTO table1 (column1) VALUES (\'a\')')
       await queryFn('INSERT INTO table2 (id, column1) VALUES (\'x\', \'b\')')

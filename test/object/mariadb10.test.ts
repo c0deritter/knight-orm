@@ -13,7 +13,7 @@ function queryFn(sqlString: string, values?: any[]): Promise<any> {
   return pool.query(sqlString, values)
 }
 
-describe('object (MariaDb 10)', function() {
+describe('ObjectTools (MariaDb 10)', function() {
   after(async function() {
     await pool.end()
   })

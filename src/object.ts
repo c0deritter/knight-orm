@@ -166,6 +166,29 @@ export class ObjectTools {
     
     return true
   }
+
+  isAtLeastOneNotPrimaryKeyColumnSet(
+    classNameOrTable: (new (...args: any[]) => any)|Table, 
+    obj: any, 
+    asDatabaseRow = false
+  ): boolean {
+
+    let table: Table
+    if (typeof classNameOrTable == 'function') {
+      table = this.schema.getTableByClassName(classNameOrTable)
+    }
+    else {
+      table = classNameOrTable
+    }
+
+    for (let column of table.notPrimaryKey) {
+      if (obj[column.getName(asDatabaseRow)] !== undefined) {
+        return true
+      }
+    }
+    
+    return false
+  }
   
   objectsRepresentSameEntity(
     classNameOrTable: (new (...args: any[]) => any)|Table, 

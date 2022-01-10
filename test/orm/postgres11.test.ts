@@ -15,7 +15,7 @@ function queryFn(sqlString: string, values?: any[]): Promise<any> {
   return pool.query(sqlString, values)
 }
 
-describe('orm (PostgreSQL 11)', function() {
+describe('Orm (PostgreSQL 11)', function() {
   after(async function() {
     await pool.end()
   })

@@ -21,7 +21,7 @@ function queryFn(sqlString: string, values?: any[]): Promise<any> {
   }))
 }
 
-describe('orm (MySQL 5 / mysql2)', function() {
+describe('Orm (MySQL 5 / mysql2)', function() {
   after(async function() {
     await new Promise<void>((resolve, reject) => pool.end(err => {
       if (err) {

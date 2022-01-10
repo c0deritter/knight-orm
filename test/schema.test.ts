@@ -3,12 +3,29 @@ import 'mocha'
 import { ManyToManyObject2, Object1, Object2, schema } from './testSchema'
 
 describe('Schema', function() {
-  describe('getPrimaryKey', function() {
-    it('should return all id columns', function() {
+  describe('primaryKey', function() {
+    it('should return all primary key columns', function() {
       expect(schema.getTable('table1').primaryKey).to.deep.equal([schema.getTable('table1').getColumn('id')])
       expect(schema.getTable('many_to_many_table2').primaryKey).to.deep.equal([
         schema.getTable('many_to_many_table2').getColumn('table1_id'),
         schema.getTable('many_to_many_table2').getColumn('table2_id')
+      ])
+    })
+  })
+
+  describe('notPrimaryKey', function() {
+    it('should return all not primary key columns', function() {
+      expect(schema.getTable('table2').notPrimaryKey).to.deep.equal([
+        schema.getTable('table2').getColumn('column1'),
+        schema.getTable('table2').getColumn('column2'),
+        schema.getTable('table2').getColumn('column3'),
+        schema.getTable('table2').getColumn('one_to_one_object1_id'),
+        schema.getTable('table2').getColumn('one_to_many_object2_many_to_one_id')
+      ])
+      expect(schema.getTable('many_to_many_table2').notPrimaryKey).to.deep.equal([
+        schema.getTable('many_to_many_table2').getColumn('column1'),
+        schema.getTable('many_to_many_table2').getColumn('column2'),
+        schema.getTable('many_to_many_table2').getColumn('column3')
       ])
     })
   })

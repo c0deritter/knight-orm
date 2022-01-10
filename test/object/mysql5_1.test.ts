@@ -19,7 +19,7 @@ function queryFn(sqlString: string, values?: any[]): Promise<any> {
   }))
 }
 
-describe('object (MySQL 5 / mysql)', function() {
+describe('ObjectTools (MySQL 5 / mysql)', function() {
   after(async function() {
     await new Promise<void>((resolve, reject) => pool.end(err => {
       if (err) {
