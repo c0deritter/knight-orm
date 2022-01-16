@@ -106,15 +106,6 @@ export class StoredObjects {
   }
 }
 
-export type StoreFunction = (
-  queryFn: QueryFn, 
-  classNameOrTable: (new (...args: any[]) => any)|Table, 
-  obj: any, 
-  asDatabaseRow?: boolean, 
-  storedObjects?: StoredObjects,
-  relationshipPath?: string
-) => Promise<any>
-
 export interface UpdateCriteria {
   [column: string]: any
   '@criteria': Criteria
@@ -125,10 +116,6 @@ let ormLog = log.cls('Orm')
 export class Orm {
   schema: Schema
   db: string
-
-  customFunctions: { [className: string]: {
-    store?: StoreFunction
-  }} = {}
 
   criteriaTools: CriteriaTools
   objectTools: ObjectTools
@@ -141,18 +128,6 @@ export class Orm {
     this.criteriaTools = new CriteriaTools(this)
     this.objectTools = new ObjectTools(this)
     this.queryTools = new QueryTools(this)
-  }
-
-  get customStoreFunctions(): { [className: string]: StoreFunction } {
-    let result: { [className: string]: StoreFunction } = {}
-
-    for (let className of Object.keys(this.customFunctions)) {
-      if ('store' in this.customFunctions[className]) {
-        result[className] = this.customFunctions[className].store!
-      }
-    }
-
-    return result
   }
 
   /**
@@ -251,19 +226,9 @@ export class Orm {
         if (! storedObjects.isContained(manyToOneObj)) {
           l.lib('There is a relationship object and it was not stored yet')
   
-          let storeFn
-          if (! asDatabaseRow && relationship.otherTable.className in this.customStoreFunctions) {
-            l.lib('Found custom store function')
-            storeFn = this.customStoreFunctions[relationship.otherTable.className]
-          }
-          else {
-            l.lib('Did not find custom store function')
-            storeFn = this.store.bind(this)
-          }
-  
           l.calling('Storing it now...')
           
-          let relationshipStoreInfo = await storeFn(
+          let relationshipStoreInfo = await this.store(
             queryFn, 
             relationship.otherTable, 
             obj[relationship.name], 
@@ -590,19 +555,9 @@ export class Orm {
               
               l.lib(`Setting many-to-one relationship id on the one-to-many object: ${relationship.otherId.getName(asDatabaseRow)} = ${obj[relationship.thisId.getName(asDatabaseRow)]}`)
               oneToManyObj[relationship.otherId.getName(asDatabaseRow)] = obj[relationship.thisId.getName(asDatabaseRow)]
-              
-              let storeFn
-              if (! asDatabaseRow && relationship.otherTable.className in this.customStoreFunctions) {
-                l.lib('Found custom store function')
-                storeFn = this.customStoreFunctions[relationship.otherTable.className]
-              }
-              else {
-                l.lib('Did not find custom store function')
-                storeFn = this.store.bind(this)
-              }
-  
-              l.called('Storing the row...')
-              let relationshipStoreInfo = await storeFn(
+                
+              l.calling('Storing the row...')
+              let relationshipStoreInfo = await this.store(
                 queryFn, 
                 relationship.otherTable, 
                 oneToManyObj, 

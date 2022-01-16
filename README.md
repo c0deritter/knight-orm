@@ -805,21 +805,6 @@ orm.store(queryFn, luisa)
 
 To check relationship objects for correctness, take a look into the package [knight-validation](https://github.com/c0deritter/knight-validation). It allows to combine domain object specific validators.
 
-#### Use custom functions when storing relationship objects
-
-In a real application, you will programm your own code around the store functionality. For example, at first you might want to check, if the values of the given object are valid, or you want to add certain generated values before you store into the database.
-
-```typescript
-
-```
-
-That will not only apply to one of your domain objects, but to every. Thus you will have code wrapped around the store function for every domain object.
-
-The problem is, if you attach relationship objects, the store method will also store them, but without validating or generating additional values.
-
-To solve this, you can attach your own functions 
-
-
 ### Delete
 
 The `delete()` method takes a domain instance or a database row and deletes the corresponding entity from the database.
