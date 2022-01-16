@@ -1297,5 +1297,21 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         one_to_many_object2_many_to_one_id: null
       })
     })
+
+    it('should use a given custom store function', async function() {
+      let obj1 = {
+        property2: 10,
+        manyToOneObject1: {
+          property2: 20
+        }
+      }
+
+      orm.setCustomFunctions(Object1, {
+        store: async (queryFn, classNameOrTable, obj, internalParameters) => {
+          obj.property2 += 10
+          return orm.store(queryFn, classNameOrTable, obj, false, internalParameters)
+        }
+      })
+    })
   })
 }

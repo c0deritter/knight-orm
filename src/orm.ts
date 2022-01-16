@@ -106,13 +106,17 @@ export class StoredObjects {
   }
 }
 
-export type StoreFunction = (
+export interface InternalStoreParameters {
+  storedObjects: StoredObjects,
+  relationshipPath: string
+}
+
+export type CustomStoreFunction = (
   queryFn: QueryFn, 
   classNameOrTable: (new (...args: any[]) => any)|Table, 
   obj: any, 
   asDatabaseRow?: boolean, 
-  storedObjects?: StoredObjects,
-  relationshipPath?: string
+  internalParameters?: InternalStoreParameters
 ) => Promise<any>
 
 export interface UpdateCriteria {
@@ -126,8 +130,8 @@ export class Orm {
   schema: Schema
   db: string
 
-  customFunctions: { [className: string]: {
-    store?: StoreFunction
+  customFunctions: { [tableName: string]: {
+    store?: CustomStoreFunction
   }} = {}
 
   criteriaTools: CriteriaTools
@@ -143,16 +147,45 @@ export class Orm {
     this.queryTools = new QueryTools(this)
   }
 
-  get customStoreFunctions(): { [className: string]: StoreFunction } {
-    let result: { [className: string]: StoreFunction } = {}
-
-    for (let className of Object.keys(this.customFunctions)) {
-      if ('store' in this.customFunctions[className]) {
-        result[className] = this.customFunctions[className].store!
-      }
+  setCustomFunctions(
+    classNameOrTable: (new (...args: any[]) => any)|Table,
+    customFunctions: {
+      store?: CustomStoreFunction
+    }
+  ) {
+    let table: Table
+    if (typeof classNameOrTable == 'function') {
+      table = this.schema.getTableByClassName(classNameOrTable)
+    }
+    else {
+      table = classNameOrTable
     }
 
-    return result
+    this.customFunctions[table.name] = customFunctions
+  }
+
+  hasCustomStoreFunction(classNameOrTable: (new (...args: any[]) => any)|Table): boolean {
+    let table: Table
+    if (typeof classNameOrTable == 'function') {
+      table = this.schema.getTableByClassName(classNameOrTable)
+    }
+    else {
+      table = classNameOrTable
+    }
+
+    return this.customFunctions && this.customFunctions[table.name] && this.customFunctions[table.name].store != undefined
+  }
+
+  getCustomStoreFunction(classNameOrTable: (new (...args: any[]) => any)|Table): CustomStoreFunction|undefined {
+    let table: Table
+    if (typeof classNameOrTable == 'function') {
+      table = this.schema.getTableByClassName(classNameOrTable)
+    }
+    else {
+      table = classNameOrTable
+    }
+
+    return this.customFunctions[table.name]?.store
   }
 
   /**
@@ -187,13 +220,18 @@ export class Orm {
     queryFn: QueryFn, 
     classNameOrTable: (new (...args: any[]) => any)|Table, 
     obj: any, 
-    asDatabaseRow = false, 
-    storedObjects: StoredObjects = new StoredObjects,
-    relationshipPath: string = 'root'
+    asDatabaseRow = false,
+    internalParameters: InternalStoreParameters = {
+      storedObjects: new StoredObjects,
+      relationshipPath: 'root'
+    }
   ): Promise<any> {
 
     let l = ormLog.mt('store')
     l.locationSeparator = ' > '
+
+    let storedObjects = internalParameters.storedObjects
+    let relationshipPath = internalParameters.relationshipPath
   
     if (relationshipPath != undefined) {
       l.location = [ relationshipPath ]
@@ -252,9 +290,9 @@ export class Orm {
           l.lib('There is a relationship object and it was not stored yet')
   
           let storeFn
-          if (! asDatabaseRow && relationship.otherTable.className in this.customStoreFunctions) {
+          if (! asDatabaseRow && this.hasCustomStoreFunction(relationship.otherTable)) {
             l.lib('Found custom store function')
-            storeFn = this.customStoreFunctions[relationship.otherTable.className]
+            storeFn = this.getCustomStoreFunction(relationship.otherTable)!
           }
           else {
             l.lib('Did not find custom store function')
@@ -268,8 +306,10 @@ export class Orm {
             relationship.otherTable, 
             obj[relationship.name], 
             asDatabaseRow,
-            storedObjects, 
-            relationshipPath != undefined ? relationshipPath + '.' + relationship.name : relationship.name
+            {
+              storedObjects: storedObjects, 
+              relationshipPath: relationshipPath != undefined ? relationshipPath + '.' + relationship.name : relationship.name
+            }
           )
   
           l.called('Returned from storing the relationship object...')
@@ -592,9 +632,9 @@ export class Orm {
               oneToManyObj[relationship.otherId.getName(asDatabaseRow)] = obj[relationship.thisId.getName(asDatabaseRow)]
               
               let storeFn
-              if (! asDatabaseRow && relationship.otherTable.className in this.customStoreFunctions) {
+              if (! asDatabaseRow && this.hasCustomStoreFunction(relationship.otherTable)) {
                 l.lib('Found custom store function')
-                storeFn = this.customStoreFunctions[relationship.otherTable.className]
+                storeFn = this.getCustomStoreFunction(relationship.otherTable)!
               }
               else {
                 l.lib('Did not find custom store function')
@@ -607,8 +647,10 @@ export class Orm {
                 relationship.otherTable, 
                 oneToManyObj, 
                 asDatabaseRow, 
-                storedObjects, 
-                relationshipPath != undefined ? relationshipPath + '.' + relationship.name : relationship.name
+                {
+                  storedObjects: storedObjects, 
+                  relationshipPath: relationshipPath != undefined ? relationshipPath + '.' + relationship.name : relationship.name
+                }
               )
     
               l.called('Returned from storing relationship row...')
