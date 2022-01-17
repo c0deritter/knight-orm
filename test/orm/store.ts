@@ -1,5 +1,6 @@
 import * as chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
+import { Change } from 'knight-change'
 import 'mocha'
 import { Orm, SelectResult } from '../../src'
 import { Object1, schema } from '../testSchema'
@@ -16,12 +17,33 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         property1: 'a'
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      expect(obj1).to.deep.equal({
         id: 1,
-        '@update': false
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null
       })
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create')
+      ])
 
       let result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -47,16 +69,55 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      expect(obj1).to.deep.equal({
         id: 2,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: 1,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         manyToOneObject1: {
           id: 1,
-          '@update': false
+          property1: 'b',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
         }
       })
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'b',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 2,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: 1,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create')
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
@@ -86,7 +147,6 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       })
     })
 
-
     it('insert many-to-one primary key not generated', async function() {
       let obj1 = {
         property1: 'a',
@@ -96,16 +156,49 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      expect(obj1).to.deep.equal({
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: 'x',
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         manyToOneObject2: {
           id: 'x',
-          '@update': false
+          property1: 'b',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: null,
+          oneToManyObject2ManyToOneId: null
         }
       })
+
+      expect(changes).to.deep.equal([
+        new Change('Object2', {
+          id: 'x',
+          property1: 'b',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: null,
+          oneToManyObject2ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: 'x',
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create')
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -143,16 +236,59 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      expect(obj1).to.deep.equal({
         id: 2,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: 1,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         oneToOneObject1: {
           id: 1,
-          '@update': false
+          property1: 'b',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: 2,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
         }
       })
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'b',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 2,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: 1,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 1,
+          oneToOneObject1Id: 2
+        }, 'update', [ 'oneToOneObject1Id' ])
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
@@ -193,16 +329,63 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       obj1.oneToOneObject1.oneToOneObject1 = obj1
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      let expectedObj1 = {
         id: 2,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: 1,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         oneToOneObject1: {
           id: 1,
-          '@update': false
-        }
-      })
+          property1: 'b',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: 2,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        } as any
+      }
+      
+      expectedObj1.oneToOneObject1.oneToOneObject1 = expectedObj1
+
+      expect(obj1).to.deep.equal(expectedObj1)
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'b',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 2,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: 1,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 1,
+          oneToOneObject1Id: 2
+        }, 'update', [ 'oneToOneObject1Id' ])
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
@@ -240,12 +423,45 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       obj1.oneToOneObject1 = obj1
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
-      
-      expect(storeInfo).to.deep.equal({
+      let changes = await orm.store(queryFn, Object1, obj1)
+
+      let expectedObj1 = {
         id: 1,
-        '@update': false
-      })
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: 1,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
+      } as any
+      
+      expectedObj1.oneToOneObject1 = expectedObj1
+
+      expect(obj1).to.deep.equal(expectedObj1)
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 1,
+          oneToOneObject1Id: 1
+        }, 'update', [ 'oneToOneObject1Id' ]),
+        new Change('Object1', {
+          id: 1,
+          oneToOneObject1Id: 1
+        }, 'update', [ 'oneToOneObject1Id' ])
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
@@ -272,16 +488,53 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      expect(obj1).to.deep.equal({
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: 'x',
+        oneToManyObject1ManyToOneId: null,
         oneToOneObject2: {
           id: 'x',
-          '@update': false
+          property1: 'b',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: 1,
+          oneToManyObject2ManyToOneId: null
         }
       })
+
+      expect(changes).to.deep.equal([
+        new Change('Object2', {
+          id: 'x',
+          property1: 'b',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: null,
+          oneToManyObject2ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: 'x',
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object2', {
+          id: 'x',
+          oneToOneObject1Id: 1
+        }, 'update', [ 'oneToOneObject1Id' ])
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -323,16 +576,57 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       obj1.oneToOneObject2.oneToOneObject1 = obj1
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      let expectObj1 = {
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: 'x',
+        oneToManyObject1ManyToOneId: null,
         oneToOneObject2: {
           id: 'x',
-          '@update': false
-        }
-      })
+          property1: 'b',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: 1,
+          oneToManyObject2ManyToOneId: null
+        } as any
+      }
+
+      expectObj1.oneToOneObject2.oneToOneObject1 = expectObj1
+
+      expect(obj1).to.deep.equal(expectObj1)
+
+      expect(changes).to.deep.equal([
+        new Change('Object2', {
+          id: 'x',
+          property1: 'b',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: null,
+          oneToManyObject2ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: 'x',
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object2', {
+          id: 'x',
+          oneToOneObject1Id: 1
+        }, 'update', [ 'oneToOneObject1Id' ])
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -375,22 +669,79 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      expect(obj1).to.deep.equal({
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         oneToManyObject1: [
           {
             id: 2,
-            '@update': false
+            property1: 'b',
+            property2: null,
+            property3: null,
+            manyToOneObject1Id: null,
+            manyToOneObject2Id: null,
+            oneToOneObject1Id: null,
+            oneToOneObject2Id: null,
+            oneToManyObject1ManyToOneId: 1,
           },
           {
             id: 3,
-            '@update': false
+            property1: 'c',
+            property2: null,
+            property3: null,
+            manyToOneObject1Id: null,
+            manyToOneObject2Id: null,
+            oneToOneObject1Id: null,
+            oneToOneObject2Id: null,
+            oneToManyObject1ManyToOneId: 1,
           }
         ]
       })
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 2,
+          property1: 'b',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: 1
+        }, 'create'),
+        new Change('Object1', {
+          id: 3,
+          property1: 'c',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: 1
+        }, 'create')
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -451,22 +802,84 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       obj1.oneToManyObject1[0].oneToManyObject1ManyToOne = obj1
       obj1.oneToManyObject1[1].oneToManyObject1ManyToOne = obj1
       
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      let expectedObj1 = {
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         oneToManyObject1: [
           {
             id: 2,
-            '@update': false
-          },
+            property1: 'b',
+            property2: null,
+            property3: null,
+            manyToOneObject1Id: null,
+            manyToOneObject2Id: null,
+            oneToOneObject1Id: null,
+            oneToOneObject2Id: null,
+            oneToManyObject1ManyToOneId: 1,
+          } as any,
           {
             id: 3,
-            '@update': false,
+            property1: 'c',
+            property2: null,
+            property3: null,
+            manyToOneObject1Id: null,
+            manyToOneObject2Id: null,
+            oneToOneObject1Id: null,
+            oneToOneObject2Id: null,
+            oneToManyObject1ManyToOneId: 1,
           }
         ]
-      })
+      }
+
+      expectedObj1.oneToManyObject1[0].oneToManyObject1ManyToOne = expectedObj1
+      expectedObj1.oneToManyObject1[1].oneToManyObject1ManyToOne = expectedObj1
+
+      expect(obj1).to.deep.equal(expectedObj1)
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 2,
+          property1: 'b',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: 1
+        }, 'create'),
+        new Change('Object1', {
+          id: 3,
+          property1: 'c',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: 1
+        }, 'create')
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -524,22 +937,67 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      expect(obj1).to.deep.equal({
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         oneToManyObject2: [
           {
             id: 'x',
-            '@update': false
-          },
+            property1: 'b',
+            property2: null,
+            property3: null,
+            oneToOneObject1Id: null,
+            oneToManyObject2ManyToOneId: 1
+            } as any,
           {
             id: 'y',
-            '@update': false
-          }
+            property1: 'c',
+            property2: null,
+            property3: null,
+            oneToOneObject1Id: null,
+            oneToManyObject2ManyToOneId: 1
+            }
         ]
       })
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object2', {
+          id: 'x',
+          property1: 'b',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: null,
+          oneToManyObject2ManyToOneId: 1
+        }, 'create'),
+          new Change('Object2', {
+            id: 'y',
+            property1: 'c',
+            property2: null,
+            property3: null,
+            oneToOneObject1Id: null,
+            oneToManyObject2ManyToOneId: 1
+        }, 'create')
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -599,22 +1057,72 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       obj1.oneToManyObject2[0].oneToManyObject2ManyToOne = obj1
       obj1.oneToManyObject2[1].oneToManyObject2ManyToOne = obj1
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      let expectedObj1 = {
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         oneToManyObject2: [
           {
             id: 'x',
-            '@update': false
-          },
+            property1: 'b',
+            property2: null,
+            property3: null,
+            oneToOneObject1Id: null,
+            oneToManyObject2ManyToOneId: 1
+            } as any,
           {
             id: 'y',
-            '@update': false
-          }
+            property1: 'c',
+            property2: null,
+            property3: null,
+            oneToOneObject1Id: null,
+            oneToManyObject2ManyToOneId: 1
+            }
         ]
-      })
+      }
+
+      expectedObj1.oneToManyObject2[0].oneToManyObject2ManyToOne = expectedObj1
+      expectedObj1.oneToManyObject2[1].oneToManyObject2ManyToOne = expectedObj1
+
+      expect(obj1).to.deep.equal(expectedObj1)
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object2', {
+          id: 'x',
+          property1: 'b',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: null,
+          oneToManyObject2ManyToOneId: 1
+        }, 'create'),
+          new Change('Object2', {
+            id: 'y',
+            property1: 'c',
+            property2: null,
+            property3: null,
+            oneToOneObject1Id: null,
+            oneToManyObject2ManyToOneId: 1
+        }, 'create')
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -662,12 +1170,42 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       obj1.oneToManyObject1 = [ obj1 ]
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      let expectedObj1 = {
         id: 1,
-        '@update': false
-      })
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: 1,
+        oneToManyObject1: null
+      } as any
+
+      expectedObj1.oneToManyObject1 = [ expectedObj1 ]
+
+      expect(obj1).to.deep.equal(expectedObj1)
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 1,
+          oneToManyObject1ManyToOneId: 1
+        }, 'update', [ 'oneToManyObject1ManyToOneId' ])
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -705,32 +1243,107 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      expect(obj1).to.deep.equal({
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         manyToManyObject1: [
           {
             object11Id: 1,
             object12Id: 2,
-            '@update': false,
+            property1: 'b',
+            property2: null,
+            property3: null,
             object12: {
               id: 2,
-              '@update': false,
+              property1: 'c',
+              property2: null,
+              property3: null,
+              manyToOneObject1Id: null,
+              manyToOneObject2Id: null,
+              oneToOneObject1Id: null,
+              oneToOneObject2Id: null,
+              oneToManyObject1ManyToOneId: null
             }
           },
           {
             object11Id: 1,
             object12Id: 3,
-            '@update': false,
+            property1: 'd',
+            property2: null,
+            property3: null,
             object12: {
               id: 3,
-              '@update': false,
+              property1: 'e',
+              property2: null,
+              property3: null,
+              manyToOneObject1Id: null,
+              manyToOneObject2Id: null,
+              oneToOneObject1Id: null,
+              oneToOneObject2Id: null,
+              oneToManyObject1ManyToOneId: null
             }
           }
         ]
       })
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 2,
+          property1: 'c',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('ManyToManyObject1', {
+          object11Id: 1,
+          object12Id: 2,
+          property1: 'b',
+          property2: null,
+          property3: null,
+        }, 'create'),
+        new Change('Object1', {
+          id: 3,
+          property1: 'e',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('ManyToManyObject1', {
+          object11Id: 1,
+          object12Id: 3,
+          property1: 'd',
+          property2: null,
+          property3: null,
+        }, 'create'),
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
@@ -801,52 +1414,132 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             property1: 'b',
             object11: {},
             object12: {
-              property1: 'c',
-              manyToManyObject1: []
+              property1: 'c'
             } as any
           },
           {
             property1: 'd',
             object11: {},
             object12: {
-              property1: 'e',
-              manyToManyObject1: []
+              property1: 'e'
             }
           }
         ]
       }
 
       obj1.manyToManyObject1[0].object11 = obj1
-      obj1.manyToManyObject1[0].object12.manyToManyObject1.push(obj1.manyToManyObject1[0])
+      obj1.manyToManyObject1[0].object12.manyToManyObject1 = [ obj1.manyToManyObject1[0] ]
       obj1.manyToManyObject1[1].object11 = obj1
-      obj1.manyToManyObject1[1].object12.manyToManyObject1.push(obj1.manyToManyObject1[1])
+      obj1.manyToManyObject1[1].object12.manyToManyObject1 = [ obj1.manyToManyObject1[1] ]
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      let expectedObj1 = {
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         manyToManyObject1: [
           {
             object11Id: 1,
             object12Id: 2,
-            '@update': false,
+            property1: 'b',
+            property2: null,
+            property3: null,
             object12: {
               id: 2,
-              '@update': false
-            }
-          },
+              property1: 'c',
+              property2: null,
+              property3: null,
+              manyToOneObject1Id: null,
+              manyToOneObject2Id: null,
+              oneToOneObject1Id: null,
+              oneToOneObject2Id: null,
+              oneToManyObject1ManyToOneId: null
+            } as any
+          } as any,
           {
             object11Id: 1,
             object12Id: 3,
-            '@update': false,
+            property1: 'd',
+            property2: null,
+            property3: null,
             object12: {
               id: 3,
-              '@update': false
+              property1: 'e',
+              property2: null,
+              property3: null,
+              manyToOneObject1Id: null,
+              manyToOneObject2Id: null,
+              oneToOneObject1Id: null,
+              oneToOneObject2Id: null,
+              oneToManyObject1ManyToOneId: null
             }
           }
         ]
-      })
+      }
+
+      expectedObj1.manyToManyObject1[0].object11 = obj1
+      expectedObj1.manyToManyObject1[0].object12.manyToManyObject1 = [ expectedObj1.manyToManyObject1[0] ]
+      expectedObj1.manyToManyObject1[1].object11 = obj1
+      expectedObj1.manyToManyObject1[1].object12.manyToManyObject1 = [ expectedObj1.manyToManyObject1[1] ]
+
+      expect(obj1).to.deep.equal(expectedObj1)
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object1', {
+          id: 2,
+          property1: 'c',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('ManyToManyObject1', {
+          object11Id: 1,
+          object12Id: 2,
+          property1: 'b',
+          property2: null,
+          property3: null,
+        }, 'create'),
+        new Change('Object1', {
+          id: 3,
+          property1: 'e',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('ManyToManyObject1', {
+          object11Id: 1,
+          object12Id: 3,
+          property1: 'd',
+          property2: null,
+          property3: null,
+        }, 'create'),
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
@@ -922,19 +1615,53 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       obj1.manyToManyObject1[0].object12 = obj1
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      let expectedObj1 = {
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         manyToManyObject1: [
           {
             object11Id: 1,
             object12Id: 1,
-            '@update': false
-          }
+            property1: 'b',
+            property2: null,
+            property3: null
+          } as any
         ]
-      })
+      }
+
+      expectedObj1.manyToManyObject1[0].object12 = expectedObj1
+
+      expect(obj1).to.deep.equal(expectedObj1)
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('ManyToManyObject1', {
+          object11Id: 1,
+          object12Id: 1,
+          property1: 'b',
+          property2: null,
+          property3: null,
+        }, 'create')
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1 ORDER BY id') as SelectResult
 
@@ -986,32 +1713,95 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      expect(obj1).to.deep.equal({
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         manyToManyObject2: [
           {
             object1Id: 1,
             object2Id: 'x',
-            '@update': false,
+            property1: 'b',
+            property2: null,
+            property3: null,
             object2: {
               id: 'x',
-              '@update': false,
-            }
-          },
+              property1: 'c',
+              property2: null,
+              property3: null,
+              oneToOneObject1Id: null,
+              oneToManyObject2ManyToOneId: null
+                } as any
+          } as any,
           {
             object1Id: 1,
             object2Id: 'y',
-            '@update': false,
+            property1: 'd',
+            property2: null,
+            property3: null,
             object2: {
               id: 'y',
-              '@update': false
+              property1: 'e',
+              property2: null,
+              property3: null,
+              oneToOneObject1Id: null,
+              oneToManyObject2ManyToOneId: null
             }
           }
         ]
       })
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object2', {
+          id: 'x',
+          property1: 'c',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: null,
+          oneToManyObject2ManyToOneId: null
+        }, 'create'),
+        new Change('ManyToManyObject2', {
+          object1Id: 1,
+          object2Id: 'x',
+          property1: 'b',
+          property2: null,
+          property3: null,
+        }, 'create'),
+        new Change('Object2', {
+          id: 'y',
+          property1: 'e',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: null,
+          oneToManyObject2ManyToOneId: null
+        }, 'create'),
+        new Change('ManyToManyObject2', {
+          object1Id: 1,
+          object2Id: 'y',
+          property1: 'd',
+          property2: null,
+          property3: null,
+        }, 'create'),
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -1101,32 +1891,102 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       obj1.manyToManyObject2[1].object1 = obj1
       obj1.manyToManyObject2[1].object2.manyToManyObject2.push(obj1.manyToManyObject2[1])
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      let expectedObj1 = {
         id: 1,
-        '@update': false,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         manyToManyObject2: [
           {
             object1Id: 1,
             object2Id: 'x',
-            '@update': false,
+            property1: 'b',
+            property2: null,
+            property3: null,
             object2: {
               id: 'x',
-              '@update': false
-            }
-          },
+              property1: 'c',
+              property2: null,
+              property3: null,
+              oneToOneObject1Id: null,
+              oneToManyObject2ManyToOneId: null
+                } as any
+          } as any,
           {
             object1Id: 1,
             object2Id: 'y',
-            '@update': false,
+            property1: 'd',
+            property2: null,
+            property3: null,
             object2: {
               id: 'y',
-              '@update': false
+              property1: 'e',
+              property2: null,
+              property3: null,
+              oneToOneObject1Id: null,
+              oneToManyObject2ManyToOneId: null
             }
           }
         ]
-      })
+      }
+
+      expectedObj1.manyToManyObject2[0].object1 = obj1
+      expectedObj1.manyToManyObject2[0].object2.manyToManyObject2 = [ expectedObj1.manyToManyObject2[0] ]
+      expectedObj1.manyToManyObject2[1].object1 = obj1
+      expectedObj1.manyToManyObject2[1].object2.manyToManyObject2 = [ expectedObj1.manyToManyObject2[1] ]
+
+      expect(obj1).to.deep.equal(expectedObj1)
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'a',
+          property2: null,
+          property3: null,
+          manyToOneObject1Id: null,
+          manyToOneObject2Id: null,
+          oneToOneObject1Id: null,
+          oneToOneObject2Id: null,
+          oneToManyObject1ManyToOneId: null
+        }, 'create'),
+        new Change('Object2', {
+          id: 'x',
+          property1: 'c',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: null,
+          oneToManyObject2ManyToOneId: null
+        }, 'create'),
+        new Change('ManyToManyObject2', {
+          object1Id: 1,
+          object2Id: 'x',
+          property1: 'b',
+          property2: null,
+          property3: null,
+        }, 'create'),
+        new Change('Object2', {
+          id: 'y',
+          property1: 'e',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: null,
+          oneToManyObject2ManyToOneId: null
+        }, 'create'),
+        new Change('ManyToManyObject2', {
+          object1Id: 1,
+          object2Id: 'y',
+          property1: 'd',
+          property2: null,
+          property3: null,
+        }, 'create'),
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -1194,12 +2054,26 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         property1: 'b'
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      expect(obj1).to.deep.equal({
         id: 1,
-        '@update': true
+        property1: 'b',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null
       })
+
+      expect(changes).to.deep.equal([
+        new Change('Object1', {
+          id: 1,
+          property1: 'b',
+        }, 'update', [ 'property1' ])
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -1224,11 +2098,21 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         id: 1
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
-        id: 1
+      expect(obj1).to.deep.equal({
+        id: 1,
+        property1: 'a',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: null,
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null
       })
+
+      expect(changes).to.deep.equal([])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 
@@ -1247,7 +2131,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
     })
 
     it('update many-to-one primary key not generated', async function() {
-      await queryFn('INSERT INTO table1 (column1) VALUES (\'a\')')
+      await queryFn('INSERT INTO table1 (column1, many_to_one_object2_id) VALUES (\'a\', \'x\')')
       await queryFn('INSERT INTO table2 (id, column1) VALUES (\'x\', \'b\')')
 
       let obj1 = {
@@ -1259,16 +2143,38 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }
       }
 
-      let storeInfo = await orm.store(queryFn, Object1, obj1)
+      let changes = await orm.store(queryFn, Object1, obj1)
 
-      expect(storeInfo).to.deep.equal({
+      expect(obj1).to.deep.equal({
         id: 1,
-        '@update': true,
+        property1: 'b',
+        property2: null,
+        property3: null,
+        manyToOneObject1Id: null,
+        manyToOneObject2Id: 'x',
+        oneToOneObject1Id: null,
+        oneToOneObject2Id: null,
+        oneToManyObject1ManyToOneId: null,
         manyToOneObject2: {
           id: 'x',
-          '@update': true
+          property1: 'c',
+          property2: null,
+          property3: null,
+          oneToOneObject1Id: null,
+          oneToManyObject2ManyToOneId: null
         }
       })
+
+      expect(changes).to.deep.equal([
+        new Change('Object2', {
+          id: 'x',
+          property1: 'c'
+        }, 'update', [ 'property1' ]),
+        new Change('Object1', {
+          id: 1,
+          property1: 'b'
+        }, 'update', [ 'property1' ])
+      ])
 
       let table1Result = await orm.queryTools.databaseIndependentQuery(queryFn, 'SELECT * FROM table1') as SelectResult
 

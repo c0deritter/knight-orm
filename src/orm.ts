@@ -1,3 +1,4 @@
+import { Change } from 'knight-change'
 import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { comparison, Query } from 'knight-sql'
@@ -165,7 +166,7 @@ export class Orm {
     asDatabaseRow = false, 
     storedObjects: StoredObjects = new StoredObjects,
     relationshipPath: string = 'root'
-  ): Promise<any> {
+  ): Promise<Change[]> {
 
     let l = ormLog.mt('store')
     l.locationSeparator = ' > '
@@ -183,7 +184,7 @@ export class Orm {
   
     if (storedObjects.isContained(obj)) {
       l.lib('Row already stored. Returning...')
-      return
+      return []
     }
 
     let table: Table
@@ -194,7 +195,7 @@ export class Orm {
       table = classNameOrTable
     }
   
-    let storeInfo: any = {}
+    let changes: Change[] = []
     storedObjects.setRowAboutToBeStored(obj)
   
     if (table.relationships.length > 0) {
@@ -228,7 +229,7 @@ export class Orm {
   
           l.calling('Storing it now...')
           
-          let relationshipStoreInfo = await this.store(
+          let relationshipChanges = await this.store(
             queryFn, 
             relationship.otherTable, 
             obj[relationship.name], 
@@ -239,11 +240,11 @@ export class Orm {
   
           l.called('Returned from storing the relationship object...')
   
-          l.lib(`Setting the many-to-one id using the stored relationship object: ${relationship.thisId.getName(asDatabaseRow)} =`, relationshipStoreInfo[relationship.otherId.getName(asDatabaseRow)])
+          l.lib(`Setting the many-to-one id using the stored relationship object: ${relationship.thisId.getName(asDatabaseRow)} =`, manyToOneObj[relationship.otherId.getName(asDatabaseRow)])
           obj[relationship.thisId.getName(asDatabaseRow)] = manyToOneObj[relationship.otherId.getName(asDatabaseRow)]
           
-          l.dev('Adding store information for the relationship', relationshipStoreInfo)
-          storeInfo[relationship.name] = relationshipStoreInfo
+          l.dev('Adding changes made in the relationship', relationshipChanges)
+          changes.push(...relationshipChanges)
         }
   
         else if (manyToOneObj[relationship.otherId.getName(asDatabaseRow)] !== undefined) {
@@ -261,29 +262,30 @@ export class Orm {
             l.param('relationship.name', relationship.name)
   
             let row
-            let justStoredManyToOneRow
+            let manyToOneRow
+
             if (asDatabaseRow) {
               row = obj
-              justStoredManyToOneRow = justStoredManyToOneObj
+              manyToOneRow = justStoredManyToOneObj
             }
             else {
-              let reduced = {
+              let reducedManyToOneObj = {
                 [relationship.otherId.name]: justStoredManyToOneObj[relationship.otherId.name]
               }
               
-              l.lib('Converting reduced just stored object to a database row...', reduced)
+              l.lib('Converting reduced just stored object to a database row...', reducedManyToOneObj)
               
               l.calling('Calling Table.instanceToRow...')
-              justStoredManyToOneRow = table.instanceToRow(reduced, true)
+              manyToOneRow = table.instanceToRow(reducedManyToOneObj, true)
               l.called('Called Table.instanceToRow...')
 
-              l.lib('Converted reduced just stored object to row', justStoredManyToOneRow)
+              l.lib('Converted reduced just stored object to row', manyToOneRow)
   
-              reduced = this.objectTools.reduceToPrimaryKey(table, obj)
-              l.lib('Converting reduced object to set the many-to-one id on to row', reduced)
+              let reducedObj = this.objectTools.reduceToPrimaryKey(table, obj)
+              l.lib('Converting reduced object to set the many-to-one id on to row', reducedManyToOneObj)
 
               l.calling('Calling Table.instanceToRow...')
-              row = table.instanceToRow(reduced, true)
+              row = table.instanceToRow(reducedObj, true)
               l.called('Called Table.instanceToRow...')
             }
   
@@ -295,7 +297,7 @@ export class Orm {
               query.where(comparison(column.name, row[column.name]))
             }
   
-            query.set(relationship.thisId.name, justStoredManyToOneRow[relationship.otherId.name])
+            query.set(relationship.thisId.name, manyToOneRow[relationship.otherId.name])
   
             l.calling('Calling databaseIndependentQuery')
     
@@ -312,6 +314,20 @@ export class Orm {
             if (result.affectedRows != 1) {
               throw new Error('Expected row count does not equal 1')
             }
+
+            obj[relationship.thisId.getName(asDatabaseRow)] = justStoredManyToOneObj[relationship.otherId.getName(asDatabaseRow)]
+
+            let entity: any = {
+              [relationship.thisId.getName(asDatabaseRow)]: justStoredManyToOneObj[relationship.otherId.getName()]
+            }
+
+            for (let column of table.primaryKey) {
+              entity[column.getName()] = obj[column.getName(asDatabaseRow)]
+            }
+
+            let change = new Change(asDatabaseRow ? table.name : table.className, entity, 'update', [ relationship.thisId.getName(asDatabaseRow) ])
+            l.lib('Add change to result', change)
+            changes.push(change)
           })    
         }
   
@@ -334,49 +350,122 @@ export class Orm {
       row = table.instanceToRow(obj, true)
       l.called('Called Table.instanceToRow...')
     }
-  
+
     l.lib('Determining if to store or to update the given row...', row)
-    
+
     let doUpdate = await this.objectTools.isUpdate(table, queryFn, row, true)
   
     if (doUpdate) {
       if (this.objectTools.isAtLeastOneNotPrimaryKeyColumnSet(table, row, true)) {
-        l.lib('Updating the given row...')
+        l.lib('Updating...')
+        let dbResult: any
+
+        l.lib('Loading the row before the update')
+
+        let selectQuery = sql.select('*').from(table.name)
+        for (let column of table.primaryKey) {
+          selectQuery.where(comparison(column.name, row[column.name]), 'AND')
+        }
+
+        try {
+          dbResult = await this.queryTools.databaseIndependentQuery(queryFn, selectQuery.sql(this.db), selectQuery.values()) as SelectResult
+        }
+        catch (e) {
+          throw new Error(e as any)
+        }
+
+        if (dbResult.length != 1) {
+          throw new Error(`The row count was ${dbResult.length} instead of exactly 1 while loading the row before updating it.`)
+        }
+
+        let rowBefore = dbResult[0]
+
+        l.lib('Updating row')
   
-        let query = sql.update(table.name)
+        let updateQuery = sql.update(table.name)
     
         for (let column of table.columns) {
           if (column.primaryKey) {
-            query.where(comparison(column.name, row[column.name]), 'AND')
+            updateQuery.where(comparison(column.name, row[column.name]), 'AND')
           }
           else if (row[column.name] !== undefined) {
-            query.value(column.name, row[column.name])
+            updateQuery.set(column.name, row[column.name])
           }
         }
+
+        l.dev('Update query', updateQuery)
     
-        let result
         try {
-          result = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
+          dbResult = await this.queryTools.databaseIndependentQuery(queryFn, updateQuery.sql(this.db), updateQuery.values()) as InsertUpdateDeleteResult
         }
         catch (e) {
           throw new Error(e as any)
         }
       
-        if (result.affectedRows != 1) {
-          throw new Error(`Updated ${result.affectedRows} rows for ${relationshipPath}. Should have been exactly one row. Please enable logging for more information.`)
+        if (dbResult.affectedRows != 1) {
+          throw new Error(`Updated ${dbResult.affectedRows} rows for ${relationshipPath}. Should have been exactly one row. Please enable logging for more information.`)
+        }
+
+        l.lib('Loading the row after the update')
+
+        try {
+          dbResult = await this.queryTools.databaseIndependentQuery(queryFn, selectQuery.sql(this.db), selectQuery.values()) as SelectResult
+        }
+        catch (e) {
+          throw new Error(e as any)
+        }
+
+        if (dbResult.length != 1) {
+          throw new Error(`The row count was ${dbResult.length} instead of exactly 1 while loading the row after updating it.`)
+        }
+
+        let rowAfter = dbResult[0]
+        let objAfter = asDatabaseRow ? rowAfter : table.rowToInstance(rowAfter)
+        let props: string[] = []
+        let entity: any = {}
+
+        for (let column of table.columns) {
+          obj[column.getName(asDatabaseRow)] = objAfter[column.getName(asDatabaseRow)]
+
+          if (rowBefore[column.name] !== undefined && rowBefore[column.name] !== rowAfter[column.name]) {
+            entity[column.getName(asDatabaseRow)] = objAfter[column.getName(asDatabaseRow)]
+            props.push(column.getName(asDatabaseRow))
+          }
+        }
+
+        for (let column of table.primaryKey) {
+          entity[column.getName(asDatabaseRow)] = objAfter[column.getName(asDatabaseRow)]
         }
     
-        storeInfo['@update'] = true
-    
-        for (let column of table.primaryKey) {
-          storeInfo[column.name] = obj[column.name]
-        }  
+        let change = new Change(asDatabaseRow? table.name : table.className, entity, 'update', props)
+        l.lib('Add change to result', change)
+        changes.push(change)
       }
       else {
         l.lib('Not updating the given row because there is no column set which does not belong to the primary key')
-        
+
+        let selectQuery = sql.select('*').from(table.name)
         for (let column of table.primaryKey) {
-          storeInfo[column.name] = obj[column.name]
+          selectQuery.where(comparison(column.name, row[column.name]), 'AND')
+        }
+
+        let dbResult
+        try {
+          dbResult = await this.queryTools.databaseIndependentQuery(queryFn, selectQuery.sql(this.db), selectQuery.values()) as SelectResult
+        }
+        catch (e) {
+          throw new Error(e as any)
+        }
+
+        if (dbResult.length != 1) {
+          throw new Error(`The row count was ${dbResult.length} instead of exactly 1 while loading the row after updating it.`)
+        }
+
+        let currentRow = dbResult[0]
+        let currentObj = asDatabaseRow ? currentRow : table.rowToInstance(currentRow)
+
+        for (let column of table.columns) {
+          obj[column.getName(asDatabaseRow)] = currentObj[column.getName(asDatabaseRow)]
         }
       }
     }
@@ -384,43 +473,66 @@ export class Orm {
     else {
       l.lib('Inserting the given row...')
   
-      let query = sql.insertInto(table.name)
+      let insertQuery = sql.insertInto(table.name)
   
       for (let column of table.columns) {
-        if (row[column.name] !== undefined) {
-          query.value(column.name, row[column.name])
+        if (obj[column.getName(asDatabaseRow)] !== undefined) {
+          insertQuery.value(column.name, row[column.name])
         }
       }
+
+      l.dev('Insert query', insertQuery)
   
       let generatedPrimaryKey = table.generatedPrimaryKey
   
-      let result
+      let dbResult: any
       try {
-        result = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values(), generatedPrimaryKey?.name) as InsertUpdateDeleteResult
+        dbResult = await this.queryTools.databaseIndependentQuery(queryFn, insertQuery.sql(this.db), insertQuery.values(), generatedPrimaryKey?.name) as InsertUpdateDeleteResult
       }
       catch (e) {
         throw new Error(e as any)
       }
-  
-      if (result.affectedRows != 1) {
-        throw new Error(`Inserted ${result.affectedRows} rows for ${relationshipPath}. Should have been exactly one row.`)
+
+      if (dbResult.affectedRows != 1) {
+        throw new Error(`Inserted ${dbResult.affectedRows} rows for ${relationshipPath}. Should have been exactly one row.`)
       }
-  
-      storeInfo['@update'] = false
-  
-      for (let column of table.primaryKey) {
-        storeInfo[column.getName(asDatabaseRow)] = obj[column.getName(asDatabaseRow)]
-      }
-  
+
       if (generatedPrimaryKey) {
-        l.dev(`Setting generated primary key on object: ${generatedPrimaryKey.getName(asDatabaseRow)} = ${result.insertId}`)
-        obj[generatedPrimaryKey.getName(asDatabaseRow)] = result.insertId
-        l.dev(`Setting generated primary key on storage information: ${generatedPrimaryKey.getName(asDatabaseRow)} = ${result.insertId}`)
-        storeInfo[generatedPrimaryKey.getName(asDatabaseRow)] = result.insertId
+        l.dev(`Setting generated primary key on row: ${generatedPrimaryKey.name} = ${dbResult.insertId}`)
+        row[generatedPrimaryKey.name] = dbResult.insertId
       }
+
+      l.lib('Loading the row after the insert')
+  
+      let selectQuery = sql.select('*').from(table.name)
+      for (let column of table.primaryKey) {
+        selectQuery.where(comparison(column.name, row[column.name]), 'AND')
+      }
+
+      try {
+        dbResult = await this.queryTools.databaseIndependentQuery(queryFn, selectQuery.sql(this.db), selectQuery.values()) as SelectResult
+      }
+      catch (e) {
+        throw new Error(e as any)
+      }
+
+      if (dbResult.length != 1) {
+        throw new Error(`The row count was ${dbResult.length} instead of exactly 1 while loading the row after inserting it.`)
+      }
+
+      let objAfter = asDatabaseRow ? dbResult[0] : table.rowToInstance(dbResult[0])
+      let entity: any = {}
+
+      for (let column of table.columns) {
+        entity[column.getName(asDatabaseRow)] = objAfter[column.getName(asDatabaseRow)]
+        obj[column.getName(asDatabaseRow)] = objAfter[column.getName(asDatabaseRow)]
+      }
+  
+      let change = new Change(asDatabaseRow ? table.name : table.className, entity, asDatabaseRow ? 'insert' : 'create')
+      l.lib('Add change to result', change)
+      changes.push(change)
     }
   
-    l.lib('Storage information', storeInfo)
     l.calling('Triggering actions that can be down now after this object was stored...')
   
     try {
@@ -476,6 +588,7 @@ export class Orm {
   
             let row
             let oneToOneRow
+
             if (asDatabaseRow) {
               row = obj
               oneToOneRow = oneToOneObj
@@ -484,16 +597,16 @@ export class Orm {
             else {
               l.lib('Converting instance to row')
               l.calling('Calling Table.instanceToRow...')
-              let reduced = {
+              let reducedObj = {
                 [otherRelationship.otherId.propertyName]: obj[otherRelationship.otherId.propertyName]
               }
-              row = table.instanceToRow(reduced, true)
+              row = table.instanceToRow(reducedObj, true)
               l.called('Called Table.instanceToRow...')
   
               l.lib('Converting one-to-one instance to row')
               l.calling('Calling Table.instanceToRow...')
-              reduced = this.objectTools.reduceToPrimaryKey(table, oneToOneObj)
-              oneToOneRow = table.instanceToRow(reduced, true)
+              let reducedOneToOneObj = this.objectTools.reduceToPrimaryKey(table, oneToOneObj)
+              oneToOneRow = table.instanceToRow(reducedOneToOneObj, true)
               l.called('Called Table.instanceToRow...')
             }
   
@@ -526,6 +639,20 @@ export class Orm {
             if (result.affectedRows != 1) {
               throw new Error(`When trying to set and store the other side of a one-to-one relationship in the database, the amount of affected rows '${result.affectedRows}' did not not equal 1.`)
             }
+
+            oneToOneObj[otherRelationship.thisId.getName(asDatabaseRow)] = obj[otherRelationship.otherId.getName(asDatabaseRow)]
+
+            let entity: any = {
+              [otherRelationship.thisId.getName(asDatabaseRow)]: obj[otherRelationship.otherId.getName(asDatabaseRow)]
+            }
+
+            for (let column of otherTable.primaryKey) {
+              entity[column.getName()] = oneToOneObj[column.getName(asDatabaseRow)]
+            }
+
+            let change = new Change(asDatabaseRow ? otherTable.name : otherTable.className, entity, 'update', [ otherRelationship.thisId.getName(asDatabaseRow) ])
+            l.lib('Add change to result', change)
+            changes.push(change)
           }
         }
   
@@ -557,7 +684,7 @@ export class Orm {
               oneToManyObj[relationship.otherId.getName(asDatabaseRow)] = obj[relationship.thisId.getName(asDatabaseRow)]
                 
               l.calling('Storing the row...')
-              let relationshipStoreInfo = await this.store(
+              let relationshipChanges = await this.store(
                 queryFn, 
                 relationship.otherTable, 
                 oneToManyObj, 
@@ -566,15 +693,8 @@ export class Orm {
                 relationshipPath != undefined ? relationshipPath + '.' + relationship.name : relationship.name
               )
     
-              l.called('Returned from storing relationship row...')
-              
-              if (relationshipStoreInfo) {
-                if (storeInfo[relationship.name] == undefined) {
-                  storeInfo[relationship.name] = []
-                }
-    
-                storeInfo[relationship.name].push(relationshipStoreInfo)
-              }
+              l.called('Returned from storing relationship row...')              
+              changes.push(...relationshipChanges)
             }
     
             else if (storedObjects.isAboutToBeStored(oneToManyObj)) {
@@ -592,11 +712,12 @@ export class Orm {
             else {
               l.lib('One-to-many object was already stored', oneToManyObj)
   
-              if (oneToManyObj[relationship.otherId.getName(asDatabaseRow)] === undefined) {
+              if (oneToManyObj[relationship.otherId.getName(asDatabaseRow)] == null) {
                 l.lib(`The many-to-one id referencing this one-to-many object is not set. Setting it in the database: ${relationship.otherId.getName(asDatabaseRow)} =`, obj[relationship.thisId.getName(asDatabaseRow)])
     
                 let row
                 let oneToManyRow
+
                 if (asDatabaseRow) {
                   row = obj
                   oneToManyRow = oneToManyObj
@@ -605,16 +726,16 @@ export class Orm {
                 else {
                   l.lib('Converting instance to row')
                   l.calling('Calling Table.instanceToRow...')
-                  let reduced = {
+                  let reducedObj = {
                     [relationship.thisId.name]: obj[relationship.thisId.name]
                   }
-                  row = table.instanceToRow(reduced, true)
+                  row = table.instanceToRow(reducedObj, true)
                   l.called('Called Table.instanceToRow...')
       
                   l.lib('Converting one-to-many instance to row')
                   l.calling('Calling Table.instanceToRow...')
-                  reduced = this.objectTools.reduceToPrimaryKey(table, oneToManyObj)
-                  oneToManyRow = table.instanceToRow(reduced, true)
+                  let reducedOneToManyObj = this.objectTools.reduceToPrimaryKey(table, oneToManyObj)
+                  oneToManyRow = table.instanceToRow(reducedOneToManyObj, true)
                   l.called('Called Table.instanceToRow...')
                 }
       
@@ -647,6 +768,20 @@ export class Orm {
                 if (result.affectedRows != 1) {
                   throw new Error('Expected row count does not equal 1')
                 }
+
+                oneToManyObj[relationship.otherId.getName(asDatabaseRow)] = obj[relationship.thisId.getName(asDatabaseRow)]
+
+                let entity: any = {
+                  [relationship.otherId.getName(asDatabaseRow)]: obj[relationship.thisId.getName(asDatabaseRow)]
+                }
+    
+                for (let column of otherTable.primaryKey) {
+                  entity[column.getName()] = oneToManyObj[column.getName(asDatabaseRow)]
+                }
+    
+                let change = new Change(asDatabaseRow ? otherTable.name : otherTable.className, entity, 'update', [ relationship.otherId.getName(asDatabaseRow) ])
+                l.lib('Add change to result', change)
+                changes.push(change)    
               }
               else {
                 l.lib('The many-to-one id referencing back to this one-to-many object is already set which means that this object is part of a many-to-many relationship')
@@ -659,8 +794,8 @@ export class Orm {
       l.location.pop()
     }
       
-    l.returning('Returning storage information...', storeInfo)
-    return storeInfo
+    l.returning('Returning changes...', changes)
+    return changes
   }
 
   /**

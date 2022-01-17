@@ -120,6 +120,7 @@ export class Table {
   private _generatedPrimaryKey?: Column|null = null
   private _notGeneratedPrimaryKey?: Column[]
   private _notPrimaryKey?: Column[]
+  private _foreignKeys?: Column[]
   private _columnNames?: string[]
   private _propertyNames?: string[]
   private _relationshipNames?: string[]
@@ -272,6 +273,20 @@ export class Table {
     }
   
     return this._notPrimaryKey
+  }
+
+  get foreignKeys(): Column[] {
+    if (! this._foreignKeys) {
+      this._foreignKeys = []
+
+      for (let column of this.columns) {
+        if (column.isForeignKey()) {
+          this._foreignKeys.push(column)
+        }
+      }
+    }
+
+    return this._foreignKeys
   }
 
   get columnNames(): string[] {
