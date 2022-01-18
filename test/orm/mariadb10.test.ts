@@ -2,7 +2,8 @@ import { createPool, PoolConfig } from 'mariadb'
 import 'mocha'
 import { loadTests } from './load'
 import { remainingTests } from './remaining'
-import { storeTests } from './store'
+import { storeInstanceTests } from './storeInstance'
+import { storeRowTests } from './storeRow'
 
 let pool = createPool({
   host: 'mariadb10',
@@ -34,7 +35,8 @@ describe('Orm (MariaDb 10)', function() {
     await pool.query('DROP TABLE IF EXISTS many_to_many_table2 CASCADE')
   })
 
-  storeTests('mariadb', queryFn)
+  storeRowTests('mariadb', queryFn)
+  storeInstanceTests('mariadb', queryFn)
   loadTests('mariadb', queryFn)
   remainingTests('mariadb', queryFn)
 })

@@ -2,7 +2,8 @@ import 'mocha'
 import { Pool, PoolConfig } from 'pg'
 import { loadTests } from './load'
 import { remainingTests } from './remaining'
-import { storeTests } from './store'
+import { storeInstanceTests } from './storeInstance'
+import { storeRowTests } from './storeRow'
 
 let pool: Pool = new Pool({
   host: 'postgres13',
@@ -34,7 +35,8 @@ describe('Orm (PostgreSQL 13)', function() {
     await pool.query('DROP TABLE IF EXISTS many_to_many_table2 CASCADE')
   })
 
-  storeTests('postgres', queryFn)
+  // storeRowTests('postgres', queryFn)
+  storeInstanceTests('postgres', queryFn)
   loadTests('postgres', queryFn)
   remainingTests('postgres', queryFn)
 })

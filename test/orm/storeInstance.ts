@@ -8,10 +8,10 @@ import { Object1, schema } from '../testSchema'
 chai.use(chaiAsPromised)
 const expect = chai.expect
 
-export function storeTests(db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>) {  
+export function storeInstanceTests(db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>) {  
   let orm = new Orm(schema, db)
   
-  describe('store', function() {
+  describe('store (instance)', function() {
     it('insert simple object', async function() {
       let obj1 = {
         property1: 'a'

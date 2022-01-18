@@ -2,7 +2,8 @@ import 'mocha'
 import { createPool, PoolConfig } from 'mysql'
 import { loadTests } from './load'
 import { remainingTests } from './remaining'
-import { storeTests } from './store'
+import { storeInstanceTests } from './storeInstance'
+import { storeRowTests } from './storeRow'
 
 let pool = createPool({
   host: 'mysql5',
@@ -45,8 +46,9 @@ describe('Orm (MySQL 5 / mysql)', function() {
     await queryFn('DROP TABLE IF EXISTS many_to_many_table1 CASCADE')
     await queryFn('DROP TABLE IF EXISTS many_to_many_table2 CASCADE')
   })
-
-  storeTests('mysql', queryFn)
+  
+  // storeRowTests('mysql', queryFn)
+  storeInstanceTests('mysql', queryFn)
   loadTests('mysql', queryFn)
   remainingTests('mysql', queryFn)
 })
