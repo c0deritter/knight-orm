@@ -20,7 +20,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -33,7 +33,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -50,7 +50,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(result.length).to.equal(1)
       expect(result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -72,17 +72,17 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 2,
+        id: 3,
         property1: 'a',
         property2: null,
         property3: null,
-        manyToOneObject1Id: 1,
+        manyToOneObject1Id: 2,
         manyToOneObject2Id: null,
         oneToOneObject1Id: null,
         oneToOneObject2Id: null,
         oneToManyObject1ManyToOneId: null,
         manyToOneObject1: {
-          id: 1,
+          id: 2,
           property1: 'b',
           property2: null,
           property3: null,
@@ -96,7 +96,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'b',
           property2: null,
           property3: null,
@@ -107,11 +107,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 2,
+          id: 3,
           property1: 'a',
           property2: null,
           property3: null,
-          manyToOneObject1Id: 1,
+          manyToOneObject1Id: 2,
           manyToOneObject2Id: null,
           oneToOneObject1Id: null,
           oneToOneObject2Id: null,
@@ -124,7 +124,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(2)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'b',
+        column1: 'c',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -136,7 +136,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[1]).to.deep.equal({
         id: 2,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: 1,
@@ -159,7 +159,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -188,7 +188,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject2ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -205,11 +205,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
-        many_to_one_object2_id: 'x',
+        many_to_one_object2_id: 'y',
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
         one_to_many_object1_many_to_one_id: null,
@@ -219,8 +219,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table2Result.length).to.equal(1)
       expect(table2Result[0]).to.deep.equal({
-        id: 'x',
-        column1: 'b',
+        id: 'y',
+        column1: 'c',
         column2: null,
         column3: null,
         one_to_one_object1_id: null,
@@ -239,23 +239,23 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 2,
+        id: 3,
         property1: 'a',
         property2: null,
         property3: null,
         manyToOneObject1Id: null,
         manyToOneObject2Id: null,
-        oneToOneObject1Id: 1,
+        oneToOneObject1Id: 2,
         oneToOneObject2Id: null,
         oneToManyObject1ManyToOneId: null,
         oneToOneObject1: {
-          id: 1,
+          id: 2,
           property1: 'b',
           property2: null,
           property3: null,
           manyToOneObject1Id: null,
           manyToOneObject2Id: null,
-          oneToOneObject1Id: 2,
+          oneToOneObject1Id: 3,
           oneToOneObject2Id: null,
           oneToManyObject1ManyToOneId: null
         }
@@ -263,7 +263,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'b',
           property2: null,
           property3: null,
@@ -274,19 +274,19 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 2,
+          id: 3,
           property1: 'a',
           property2: null,
           property3: null,
           manyToOneObject1Id: null,
           manyToOneObject2Id: null,
-          oneToOneObject1Id: 1,
+          oneToOneObject1Id: 2,
           oneToOneObject2Id: null,
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 1,
-          oneToOneObject1Id: 2
+          id: 2,
+          oneToOneObject1Id: 3
         }, 'update', [ 'oneToOneObject1Id' ])
       ])
 
@@ -295,7 +295,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(2)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'b',
+        column1: 'c',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -307,7 +307,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[1]).to.deep.equal({
         id: 2,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -332,23 +332,23 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       let expectedObj1 = {
-        id: 2,
+        id: 3,
         property1: 'a',
         property2: null,
         property3: null,
         manyToOneObject1Id: null,
         manyToOneObject2Id: null,
-        oneToOneObject1Id: 1,
+        oneToOneObject1Id: 2,
         oneToOneObject2Id: null,
         oneToManyObject1ManyToOneId: null,
         oneToOneObject1: {
-          id: 1,
+          id: 2,
           property1: 'b',
           property2: null,
           property3: null,
           manyToOneObject1Id: null,
           manyToOneObject2Id: null,
-          oneToOneObject1Id: 2,
+          oneToOneObject1Id: 3,
           oneToOneObject2Id: null,
           oneToManyObject1ManyToOneId: null
         } as any
@@ -360,7 +360,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'b',
           property2: null,
           property3: null,
@@ -371,19 +371,19 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 2,
+          id: 3,
           property1: 'a',
           property2: null,
           property3: null,
           manyToOneObject1Id: null,
           manyToOneObject2Id: null,
-          oneToOneObject1Id: 1,
+          oneToOneObject1Id: 2,
           oneToOneObject2Id: null,
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 1,
-          oneToOneObject1Id: 2
+          id: 2,
+          oneToOneObject1Id: 3
         }, 'update', [ 'oneToOneObject1Id' ])
       ])
 
@@ -392,7 +392,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(2)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'b',
+        column1: 'c',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -404,7 +404,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[1]).to.deep.equal({
         id: 2,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -426,13 +426,13 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       let expectedObj1 = {
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
         manyToOneObject1Id: null,
         manyToOneObject2Id: null,
-        oneToOneObject1Id: 1,
+        oneToOneObject1Id: 2,
         oneToOneObject2Id: null,
         oneToManyObject1ManyToOneId: null,
       } as any
@@ -443,7 +443,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -454,12 +454,12 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 1,
-          oneToOneObject1Id: 1
+          id: 2,
+          oneToOneObject1Id: 2
         }, 'update', [ 'oneToOneObject1Id' ]),
         new Change('Object1', {
-          id: 1,
-          oneToOneObject1Id: 1
+          id: 2,
+          oneToOneObject1Id: 2
         }, 'update', [ 'oneToOneObject1Id' ])
       ])
 
@@ -468,7 +468,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -491,7 +491,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -505,7 +505,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           property1: 'b',
           property2: null,
           property3: null,
-          oneToOneObject1Id: 1,
+          oneToOneObject1Id: 2,
           oneToManyObject2ManyToOneId: null
         }
       })
@@ -520,7 +520,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject2ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -532,7 +532,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }, 'create'),
         new Change('Object2', {
           id: 'x',
-          oneToOneObject1Id: 1
+          oneToOneObject1Id: 2
         }, 'update', [ 'oneToOneObject1Id' ])
       ])
 
@@ -541,13 +541,13 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
-        one_to_one_object2_id: 'x',
+        one_to_one_object2_id: 'y',
         one_to_many_object1_many_to_one_id: null
       })
 
@@ -555,8 +555,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table2Result.length).to.equal(1)
       expect(table2Result[0]).to.deep.equal({
-        id: 'x',
-        column1: 'b',
+        id: 'y',
+        column1: 'c',
         column2: null,
         column3: null,
         one_to_one_object1_id: 1,
@@ -579,7 +579,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       let expectObj1 = {
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -593,7 +593,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           property1: 'b',
           property2: null,
           property3: null,
-          oneToOneObject1Id: 1,
+          oneToOneObject1Id: 2,
           oneToManyObject2ManyToOneId: null
         } as any
       }
@@ -612,7 +612,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject2ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -624,7 +624,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         }, 'create'),
         new Change('Object2', {
           id: 'x',
-          oneToOneObject1Id: 1
+          oneToOneObject1Id: 2
         }, 'update', [ 'oneToOneObject1Id' ])
       ])
 
@@ -633,13 +633,13 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
         many_to_one_object2_id: null,
         one_to_one_object1_id: null,
-        one_to_one_object2_id: 'x',
+        one_to_one_object2_id: 'y',
         one_to_many_object1_many_to_one_id: null
       })
 
@@ -647,8 +647,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table2Result.length).to.equal(1)
       expect(table2Result[0]).to.deep.equal({
-        id: 'x',
-        column1: 'b',
+        id: 'y',
+        column1: 'c',
         column2: null,
         column3: null,
         one_to_one_object1_id: 1,
@@ -672,7 +672,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -683,7 +683,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         oneToManyObject1ManyToOneId: null,
         oneToManyObject1: [
           {
-            id: 2,
+            id: 3,
             property1: 'b',
             property2: null,
             property3: null,
@@ -691,10 +691,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             manyToOneObject2Id: null,
             oneToOneObject1Id: null,
             oneToOneObject2Id: null,
-            oneToManyObject1ManyToOneId: 1,
+            oneToManyObject1ManyToOneId: 2
           },
           {
-            id: 3,
+            id: 4,
             property1: 'c',
             property2: null,
             property3: null,
@@ -702,14 +702,14 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             manyToOneObject2Id: null,
             oneToOneObject1Id: null,
             oneToOneObject2Id: null,
-            oneToManyObject1ManyToOneId: 1,
+            oneToManyObject1ManyToOneId: 2
           }
         ]
       })
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -720,7 +720,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 2,
+          id: 3,
           property1: 'b',
           property2: null,
           property3: null,
@@ -728,10 +728,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           manyToOneObject2Id: null,
           oneToOneObject1Id: null,
           oneToOneObject2Id: null,
-          oneToManyObject1ManyToOneId: 1
+          oneToManyObject1ManyToOneId: 2
         }, 'create'),
         new Change('Object1', {
-          id: 3,
+          id: 4,
           property1: 'c',
           property2: null,
           property3: null,
@@ -739,7 +739,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           manyToOneObject2Id: null,
           oneToOneObject1Id: null,
           oneToOneObject2Id: null,
-          oneToManyObject1ManyToOneId: 1
+          oneToManyObject1ManyToOneId: 2
         }, 'create')
       ])
 
@@ -749,7 +749,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -761,7 +761,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[1]).to.deep.equal({
         id: 2,
-        column1: 'b',
+        column1: 'c',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -773,7 +773,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[2]).to.deep.equal({
         id: 3,
-        column1: 'c',
+        column1: 'd',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -805,7 +805,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       let expectedObj1 = {
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -816,7 +816,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         oneToManyObject1ManyToOneId: null,
         oneToManyObject1: [
           {
-            id: 2,
+            id: 3,
             property1: 'b',
             property2: null,
             property3: null,
@@ -824,10 +824,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             manyToOneObject2Id: null,
             oneToOneObject1Id: null,
             oneToOneObject2Id: null,
-            oneToManyObject1ManyToOneId: 1,
+            oneToManyObject1ManyToOneId: 2,
           } as any,
           {
-            id: 3,
+            id: 4,
             property1: 'c',
             property2: null,
             property3: null,
@@ -835,7 +835,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             manyToOneObject2Id: null,
             oneToOneObject1Id: null,
             oneToOneObject2Id: null,
-            oneToManyObject1ManyToOneId: 1,
+            oneToManyObject1ManyToOneId: 2,
           }
         ]
       }
@@ -847,7 +847,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -858,7 +858,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 2,
+          id: 3,
           property1: 'b',
           property2: null,
           property3: null,
@@ -866,10 +866,10 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           manyToOneObject2Id: null,
           oneToOneObject1Id: null,
           oneToOneObject2Id: null,
-          oneToManyObject1ManyToOneId: 1
+          oneToManyObject1ManyToOneId: 2
         }, 'create'),
         new Change('Object1', {
-          id: 3,
+          id: 4,
           property1: 'c',
           property2: null,
           property3: null,
@@ -877,7 +877,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           manyToOneObject2Id: null,
           oneToOneObject1Id: null,
           oneToOneObject2Id: null,
-          oneToManyObject1ManyToOneId: 1
+          oneToManyObject1ManyToOneId: 2
         }, 'create')
       ])
 
@@ -887,7 +887,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -899,7 +899,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[1]).to.deep.equal({
         id: 2,
-        column1: 'b',
+        column1: 'c',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -911,7 +911,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[2]).to.deep.equal({
         id: 3,
-        column1: 'c',
+        column1: 'd',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -940,7 +940,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -956,7 +956,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             property2: null,
             property3: null,
             oneToOneObject1Id: null,
-            oneToManyObject2ManyToOneId: 1
+            oneToManyObject2ManyToOneId: 2
             } as any,
           {
             id: 'y',
@@ -964,14 +964,14 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             property2: null,
             property3: null,
             oneToOneObject1Id: null,
-            oneToManyObject2ManyToOneId: 1
+            oneToManyObject2ManyToOneId: 2
             }
         ]
       })
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -987,7 +987,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           property2: null,
           property3: null,
           oneToOneObject1Id: null,
-          oneToManyObject2ManyToOneId: 1
+          oneToManyObject2ManyToOneId: 2
         }, 'create'),
           new Change('Object2', {
             id: 'y',
@@ -995,7 +995,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             property2: null,
             property3: null,
             oneToOneObject1Id: null,
-            oneToManyObject2ManyToOneId: 1
+            oneToManyObject2ManyToOneId: 2
         }, 'create')
       ])
 
@@ -1004,7 +1004,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -1019,8 +1019,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table2Result.length).to.equal(2)
       
       expect(table2Result[0]).to.deep.equal({
-        id: 'x',
-        column1: 'b',
+        id: 'y',
+        column1: 'c',
         column2: null,
         column3: null,
         one_to_one_object1_id: null,
@@ -1028,8 +1028,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       })
 
       expect(table2Result[1]).to.deep.equal({
-        id: 'y',
-        column1: 'c',
+        id: 'z',
+        column1: 'd',
         column2: null,
         column3: null,
         one_to_one_object1_id: null,
@@ -1060,7 +1060,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       let expectedObj1 = {
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -1076,7 +1076,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             property2: null,
             property3: null,
             oneToOneObject1Id: null,
-            oneToManyObject2ManyToOneId: 1
+            oneToManyObject2ManyToOneId: 2
             } as any,
           {
             id: 'y',
@@ -1084,7 +1084,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             property2: null,
             property3: null,
             oneToOneObject1Id: null,
-            oneToManyObject2ManyToOneId: 1
+            oneToManyObject2ManyToOneId: 2
             }
         ]
       }
@@ -1096,7 +1096,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -1112,7 +1112,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           property2: null,
           property3: null,
           oneToOneObject1Id: null,
-          oneToManyObject2ManyToOneId: 1
+          oneToManyObject2ManyToOneId: 2
         }, 'create'),
           new Change('Object2', {
             id: 'y',
@@ -1120,7 +1120,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             property2: null,
             property3: null,
             oneToOneObject1Id: null,
-            oneToManyObject2ManyToOneId: 1
+            oneToManyObject2ManyToOneId: 2
         }, 'create')
       ])
 
@@ -1129,7 +1129,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -1144,8 +1144,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table2Result.length).to.equal(2)
       
       expect(table2Result[0]).to.deep.equal({
-        id: 'x',
-        column1: 'b',
+        id: 'y',
+        column1: 'c',
         column2: null,
         column3: null,
         one_to_one_object1_id: null,
@@ -1153,8 +1153,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       })
 
       expect(table2Result[1]).to.deep.equal({
-        id: 'y',
-        column1: 'c',
+        id: 'z',
+        column1: 'd',
         column2: null,
         column3: null,
         one_to_one_object1_id: null,
@@ -1173,7 +1173,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       let expectedObj1 = {
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -1181,7 +1181,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         manyToOneObject2Id: null,
         oneToOneObject1Id: null,
         oneToOneObject2Id: null,
-        oneToManyObject1ManyToOneId: 1,
+        oneToManyObject1ManyToOneId: 2,
         oneToManyObject1: null
       } as any
 
@@ -1191,7 +1191,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -1202,8 +1202,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 1,
-          oneToManyObject1ManyToOneId: 1
+          id: 2,
+          oneToManyObject1ManyToOneId: 2
         }, 'update', [ 'oneToManyObject1ManyToOneId' ])
       ])
 
@@ -1213,7 +1213,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -1246,7 +1246,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -1257,13 +1257,13 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         oneToManyObject1ManyToOneId: null,
         manyToManyObject1: [
           {
-            object11Id: 1,
-            object12Id: 2,
+            object1Id1: 2,
+            object1Id2: 3,
             property1: 'b',
             property2: null,
             property3: null,
             object12: {
-              id: 2,
+              id: 3,
               property1: 'c',
               property2: null,
               property3: null,
@@ -1275,13 +1275,13 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             }
           },
           {
-            object11Id: 1,
-            object12Id: 3,
+            object1Id1: 2,
+            object1Id2: 4,
             property1: 'd',
             property2: null,
             property3: null,
             object12: {
-              id: 3,
+              id: 4,
               property1: 'e',
               property2: null,
               property3: null,
@@ -1297,7 +1297,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -1308,7 +1308,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 2,
+          id: 3,
           property1: 'c',
           property2: null,
           property3: null,
@@ -1319,14 +1319,14 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('ManyToManyObject1', {
-          object11Id: 1,
-          object12Id: 2,
+          object1Id1: 2,
+          object1Id2: 3,
           property1: 'b',
           property2: null,
           property3: null,
         }, 'create'),
         new Change('Object1', {
-          id: 3,
+          id: 4,
           property1: 'e',
           property2: null,
           property3: null,
@@ -1337,8 +1337,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('ManyToManyObject1', {
-          object11Id: 1,
-          object12Id: 3,
+          object1Id1: 2,
+          object1Id2: 4,
           property1: 'd',
           property2: null,
           property3: null,
@@ -1351,7 +1351,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -1363,7 +1363,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[1]).to.deep.equal({
         id: 2,
-        column1: 'c',
+        column1: 'd',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -1375,7 +1375,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[2]).to.deep.equal({
         id: 3,
-        column1: 'e',
+        column1: 'f',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -1392,7 +1392,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(tableManyResult[0]).to.deep.equal({
         table1_id1: 1,
         table1_id2: 2,
-        column1: 'b',
+        column1: 'c',
         column2: null,
         column3: null
       })
@@ -1400,7 +1400,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(tableManyResult[1]).to.deep.equal({
         table1_id1: 1,
         table1_id2: 3,
-        column1: 'd',
+        column1: 'e',
         column2: null,
         column3: null
       })
@@ -1435,7 +1435,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       let expectedObj1 = {
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -1446,13 +1446,13 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         oneToManyObject1ManyToOneId: null,
         manyToManyObject1: [
           {
-            object11Id: 1,
-            object12Id: 2,
+            object1Id1: 2,
+            object1Id2: 3,
             property1: 'b',
             property2: null,
             property3: null,
             object12: {
-              id: 2,
+              id: 3,
               property1: 'c',
               property2: null,
               property3: null,
@@ -1464,13 +1464,13 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
             } as any
           } as any,
           {
-            object11Id: 1,
-            object12Id: 3,
+            object1Id1: 2,
+            object1Id2: 4,
             property1: 'd',
             property2: null,
             property3: null,
             object12: {
-              id: 3,
+              id: 4,
               property1: 'e',
               property2: null,
               property3: null,
@@ -1484,16 +1484,16 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         ]
       }
 
-      expectedObj1.manyToManyObject1[0].object11 = obj1
+      expectedObj1.manyToManyObject1[0].object11 = expectedObj1
       expectedObj1.manyToManyObject1[0].object12.manyToManyObject1 = [ expectedObj1.manyToManyObject1[0] ]
-      expectedObj1.manyToManyObject1[1].object11 = obj1
+      expectedObj1.manyToManyObject1[1].object11 = expectedObj1
       expectedObj1.manyToManyObject1[1].object12.manyToManyObject1 = [ expectedObj1.manyToManyObject1[1] ]
 
       expect(obj1).to.deep.equal(expectedObj1)
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -1504,7 +1504,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('Object1', {
-          id: 2,
+          id: 3,
           property1: 'c',
           property2: null,
           property3: null,
@@ -1515,14 +1515,14 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('ManyToManyObject1', {
-          object11Id: 1,
-          object12Id: 2,
+          object1Id1: 2,
+          object1Id2: 3,
           property1: 'b',
           property2: null,
           property3: null,
         }, 'create'),
         new Change('Object1', {
-          id: 3,
+          id: 4,
           property1: 'e',
           property2: null,
           property3: null,
@@ -1533,8 +1533,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('ManyToManyObject1', {
-          object11Id: 1,
-          object12Id: 3,
+          object1Id1: 2,
+          object1Id2: 4,
           property1: 'd',
           property2: null,
           property3: null,
@@ -1547,7 +1547,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -1559,7 +1559,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[1]).to.deep.equal({
         id: 2,
-        column1: 'c',
+        column1: 'd',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -1571,7 +1571,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[2]).to.deep.equal({
         id: 3,
-        column1: 'e',
+        column1: 'f',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -1588,7 +1588,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(tableManyResult[0]).to.deep.equal({
         table1_id1: 1,
         table1_id2: 2,
-        column1: 'b',
+        column1: 'c',
         column2: null,
         column3: null
       })
@@ -1596,7 +1596,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(tableManyResult[1]).to.deep.equal({
         table1_id1: 1,
         table1_id2: 3,
-        column1: 'd',
+        column1: 'e',
         column2: null,
         column3: null
       })
@@ -1618,7 +1618,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       let expectedObj1 = {
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -1629,8 +1629,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         oneToManyObject1ManyToOneId: null,
         manyToManyObject1: [
           {
-            object11Id: 1,
-            object12Id: 1,
+            object1Id1: 2,
+            object1Id2: 2,
             property1: 'b',
             property2: null,
             property3: null
@@ -1644,7 +1644,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -1655,8 +1655,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject1ManyToOneId: null
         }, 'create'),
         new Change('ManyToManyObject1', {
-          object11Id: 1,
-          object12Id: 1,
+          object1Id1: 2,
+          object1Id2: 2,
           property1: 'b',
           property2: null,
           property3: null,
@@ -1669,7 +1669,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -1686,7 +1686,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(tableManyResult[0]).to.deep.equal({
         table1_id1: 1,
         table1_id2: 1,
-        column1: 'b',
+        column1: 'c',
         column2: null,
         column3: null
       })
@@ -1716,7 +1716,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -1727,7 +1727,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         oneToManyObject1ManyToOneId: null,
         manyToManyObject2: [
           {
-            object1Id: 1,
+            object1Id: 2,
             object2Id: 'x',
             property1: 'b',
             property2: null,
@@ -1742,7 +1742,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
                 } as any
           } as any,
           {
-            object1Id: 1,
+            object1Id: 2,
             object2Id: 'y',
             property1: 'd',
             property2: null,
@@ -1761,7 +1761,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -1780,7 +1780,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject2ManyToOneId: null
         }, 'create'),
         new Change('ManyToManyObject2', {
-          object1Id: 1,
+          object1Id: 2,
           object2Id: 'x',
           property1: 'b',
           property2: null,
@@ -1795,7 +1795,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject2ManyToOneId: null
         }, 'create'),
         new Change('ManyToManyObject2', {
-          object1Id: 1,
+          object1Id: 2,
           object2Id: 'y',
           property1: 'd',
           property2: null,
@@ -1808,7 +1808,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -1824,16 +1824,16 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(tableManyResult[0]).to.deep.equal({
         table1_id: 1,
-        table2_id: 'x',
-        column1: 'b',
+        table2_id: 'y',
+        column1: 'c',
         column2: null,
         column3: null
       })
 
       expect(tableManyResult[1]).to.deep.equal({
         table1_id: 1,
-        table2_id: 'y',
-        column1: 'd',
+        table2_id: 'z',
+        column1: 'e',
         column2: null,
         column3: null
       })
@@ -1843,8 +1843,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table2Result.length).to.equal(2)
       
       expect(table2Result[0]).to.deep.equal({
-        id: 'x',
-        column1: 'c',
+        id: 'y',
+        column1: 'd',
         column2: null,
         column3: null,
         one_to_one_object1_id: null,
@@ -1852,8 +1852,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       })
 
       expect(table2Result[1]).to.deep.equal({
-        id: 'y',
-        column1: 'e',
+        id: 'z',
+        column1: 'f',
         column2: null,
         column3: null,
         one_to_one_object1_id: null,
@@ -1894,7 +1894,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       let expectedObj1 = {
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -1905,7 +1905,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
         oneToManyObject1ManyToOneId: null,
         manyToManyObject2: [
           {
-            object1Id: 1,
+            object1Id: 2,
             object2Id: 'x',
             property1: 'b',
             property2: null,
@@ -1920,7 +1920,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
                 } as any
           } as any,
           {
-            object1Id: 1,
+            object1Id: 2,
             object2Id: 'y',
             property1: 'd',
             property2: null,
@@ -1946,7 +1946,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'a',
           property2: null,
           property3: null,
@@ -1965,7 +1965,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject2ManyToOneId: null
         }, 'create'),
         new Change('ManyToManyObject2', {
-          object1Id: 1,
+          object1Id: 2,
           object2Id: 'x',
           property1: 'b',
           property2: null,
@@ -1980,7 +1980,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           oneToManyObject2ManyToOneId: null
         }, 'create'),
         new Change('ManyToManyObject2', {
-          object1Id: 1,
+          object1Id: 2,
           object2Id: 'y',
           property1: 'd',
           property2: null,
@@ -1993,7 +1993,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -2009,16 +2009,16 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(tableManyResult[0]).to.deep.equal({
         table1_id: 1,
-        table2_id: 'x',
-        column1: 'b',
+        table2_id: 'y',
+        column1: 'c',
         column2: null,
         column3: null
       })
 
       expect(tableManyResult[1]).to.deep.equal({
         table1_id: 1,
-        table2_id: 'y',
-        column1: 'd',
+        table2_id: 'z',
+        column1: 'e',
         column2: null,
         column3: null
       })
@@ -2028,8 +2028,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table2Result.length).to.equal(2)
       
       expect(table2Result[0]).to.deep.equal({
-        id: 'x',
-        column1: 'c',
+        id: 'y',
+        column1: 'd',
         column2: null,
         column3: null,
         one_to_one_object1_id: null,
@@ -2037,8 +2037,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       })
 
       expect(table2Result[1]).to.deep.equal({
-        id: 'y',
-        column1: 'e',
+        id: 'z',
+        column1: 'f',
         column2: null,
         column3: null,
         one_to_one_object1_id: null,
@@ -2050,14 +2050,14 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       await queryFn('INSERT INTO table1 (column1) VALUES (\'a\')')
 
       let obj1 = {
-        id: 1,
+        id: 2,
         property1: 'b'
       }
 
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'b',
         property2: null,
         property3: null,
@@ -2070,7 +2070,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(changes).to.deep.equal([
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'b',
         }, 'update', [ 'property1' ])
       ])
@@ -2080,7 +2080,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'b',
+        column1: 'c',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -2092,16 +2092,16 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
     })
 
     it('not update simple obj if nothing to set is given', async function() {
-      await queryFn('INSERT INTO table1 (column1) VALUES (\'a\')')
+      await queryFn('INSERT INTO table1 (column1) VALUES (\'b\')')
 
       let obj1 = {
-        id: 1
+        id: 2
       }
 
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -2119,7 +2119,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'a',
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
@@ -2131,11 +2131,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
     })
 
     it('update many-to-one primary key not generated', async function() {
-      await queryFn('INSERT INTO table1 (column1, many_to_one_object2_id) VALUES (\'a\', \'x\')')
-      await queryFn('INSERT INTO table2 (id, column1) VALUES (\'x\', \'b\')')
+      await queryFn('INSERT INTO table1 (column1, many_to_one_object2_id) VALUES (\'b\', \'y\')')
+      await queryFn('INSERT INTO table2 (id, column1) VALUES (\'y\', \'c\')')
 
       let obj1 = {
-        id: 1,
+        id: 2,
         property1: 'b',
         manyToOneObject2: {
           id: 'x',
@@ -2146,7 +2146,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       let changes = await orm.store(queryFn, Object1, obj1)
 
       expect(obj1).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'b',
         property2: null,
         property3: null,
@@ -2171,7 +2171,7 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
           property1: 'c'
         }, 'update', [ 'property1' ]),
         new Change('Object1', {
-          id: 1,
+          id: 2,
           property1: 'b'
         }, 'update', [ 'property1' ])
       ])
@@ -2181,11 +2181,11 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
         id: 1,
-        column1: 'b',
+        column1: 'c',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,
-        many_to_one_object2_id: 'x',
+        many_to_one_object2_id: 'y',
         one_to_one_object1_id: null,
         one_to_one_object2_id: null,
         one_to_many_object1_many_to_one_id: null,
@@ -2195,8 +2195,8 @@ export function storeTests(db: string, queryFn: (sqlString: string, values?: any
 
       expect(table2Result.length).to.equal(1)
       expect(table2Result[0]).to.deep.equal({
-        id: 'x',
-        column1: 'c',
+        id: 'y',
+        column1: 'd',
         column2: null,
         column3: null,
         one_to_one_object1_id: null,

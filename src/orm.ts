@@ -256,7 +256,7 @@ export class Orm {
           l.lib('Object is about to be stored somewhere up the recursion chain. Adding handler which sets the id on the relationship owning object as soon as the relationship object is stored.')
   
           storedObjects.addAfterStorageHandler(manyToOneObj, async (justStoredManyToOneObj: any) => {
-            let l = ormLog.fn('afterStorageHandler')
+            let l = log.fn('afterStorageHandler')
             l.lib('Setting many-to-one id...')
             l.param('justStoredManyToOneObject', justStoredManyToOneObj)
             l.param('relationship.name', relationship.name)
@@ -270,19 +270,19 @@ export class Orm {
             }
             else {
               let reducedManyToOneObj = {
-                [relationship.otherId.name]: justStoredManyToOneObj[relationship.otherId.name]
+                [relationship.otherId.getName(asDatabaseRow)]: justStoredManyToOneObj[relationship.otherId.getName(asDatabaseRow)]
               }
               
               l.lib('Converting reduced just stored object to a database row...', reducedManyToOneObj)
               
               l.calling('Calling Table.instanceToRow...')
-              manyToOneRow = table.instanceToRow(reducedManyToOneObj, true)
+              manyToOneRow = relationship.otherTable.instanceToRow(reducedManyToOneObj, true)
               l.called('Called Table.instanceToRow...')
 
-              l.lib('Converted reduced just stored object to row', manyToOneRow)
+              l.lib('Converted reduced just stored object to row', reducedManyToOneObj)
   
               let reducedObj = this.objectTools.reduceToPrimaryKey(table, obj)
-              l.lib('Converting reduced object to set the many-to-one id on to row', reducedManyToOneObj)
+              l.lib('Converting reduced object to set the many-to-one id on to row', reducedObj)
 
               l.calling('Calling Table.instanceToRow...')
               row = table.instanceToRow(reducedObj, true)
@@ -584,8 +584,6 @@ export class Orm {
             l.lib('One-to-one object was already stored', oneToOneObj)
             l.lib(`Setting its many-to-one relationship id which references back -> ${otherRelationship.thisId.getName(asDatabaseRow)} =`, obj[otherRelationship.otherId.getName(asDatabaseRow)])
   
-            l.lib('Converting just stored object to a database row...')
-  
             let row
             let oneToOneRow
 
@@ -595,19 +593,21 @@ export class Orm {
               l.lib('Given object should be treated as a database row')
             }
             else {
-              l.lib('Converting instance to row')
-              l.calling('Calling Table.instanceToRow...')
               let reducedObj = {
-                [otherRelationship.otherId.propertyName]: obj[otherRelationship.otherId.propertyName]
+                [otherRelationship.otherId.getName(asDatabaseRow)]: obj[otherRelationship.otherId.getName(asDatabaseRow)]
               }
+              l.lib('Converting instance to row on reduced object', reducedObj)
+              l.calling('Calling Table.instanceToRow...')
               row = table.instanceToRow(reducedObj, true)
               l.called('Called Table.instanceToRow...')
+              l.lib('Converted reduced row', row)
   
-              l.lib('Converting one-to-one instance to row')
-              l.calling('Calling Table.instanceToRow...')
               let reducedOneToOneObj = this.objectTools.reduceToPrimaryKey(table, oneToOneObj)
-              oneToOneRow = table.instanceToRow(reducedOneToOneObj, true)
+              l.lib('Converting reduced one-to-one instance to row', reducedOneToOneObj)
+              l.calling('Calling Table.instanceToRow...')
+              oneToOneRow = otherTable.instanceToRow(reducedOneToOneObj, true)
               l.called('Called Table.instanceToRow...')
+              l.lib('Converted reduced one-to-one row', row)
             }
   
             l.lib('Updating row...', row)
@@ -616,7 +616,7 @@ export class Orm {
       
             for (let column of otherTable.primaryKey) {
               if (row[column.name] === undefined) {
-                throw new Error('Some columns of primary are not set.')
+                throw new Error('Some columns of the primary key are not set.')
               }
   
               query.where(comparison(column.name, oneToOneRow[column.name]))

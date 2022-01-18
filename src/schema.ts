@@ -29,15 +29,17 @@ export class Schema {
     }
   
     newInstance: () => any
-    rowToInstance?: (row: any, instance: any) => any
     instanceToRow?: (instance: any, row: any) => any
+    rowToInstance?: (row: any, instance: any) => any
   }) {
     let table = new Table(
       this,
       tableName,
       tableSchema.newInstance,
       tableSchema.columns,
-      tableSchema.relationships
+      tableSchema.relationships,
+      tableSchema.instanceToRow,
+      tableSchema.rowToInstance
     )
 
     this.tables.push(table)
@@ -152,11 +154,15 @@ export class Table {
         otherId: any
         otherRelationship?: string      
       }
-    }
+    },
+    instanceToRow?: (instance: any, row: any) => any,
+    rowToInstance?: (row: any, instance: any) => any
   ) {
     this.schema = schema
     this.name = tableName
     this.newInstance = newInstance
+    this.customInstanceToRow = instanceToRow
+    this.customRowToInstance = rowToInstance
 
     for (let columnName of Object.keys(columnSchema)) {
       let column = columnSchema[columnName]

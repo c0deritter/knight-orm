@@ -111,7 +111,7 @@ describe('Schema', function() {
       expect(row).to.deep.equal(expectedRow)
     })
 
-    it('should use a custom rowToInstance function', function() {
+    it('should use a custom instanceToRow function', function() {
       let object1 = new Object1
       object1.id = 1
       object1.property1 = 'a'
