@@ -47,7 +47,7 @@ describe('Orm (MySQL 5 / mysql)', function() {
     await queryFn('DROP TABLE IF EXISTS many_to_many_table2 CASCADE')
   })
   
-  // storeRowTests('mysql', queryFn)
+  storeRowTests('mysql', queryFn)
   storeInstanceTests('mysql', queryFn)
   loadTests('mysql', queryFn)
   remainingTests('mysql', queryFn)

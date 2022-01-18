@@ -11,7 +11,7 @@ const expect = chai.expect
 export function storeRowTests(db: string, queryFn: (sqlString: string, values?: any[]) => Promise<any>) {  
   let orm = new Orm(schema, db)
   
-  describe.only('store (row)', function() {
+  describe('store (row)', function() {
     it('insert simple object', async function() {
       let row = {
         column1: 'a'

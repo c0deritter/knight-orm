@@ -35,7 +35,7 @@ describe('Orm (PostgreSQL 12)', function() {
     await pool.query('DROP TABLE IF EXISTS many_to_many_table2 CASCADE')
   })
 
-  // storeRowTests('postgres', queryFn)
+  storeRowTests('postgres', queryFn)
   storeInstanceTests('postgres', queryFn)
   loadTests('postgres', queryFn)
   remainingTests('postgres', queryFn)
