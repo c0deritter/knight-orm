@@ -1,6 +1,6 @@
 {
   "name": "knight-orm",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "A light-weight non-invasive ORM",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
