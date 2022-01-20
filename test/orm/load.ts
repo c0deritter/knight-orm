@@ -24,7 +24,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       expect(rows.length).to.equal(3)
 
       expect(rows[0]).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: 1,
         property3: date1,
@@ -36,7 +36,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       })
 
       expect(rows[1]).to.deep.equal({
-        id: 2,
+        id: 3,
         property1: 'b',
         property2: 2,
         property3: date2,
@@ -48,7 +48,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       })
 
       expect(rows[2]).to.deep.equal({
-        id: 3,
+        id: 4,
         property1: 'c',
         property2: 3,
         property3: date3,
@@ -78,7 +78,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       expect(rows.length).to.equal(3)
       
       expect(rows[0]).to.deep.equal({
-        id: 3,
+        id: 4,
         property1: 'c',
         property2: 3,
         property3: date3,
@@ -90,7 +90,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       })
 
       expect(rows[1]).to.deep.equal({
-        id: 2,
+        id: 3,
         property1: 'b',
         property2: 2,
         property3: date2,
@@ -102,7 +102,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       })
 
       expect(rows[2]).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: 1,
         property3: date1,
@@ -129,7 +129,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       expect(rows.length).to.equal(2)
 
       expect(rows[0]).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: 1,
         property3: date1,
@@ -141,7 +141,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       })
 
       expect(rows[1]).to.deep.equal({
-        id: 2,
+        id: 3,
         property1: 'b',
         property2: 2,
         property3: date2,
@@ -168,7 +168,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       expect(rows.length).to.equal(1)
 
       expect(rows[0]).to.deep.equal({
-        id: 3,
+        id: 4,
         property1: 'c',
         property2: 3,
         property3: date3,
@@ -195,7 +195,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       expect(rows.length).to.equal(1)
 
       expect(rows[0]).to.deep.equal({
-        id: 2,
+        id: 3,
         property1: 'a',
         property2: null,
         property3: null,
@@ -214,18 +214,18 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
 
       let rows = await orm.load(queryFn, Object1, {
         manyToOneObject1: {
-          id: 1
+          id: 2
         }
       })
 
       expect(rows.length).to.equal(1)
 
       expect(rows[0]).to.deep.equal({
-        id: 2,
+        id: 3,
         property1: null,
         property2: null,
         property3: null,
-        manyToOneObject1Id: 1,
+        manyToOneObject1Id: 2,
         manyToOneObject2Id: null,
         oneToOneObject1Id: null,
         oneToOneObject2Id: null,
@@ -249,17 +249,17 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       expect(rows.length).to.equal(1)
 
       expect(rows[0]).to.deep.equal({
-        id: 2,
+        id: 3,
         property1: 'a',
         property2: null,
         property3: null,
-        manyToOneObject1Id: 1,
+        manyToOneObject1Id: 2,
         manyToOneObject2Id: null,
         oneToOneObject1Id: null,
         oneToOneObject2Id: null,
         oneToManyObject1ManyToOneId: null,
         manyToOneObject1: {
-          id: 1,
+          id: 2,
           property1: null,
           property2: 1,
           property3: null,
@@ -288,17 +288,17 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       expect(rows.length).to.equal(3)
 
       expect(rows[0]).to.deep.equal({
-        id: 2,
+        id: 3,
         property1: 'a',
         property2: null,
         property3: null,
-        manyToOneObject1Id: 1,
+        manyToOneObject1Id: 2,
         manyToOneObject2Id: null,
         oneToOneObject1Id: null,
         oneToOneObject2Id: null,
         oneToManyObject1ManyToOneId: null,
         manyToOneObject1: {
-          id: 1,
+          id: 2,
           property1: null,
           property2: 1,
           property3: null,
@@ -352,7 +352,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       expect(rows.length).to.equal(1)
 
       expect(rows[0]).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -380,7 +380,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       expect(rows.length).to.equal(1)
 
       expect(rows[0]).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -391,7 +391,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
         oneToManyObject1ManyToOneId: null,
         oneToManyObject1: [
           {
-            id: 2,
+            id: 3,
             property1: 'd',
             property2: null,
             property3: null,
@@ -399,7 +399,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
             manyToOneObject2Id: null,
             oneToOneObject1Id: null,
             oneToOneObject2Id: null,
-            oneToManyObject1ManyToOneId: 1
+            oneToManyObject1ManyToOneId: 2
           }
         ]
       })
@@ -421,7 +421,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       expect(rows.length).to.equal(3)
 
       expect(rows[0]).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -432,7 +432,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
         oneToManyObject1ManyToOneId: null,
         oneToManyObject1: [
           {
-            id: 2,
+            id: 3,
             property1: 'd',
             property2: null,
             property3: null,
@@ -446,7 +446,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       })
 
       expect(rows[1]).to.deep.equal({
-        id: 4,
+        id: 5,
         property1: 'a',
         property2: null,
         property3: null,
@@ -459,7 +459,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       })
 
       expect(rows[2]).to.deep.equal({
-        id: 7,
+        id: 8,
         property1: 'a',
         property2: null,
         property3: null,
@@ -497,17 +497,17 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
 
       expect(rows.length).to.equal(3)
       expect(rows[0]).to.deep.equal({
-        id: 2,
+        id: 3,
         property1: 'a',
         property2: null,
         property3: null,
-        manyToOneObject1Id: 1,
+        manyToOneObject1Id: 2,
         manyToOneObject2Id: null,
         oneToOneObject1Id: null,
         oneToOneObject2Id: null,
         oneToManyObject1ManyToOneId: null,
         manyToOneObject1: {
-          id: 1,
+          id: 2,
           property1: null,
           property2: 1,
           property3: null,
@@ -519,7 +519,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
         },
         oneToManyObject1: [
           {
-            id: 3,
+            id: 4,
             property1: 'd',
             property2: null,
             property3: null,
@@ -533,17 +533,17 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       })
 
       expect(rows[1]).to.deep.equal({
-        id: 6,
+        id: 7,
         property1: 'a',
         property2: null,
         property3: null,
-        manyToOneObject1Id: 5,
+        manyToOneObject1Id: 6,
         manyToOneObject2Id: null,
         oneToOneObject1Id: null,
         oneToOneObject2Id: null,
         oneToManyObject1ManyToOneId: null,
         manyToOneObject1: {
-          id: 5,
+          id: 6,
           property1: null,
           property2: 2,
           property3: null,
@@ -557,17 +557,17 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       })
 
       expect(rows[2]).to.deep.equal({
-        id: 10,
+        id: 11,
         property1: 'a',
         property2: null,
         property3: null,
-        manyToOneObject1Id: 9,
+        manyToOneObject1Id: 10,
         manyToOneObject2Id: null,
         oneToOneObject1Id: null,
         oneToOneObject2Id: null,
         oneToManyObject1ManyToOneId: null,
         manyToOneObject1: {
-          id: 9,
+          id: 10,
           property1: null,
           property2: 3,
           property3: null,
