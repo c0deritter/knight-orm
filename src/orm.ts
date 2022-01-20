@@ -817,7 +817,7 @@ export class Orm {
     classNameOrTable: (new (...args: any[]) => any)|Table, 
     obj: any, 
     asDatabaseRow = false
-  ): Promise<any> {
+  ): Promise<Change> {
 
     let l = ormLog.mt('delete')
     l.param('obj', obj)
@@ -834,29 +834,52 @@ export class Orm {
     if (! this.objectTools.isPrimaryKeySet(table, obj)) {
       throw new Error('Could not delete object because the primary key is not set.')
     }
+
+    let row = asDatabaseRow ? obj : table.instanceToRow(obj, true)
+
+    l.lib('Loading the row before the update')
+
+    let selectQuery = sql.select('*').from(table.name)
+    for (let column of table.primaryKey) {
+      selectQuery.where(comparison(column.name, row[column.name]), 'AND')
+    }
+
+    let dbResult
+    try {
+      dbResult = await this.queryTools.databaseIndependentQuery(queryFn, selectQuery.sql(this.db), selectQuery.values()) as SelectResult
+    }
+    catch (e) {
+      throw new Error(e as any)
+    }
+
+    if (dbResult.length != 1) {
+      throw new Error(`The row count was ${dbResult.length} instead of exactly 1 while loading the row before updating it.`)
+    }
+
+    let rowBefore = dbResult[0]
+    let objBefore = asDatabaseRow ? rowBefore : table.rowToInstance(rowBefore)
   
     let query = sql.deleteFrom(table.name)
-    let deleteInfo: any = {}
   
     for (let column of table.primaryKey) {
-      query.where(comparison(column.name, obj[column.getName(asDatabaseRow)]))
-      deleteInfo[column.getName(asDatabaseRow)] = obj[column.getName(asDatabaseRow)]
+      query.where(comparison(column.name, row[column.name]))
     }
   
-    let result
     try {
-      result = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
+      dbResult = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
     }
     catch (e) {
       throw new Error(e as any)
     }
   
-    if (result.affectedRows != 1) {
+    if (dbResult.affectedRows != 1) {
       throw new Error('Could not delete object.')
     }
   
-    l.returning('Returning delete info...', deleteInfo)
-    return deleteInfo
+    let change = new Change(asDatabaseRow ? table.name : table.className, objBefore, 'delete')
+
+    l.returning('Returning change...', change)
+    return change
   }
 
   /**
