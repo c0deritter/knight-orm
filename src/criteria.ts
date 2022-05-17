@@ -363,9 +363,9 @@ export class CriteriaTools {
       for (let criterium of criteria) {
         if (criterium instanceof Array || typeof criterium == 'object') {
           l.lib('Determining relationships to load of', criterium)
-          l.calling('Calling \'knight-orm/criteria.ts CriteriaTools.determineRelationshipsToLoadSeparately\'')
+          l.calling('Calling \'knight-orm/criteria.ts > CriteriaTools.determineRelationshipsToLoadSeparately\'')
           this.determineRelationshipsToLoadSeparately(table, objs, criterium, relationshipPath, relationshipsToLoad)
-          l.called('Calling \'knight-orm/criteria.ts CriteriaTools.determineRelationshipsToLoadSeparately\'')
+          l.called('Calling \'knight-orm/criteria.ts > CriteriaTools.determineRelationshipsToLoadSeparately\'')
           l.lib('Determined relationships to load of', criterium)
         }
       }
