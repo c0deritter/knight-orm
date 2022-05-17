@@ -393,10 +393,13 @@ export class Orm {
           }
         }
 
-        l.dev('Update query', updateQuery)
+        let sqlString = updateQuery.sql(this.db)
+        l.lib('Update SQL query string', sqlString)
+        let values = updateQuery.values()
+        l.lib('Update SQL query string parameter', values)
     
         try {
-          dbResult = await this.queryTools.databaseIndependentQuery(queryFn, updateQuery.sql(this.db), updateQuery.values()) as InsertUpdateDeleteResult
+          dbResult = await this.queryTools.databaseIndependentQuery(queryFn, sqlString, values) as InsertUpdateDeleteResult
         }
         catch (e) {
           throw new Error(e as any)
@@ -481,13 +484,16 @@ export class Orm {
         }
       }
 
-      l.dev('Insert query', insertQuery)
-  
+      let sqlString = insertQuery.sql(this.db)
+      l.lib('Update SQL query string', sqlString)
+      let values = insertQuery.values()
+      l.lib('Update SQL query string parameter', values)
+
       let generatedPrimaryKey = table.generatedPrimaryKey
   
       let dbResult: any
       try {
-        dbResult = await this.queryTools.databaseIndependentQuery(queryFn, insertQuery.sql(this.db), insertQuery.values(), generatedPrimaryKey?.name) as InsertUpdateDeleteResult
+        dbResult = await this.queryTools.databaseIndependentQuery(queryFn, sqlString, values, generatedPrimaryKey?.name) as InsertUpdateDeleteResult
       }
       catch (e) {
         throw new Error(e as any)
@@ -864,9 +870,14 @@ export class Orm {
     for (let column of table.primaryKey) {
       query.where(comparison(column.name, row[column.name]))
     }
+
+    let sqlString = query.sql(this.db)
+    l.dev('Update SQL query string', sqlString)
+    let values = query.values()
+    l.dev('Update SQL query string parameter', values)
   
     try {
-      dbResult = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as InsertUpdateDeleteResult
+      dbResult = await this.queryTools.databaseIndependentQuery(queryFn, sqlString, values) as InsertUpdateDeleteResult
     }
     catch (e) {
       throw new Error(e as any)
@@ -916,12 +927,18 @@ export class Orm {
     
     l.dev('Built SELECT query', query)
   
-    l.lib('Querying database with given SQL string and values')
+    l.lib('Querying database with given SQL query string and values')
+    
+    let sqlString = query.sql(this.db)
+    l.lib('SQL query string', sqlString)
+    let values = query.values()
+    l.lib('SQL query string parameter', values)
+    
     let joinedRows
   
     try {
       l.calling('Calling knight-orm/query.ts > QueryTools.databaseIndependentQuery')
-      joinedRows = await this.queryTools.databaseIndependentQuery(queryFn, query.sql(this.db), query.values()) as SelectResult
+      joinedRows = await this.queryTools.databaseIndependentQuery(queryFn, sqlString, values) as SelectResult
       l.called('Called knight-orm/query.ts > QueryTools.databaseIndependentQuery')
     }
     catch (e) {
