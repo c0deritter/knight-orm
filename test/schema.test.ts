@@ -41,8 +41,8 @@ describe('Schema', function() {
 
       expect(schema.getTable('table1').instanceToRow(object1)).to.deep.equal({
         id: 1,
-        column1: 'a',
-        column2: 1,
+        column1: 'b',
+        column2: 2,
         many_to_one_object1_id: 2,
         one_to_one_object1_id: 3
       })
@@ -77,29 +77,29 @@ describe('Schema', function() {
 
       let expectedRow = {
         id: 1,
-        column1: 'a',
-        column2: 1,
+        column1: 'b',
+        column2: 2,
         manyToManyObject2: [
           {
             table1_id: 1,
             table2_id: 'x',
-            column1: 'b',
-            column2: 2,
+            column1: 'c',
+            column2: 3,
             object2: {
               id: 'x',
-              column1: 'c',
-              column2: 3
+              column1: 'd',
+              column2: 4
             }
           } as any,
           {
             table1_id: 1,
             table2_id: 'y',
-            column1: 'd',
-            column2: 4,
+            column1: 'e',
+            column2: 5,
             object2: {
               id: 'y',
-              column1: 'e',
-              column2: 5
+              column1: 'f',
+              column2: 6
             }
           } as any
         ]
@@ -119,19 +119,19 @@ describe('Schema', function() {
       object1.manyToOneObject1Id = 2
       object1.oneToOneObject1Id = 3
 
+      let originalInstanceToRow = schema.getTable('table1').customInstanceToRow
       schema.getTable('table1').customInstanceToRow = function(instance: Object1, row: any) {
-        row.id++
-        row.column1 = 'b'
-        return row
+        row.column1 = 'q'
+        row.column2 = 10
       }
       
       let row = schema.getTable('table1').instanceToRow(object1)
-      delete schema.getTable('table1').customInstanceToRow
+      schema.getTable('table1').customInstanceToRow = originalInstanceToRow
 
       expect(row).to.deep.equal({
-        id: 2,
-        column1: 'b',
-        column2: 2 ,
+        id: 1,
+        column1: 'q',
+        column2: 10 ,
         many_to_one_object1_id: 2,
         one_to_one_object1_id: 3
       })
@@ -142,8 +142,8 @@ describe('Schema', function() {
     it('should convert a row to an instance', function() {
       let row = {
         id: 1,
-        column1: 'a',
-        column2: 1,
+        column1: 'b',
+        column2: 2,
         many_to_one_object1_id: 2,
         one_to_one_object1_id: 3
       }
@@ -160,25 +160,25 @@ describe('Schema', function() {
     it('should convert a row which has relationships to an instance', function() {
       let row = {
         id: 1,
-        column1: 'a',
-        column2: 1,
+        column1: 'b',
+        column2: 2,
         manyToManyObject2: [
           {
             table1_id: 1,
             table2_id: 'x',
-            column1: 'b',
+            column1: 'c',
             object2: {
               id: 'x',
-              column1: 'c'
+              column1: 'd'
             }
           } as any,
           {
             table1_id: 1,
             table2_id: 'y',
-            column1: 'd',
+            column1: 'e',
             object2: {
               id: 'y',
-              column1: 'e'
+              column1: 'f'
             }
           } as any
         ]
@@ -224,25 +224,25 @@ describe('Schema', function() {
     it('should use a custom rowToInstance function', function() {
       let row = {
         id: 1,
-        column1: 'a',
-        column2: 1,
+        column1: 'b',
+        column2: 2,
         many_to_one_object1_id: 2,
         one_to_one_object1_id: 3
       }
 
-      schema.getTable('table1').customRowToInstance = function(instance: Object1, row: any) {
-        instance.id!++
-        instance.property1 = 'b'
-        return row
+      let originalRowToInstance = schema.getTable('table1').customRowToInstance
+      schema.getTable('table1').customRowToInstance = function(row: any, instance: Object1) {
+        instance.property1 = 'q'
+        instance.property2 = 10
       }
       
       let instance = schema.getTable('table1').rowToInstance(row)
-      delete schema.getTable('table1').customRowToInstance
+      schema.getTable('table1').customRowToInstance = originalRowToInstance
 
       expect(instance).to.deep.equal({
         id: 1,
-        property1: 'a',
-        property2: 1,
+        property1: 'q',
+        property2: 10,
         manyToOneObject1Id: 2,
         oneToOneObject1Id: 3
       })

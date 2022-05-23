@@ -132,26 +132,22 @@ schema.addTable('table1',
     },
     newInstance: () => new Object1,
     instanceToRow: (object1: Object1, row: any) => {
-      row['id'] = object1.id != null ? object1.id - 1 : row['id']
-      row['column1'] = object1.property1 != null ? String.fromCharCode(object1.property1.charCodeAt(0) + 1) : object1.property1
-      row['column2'] = object1.property2 != null ? object1.property2 + 1 : object1.property2
-      row['column3'] = object1.property3 != null ? new Date(new Date(object1.property3).setFullYear(object1.property3.getFullYear() + 1)) : object1.property3
-      row['many_to_one_object1_id'] = object1.manyToOneObject1Id != null ? object1.manyToOneObject1Id - 1 : object1.manyToOneObject1Id
-      row['many_to_one_object2_id'] = object1.manyToOneObject2Id != null ? String.fromCharCode(object1.manyToOneObject2Id.charCodeAt(0) + 1) : object1.manyToOneObject2Id
-      row['one_to_one_object1_id'] = object1.oneToOneObject1Id != null ? object1.oneToOneObject1Id - 1 : object1.oneToOneObject1Id
-      row['one_to_one_object2_id'] = object1.oneToOneObject2Id != null ? String.fromCharCode(object1.oneToOneObject2Id.charCodeAt(0) + 1) : object1.oneToOneObject2Id
-      row['one_to_many_object1_many_to_one_id'] = object1.oneToManyObject1ManyToOneId != null ? object1.oneToManyObject1ManyToOneId - 1 : object1.oneToManyObject1ManyToOneId
+      if (object1.property1 !== undefined) {
+        row['column1'] = object1.property1 != null ? String.fromCharCode(object1.property1.charCodeAt(0) + 1) : object1.property1
+      }
+      
+      if (object1.property2 !== undefined) {
+        row['column2'] = object1.property2 != null ? object1.property2 + 1 : object1.property2
+      }
     },
     rowToInstance: (row: any, object1: Object1) => {
-      object1.id = row['id'] + 1
-      object1.property1 = row['column1'] != null ? String.fromCharCode(row['column1'].charCodeAt(0) - 1) : row['column1']
-      object1.property2 = row['column2'] != null ? row['column2'] - 1 : row['column2']
-      object1.property3 = row['column3'] != null ? new Date(new Date(row['column3']).setFullYear(row['column3'].getFullYear() - 1)) : row['column3']
-      object1.manyToOneObject1Id = row['many_to_one_object1_id'] != null ? row['many_to_one_object1_id'] + 1 : row['many_to_one_object1_id']
-      object1.manyToOneObject2Id = row['many_to_one_object2_id'] != null ? String.fromCharCode(row['many_to_one_object2_id'].charCodeAt(0) - 1) : row['many_to_one_object2_id']
-      object1.oneToOneObject1Id = row['one_to_one_object1_id'] != null ? row['one_to_one_object1_id'] + 1 : row['one_to_one_object1_id']
-      object1.oneToOneObject2Id = row['one_to_one_object2_id'] != null ? String.fromCharCode(row['one_to_one_object2_id'].charCodeAt(0) - 1) : row['one_to_one_object2_id']
-      object1.oneToManyObject1ManyToOneId = row['one_to_many_object1_many_to_one_id'] != null ? row['one_to_many_object1_many_to_one_id'] + 1 : row['one_to_many_object1_many_to_one_id']
+      if (row['column1'] !== undefined) {
+        object1.property1 = row['column1'] != null ? String.fromCharCode(row['column1'].charCodeAt(0) - 1) : row['column1']
+      }
+      
+      if (row['column2'] !== undefined) {
+        object1.property2 = row['column2'] != null ? row['column2'] - 1 : row['column2']
+      }
     }
   }
 )
@@ -188,20 +184,22 @@ schema.addTable('table2', {
   },
   newInstance: () => new Object2,
   instanceToRow: (object2: Object2, row: any) => {
-    row['id'] = object2.id != null ? String.fromCharCode(object2.id.charCodeAt(0) + 1) : object2.id
-    row['column1'] = object2.property1 != null ? String.fromCharCode(object2.property1.charCodeAt(0) + 1) : object2.property1
-    row['column2'] = object2.property2 != null ? object2.property2 + 1 : object2.property2
-    row['column3'] = object2.property3 != null ? new Date(new Date(object2.property3).setFullYear(object2.property3.getFullYear() + 1)) : object2.property3
-    row['one_to_one_object1_id'] = object2.oneToOneObject1Id != null ? object2.oneToOneObject1Id - 1 : object2.oneToOneObject1Id
-    row['one_to_many_object2_many_to_one_id'] = object2.oneToManyObject2ManyToOneId != null ? object2.oneToManyObject2ManyToOneId - 1 : object2.oneToManyObject2ManyToOneId
+    if (object2.property1 !== undefined) {
+      row['column1'] = object2.property1 != null ? String.fromCharCode(object2.property1.charCodeAt(0) + 1) : object2.property1
+    }
+
+    if (object2.property2 !== undefined) {
+      row['column2'] = object2.property2 != null ? object2.property2 + 1 : object2.property2
+    }
   },
   rowToInstance: (row: any, object2: Object2) => {
-    object2.id = row['id'] != null ? String.fromCharCode(row['id'].charCodeAt(0) - 1) : row['id']
-    object2.property1 = row['column1'] != null ? String.fromCharCode(row['column1'].charCodeAt(0) - 1) : row['column1']
-    object2.property2 = row['column2'] != null ? row['column2'] - 1 : row['column2']
-    object2.property3 = row['column3'] != null ? new Date(new Date(row['column3']).setFullYear(row['column3'].getFullYear() - 1)) : row['column3']
-    object2.oneToOneObject1Id = row['one_to_one_object1_id'] != null ? row['one_to_one_object1_id'] + 1 : row['one_to_one_object1_id']
-    object2.oneToManyObject2ManyToOneId = row['one_to_many_object2_many_to_one_id'] != null ? row['one_to_many_object2_many_to_one_id'] + 1 : row['one_to_many_object2_many_to_one_id']
+    if (row['column1'] !== undefined) {
+      object2.property1 = row['column1'] != null ? String.fromCharCode(row['column1'].charCodeAt(0) - 1) : row['column1']
+    }
+
+    if (row['column2'] !== undefined) {
+      object2.property2 = row['column2'] != null ? row['column2'] - 1 : row['column2']
+    }
   }
 })
 
@@ -229,18 +227,22 @@ schema.addTable('many_to_many_table1', {
   },
   newInstance: () => new ManyToManyObject1,
   instanceToRow: (manyToMany: ManyToManyObject1, row: any) => {
-    row['table1_id1'] = manyToMany.object1Id1 != null ? manyToMany.object1Id1 - 1 : manyToMany.object1Id1
-    row['table1_id2'] = manyToMany.object1Id2 != null ? manyToMany.object1Id2 - 1 : manyToMany.object1Id2
-    row['column1'] = manyToMany.property1 != null ? String.fromCharCode(manyToMany.property1.charCodeAt(0) + 1) : manyToMany.property1
-    row['column2'] = manyToMany.property2 != null ? manyToMany.property2 + 1 : manyToMany.property2
-    row['column3'] = manyToMany.property3 != null ? new Date(new Date(manyToMany.property3).setFullYear(manyToMany.property3.getFullYear() + 1)) : manyToMany.property3
+    if (manyToMany.property1 !== undefined) {
+      row['column1'] = manyToMany.property1 != null ? String.fromCharCode(manyToMany.property1.charCodeAt(0) + 1) : manyToMany.property1
+    }
+
+    if (manyToMany.property2 !== undefined) {
+      row['column2'] = manyToMany.property2 != null ? manyToMany.property2 + 1 : manyToMany.property2
+    }
   },
   rowToInstance: (row: any, manyToMany: ManyToManyObject1) => {
-    manyToMany.object1Id1 = row['table1_id1'] != null ? row['table1_id1'] + 1 : row['table1_id1']
-    manyToMany.object1Id2 = row['table1_id2'] != null ? row['table1_id2'] + 1 : row['table1_id2']
-    manyToMany.property1 = row['column1'] != null ? String.fromCharCode(row['column1'].charCodeAt(0) - 1) : row['column1']
-    manyToMany.property2 = row['column2'] != null ? row['column2'] - 1 : row['column2']
-    manyToMany.property3 = row['column3'] != null ? new Date(new Date(row['column3']).setFullYear(row['column3'].getFullYear() - 1)) : row['column3']
+    if (row['column1'] !== undefined) {
+      manyToMany.property1 = row['column1'] != null ? String.fromCharCode(row['column1'].charCodeAt(0) - 1) : row['column1']
+    }
+
+    if (row['column2'] !== undefined) {
+      manyToMany.property2 = row['column2'] != null ? row['column2'] - 1 : row['column2']
+    }
   }
 })
 
@@ -268,18 +270,22 @@ schema.addTable('many_to_many_table2', {
   },
   newInstance: () => new ManyToManyObject2,
   instanceToRow: (manyToMany: ManyToManyObject2, row: any) => {
-    row['table1_id'] = manyToMany.object1Id != null ? manyToMany.object1Id - 1 : manyToMany.object1Id
-    row['table2_id'] = manyToMany.object2Id != null ? String.fromCharCode(manyToMany.object2Id.charCodeAt(0) + 1) : manyToMany.object2Id
-    row['column1'] = manyToMany.property1 != null ? String.fromCharCode(manyToMany.property1.charCodeAt(0) + 1) : manyToMany.property1
-    row['column2'] = manyToMany.property2 != null ? manyToMany.property2 + 1 : manyToMany.property2
-    row['column3'] = manyToMany.property3 != null ? new Date(new Date(manyToMany.property3).setFullYear(manyToMany.property3.getFullYear() + 1)) : manyToMany.property3
+    if (manyToMany.property1 !== undefined) {
+      row['column1'] = manyToMany.property1 != null ? String.fromCharCode(manyToMany.property1.charCodeAt(0) + 1) : manyToMany.property1
+    }
+
+    if (manyToMany.property2 !== undefined) {
+      row['column2'] = manyToMany.property2 != null ? manyToMany.property2 + 1 : manyToMany.property2
+    }
   },
   rowToInstance: (row: any, manyToMany: ManyToManyObject2) => {
-    manyToMany.object1Id = row['table1_id'] != null ? row['table1_id'] + 1 : row['table1_id']
-    manyToMany.object2Id = row['table2_id'] != null ? String.fromCharCode(row['table2_id'].charCodeAt(0) - 1) : row['table2_id']
-    manyToMany.property1 = row['column1'] != null ? String.fromCharCode(row['column1'].charCodeAt(0) - 1) : row['column1']
-    manyToMany.property2 = row['column2'] != null ? row['column2'] - 1 : row['column2']
-    manyToMany.property3 = row['column3'] != null ? new Date(new Date(new Date(row['column3']).setFullYear(row['column3'].getFullYear() - 1))) : row['column3']
+    if (row['column1'] !== undefined) {
+      manyToMany.property1 = row['column1'] != null ? String.fromCharCode(row['column1'].charCodeAt(0) - 1) : row['column1']
+    }
+    
+    if (row['column2'] !== undefined) {
+      manyToMany.property2 = row['column2'] != null ? row['column2'] - 1 : row['column2']
+    }
   }
 })
 

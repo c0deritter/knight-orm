@@ -10,13 +10,13 @@ describe('join', function() {
         let rows = [
           {
             table1__id: 1,
-            table1__column1: 'a',
-            table1__column2: 1
+            table1__column1: 'b',
+            table1__column2: 2
           },
           {
             table1__id: 2,
-            table1__column1: 'b',
-            table1__column2: 2
+            table1__column1: 'c',
+            table1__column2: 3
           }
         ]
   
@@ -77,16 +77,16 @@ describe('join', function() {
             table1__id: 1,
             table1__many_to_one_object1_id: 2,
             table1__manyToOneObject1__id: 2,
-            table1__manyToOneObject1__column1: 'a',
-            table1__manyToOneObject1__column2: 1,
+            table1__manyToOneObject1__column1: 'b',
+            table1__manyToOneObject1__column2: 2,
             table1__manyToOneObject1__column3: null,
           },
           {
             table1__id: 3,
             table1__many_to_one_object1_id: 4,
             table1__manyToOneObject1__id: 4,
-            table1__manyToOneObject1__column1: 'b',
-            table1__manyToOneObject1__column2: 2,
+            table1__manyToOneObject1__column1: 'c',
+            table1__manyToOneObject1__column2: 3,
             table1__manyToOneObject1__column3: null,
           }
         ]
@@ -150,24 +150,24 @@ describe('join', function() {
           {
             table1__id: 1,
             table1__oneToManyObject1__id: 2,
-            table1__oneToManyObject1__column1: 'a',
-            table1__oneToManyObject1__column2: 1,
-            table1__oneToManyObject1__column3: null,
-            table1__oneToManyObject1__one_to_many_object1_many_to_one_id: 1,
-          },
-          {
-            table1__id: 1,
-            table1__oneToManyObject1__id: 3,
             table1__oneToManyObject1__column1: 'b',
             table1__oneToManyObject1__column2: 2,
             table1__oneToManyObject1__column3: null,
             table1__oneToManyObject1__one_to_many_object1_many_to_one_id: 1,
           },
           {
-            table1__id: 4,
-            table1__oneToManyObject1__id: 5,
+            table1__id: 1,
+            table1__oneToManyObject1__id: 3,
             table1__oneToManyObject1__column1: 'c',
             table1__oneToManyObject1__column2: 3,
+            table1__oneToManyObject1__column3: null,
+            table1__oneToManyObject1__one_to_many_object1_many_to_one_id: 1,
+          },
+          {
+            table1__id: 4,
+            table1__oneToManyObject1__id: 5,
+            table1__oneToManyObject1__column1: 'd',
+            table1__oneToManyObject1__column2: 4,
             table1__oneToManyObject1__column3: null,
             table1__oneToManyObject1__one_to_many_object1_many_to_one_id: 4,
           }
