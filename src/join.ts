@@ -97,7 +97,8 @@ export class JoinAlias {
   }
 
   /**
-   * Either the table which was given as the base 
+   * Either the table which was given as the base or the other table of the given 
+   * relationship.
    */
   get table(): Table {
     if (this.relationship) {
@@ -124,7 +125,8 @@ export class JoinAlias {
     return this._alias
   }
 
-  /** The alias for usage in an SQL query when aliasing the joined table. It
+  /** 
+   * The alias for usage in an SQL query when aliasing the joined table. It
    * is the 'alias' property with an appended dot.
    */
   get joinAlias(): string {
@@ -135,7 +137,8 @@ export class JoinAlias {
     return this._joinAlias
   }
 
-  /** The alias for usage in an SQL query when creating an aliasing a column in a 
+  /** 
+   * The alias for usage in an SQL query when creating an aliasing a column in a 
    * select statement. It is the 'alias' property with appended double underscore.
    */
   get columnAlias(): string {
