@@ -28,7 +28,7 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
       expect(change).to.deep.equal(
         new Change('Object1', {
           id: 2,
-          property1: 'a',
+          property1: 'b',
           property2: null,
           property3: null,
           manyToOneObject1Id: null,
@@ -43,8 +43,8 @@ export function remainingTests(db: string, queryFn: (sqlString: string, values?:
 
       expect(table1Result.length).to.equal(1)
       expect(table1Result[0]).to.deep.equal({
-        id: 2,
-        column1: 'c',
+        id: 1,
+        column1: 'b',
         column2: null,
         column3: null,
         many_to_one_object1_id: null,

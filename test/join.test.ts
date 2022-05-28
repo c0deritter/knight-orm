@@ -9,14 +9,14 @@ describe('join', function() {
       it('should unjoin simple rows', function() {
         let rows = [
           {
-            table1__id: 1,
-            table1__column1: 'b',
-            table1__column2: 2
+            t_0: 1,
+            t_1: 'b',
+            t_2: 2
           },
           {
-            table1__id: 2,
-            table1__column1: 'c',
-            table1__column2: 3
+            t_0: 2,
+            t_1: 'c',
+            t_2: 3
           }
         ]
   
@@ -40,8 +40,8 @@ describe('join', function() {
       it('should ignore columns which do not exist in the schema', function() {
         let rows = [
           {
-            table1__id: 1,
-            table1__somethingElse: '?'
+            t_0: 1,
+            t_999: '?'
           }
         ]
   
@@ -58,9 +58,9 @@ describe('join', function() {
       it('should not regard rows if every of column is NULL', function() {
         let rows = [
           {
-            table1__id: null,
-            table1__column1: null,
-            table1__column2: null
+            t_0: null,
+            t_1: null,
+            t_2: null
           }
         ]
   
@@ -74,20 +74,20 @@ describe('join', function() {
       it('should unjoin a many-to-one relationship', function() {
         let rows = [
           {
-            table1__id: 1,
-            table1__many_to_one_object1_id: 2,
-            table1__manyToOneObject1__id: 2,
-            table1__manyToOneObject1__column1: 'b',
-            table1__manyToOneObject1__column2: 2,
-            table1__manyToOneObject1__column3: null,
+            t_0: 1,
+            t_4: 2,
+            t__0_0: 2,
+            t__0_1: 'b',
+            t__0_2: 2,
+            t__0_3: null,
           },
           {
-            table1__id: 3,
-            table1__many_to_one_object1_id: 4,
-            table1__manyToOneObject1__id: 4,
-            table1__manyToOneObject1__column1: 'c',
-            table1__manyToOneObject1__column2: 3,
-            table1__manyToOneObject1__column3: null,
+            t_0: 3,
+            t_4: 4,
+            t__0_0: 4,
+            t__0_1: 'c',
+            t__0_2: 3,
+            t__0_3: null,
           }
         ]
   
@@ -123,12 +123,12 @@ describe('join', function() {
       it('should not unjoin a many-to-one relationship which is not there', function() {
         let rows = [
           {
-            table1__id: 1,
-            table1__many_to_one_object1_id: null,
-            table1__manyToOneObject1__id: null,
-            table1__manyToOneObject1__column1: null,
-            table1__manyToOneObject1__column2: null,
-            table1__manyToOneObject1__column3: null,
+            t_0: 1,
+            t_4: null,
+            t__0__0: null,
+            t__0__1: null,
+            t__0__2: null,
+            t__0__3: null,
           }
         ]
   
@@ -148,28 +148,28 @@ describe('join', function() {
       it('should unjoin a one-to-many relationship', function() {
         let rows = [
           {
-            table1__id: 1,
-            table1__oneToManyObject1__id: 2,
-            table1__oneToManyObject1__column1: 'b',
-            table1__oneToManyObject1__column2: 2,
-            table1__oneToManyObject1__column3: null,
-            table1__oneToManyObject1__one_to_many_object1_many_to_one_id: 1,
+            t_0: 1,
+            t__4_0: 2,
+            t__4_1: 'b',
+            t__4_2: 2,
+            t__4_3: null,
+            t__4_8: 1,
           },
           {
-            table1__id: 1,
-            table1__oneToManyObject1__id: 3,
-            table1__oneToManyObject1__column1: 'c',
-            table1__oneToManyObject1__column2: 3,
-            table1__oneToManyObject1__column3: null,
-            table1__oneToManyObject1__one_to_many_object1_many_to_one_id: 1,
+            t_0: 1,
+            t__4_0: 3,
+            t__4_1: 'c',
+            t__4_2: 3,
+            t__4_3: null,
+            t__4_8: 1,
           },
           {
-            table1__id: 4,
-            table1__oneToManyObject1__id: 5,
-            table1__oneToManyObject1__column1: 'd',
-            table1__oneToManyObject1__column2: 4,
-            table1__oneToManyObject1__column3: null,
-            table1__oneToManyObject1__one_to_many_object1_many_to_one_id: 4,
+            t_0: 4,
+            t__4_0: 5,
+            t__4_1: 'd',
+            t__4_2: 4,
+            t__4_3: null,
+            t__4_8: 4,
           }
         ]
   
@@ -215,12 +215,12 @@ describe('join', function() {
       it('should not unjoin a one-to-many relationship which is not there', function() {
         let rows = [
           {
-            table1__id: 1,
-            table1__oneToManyObject1__id: null,
-            table1__oneToManyObject1__column1: null,
-            table1__oneToManyObject1__column2: null,
-            table1__oneToManyObject1__column3: null,
-            table1__oneToManyObject1__one_to_many_object1_many_to_one_id: null,
+            t_0: 1,
+            t__oneToManyObject1__id: null,
+            t__oneToManyObject1__column1: null,
+            t__oneToManyObject1__column2: null,
+            t__oneToManyObject1__column3: null,
+            t__oneToManyObject1__one_to_many_object1_many_to_one_id: null,
           }
         ]
   

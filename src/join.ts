@@ -1,7 +1,7 @@
 import { Criteria, summarizeCriteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import { ObjectTools } from '.'
-import { Relationship, Table } from './schema'
+import { Column, Relationship, Table } from './schema'
 
 let log = new Log('knight-orm/join.ts')
 
@@ -44,17 +44,17 @@ export class JoinAlias {
    */
   relationship: Relationship|null
   
-  private _alias?: string
-  private _joinAlias?: string
-  private _columnAlias?: string
+  private _aliasPrefix?: string
+  private _joinAliasPrefix?: string
+  private _columnAliasPrefix?: string
 
   /**
    * This constructor is used to create the initial root alias which
    * is the base for all following join aliases.
    * 
-   * @param table The table which was defined in the SQL FROM clause
+   * @param rootTable The table which was defined in the SQL FROM clause
    */
-  constructor(table: Table)
+  constructor(rootTable: Table)
 
   /**
    * This constructor is used for creating a join alias, either using
@@ -108,45 +108,57 @@ export class JoinAlias {
     return this.rootTable
   }
 
+  get rootTableAlias(): string {
+    return 't'
+  }
+
   /**
    * The alias which contains all the aliases from all parents, concatenated by 
    * a double underscore.
    */
-  get alias(): string {
-    if (! this._alias) {
+  get aliasPrefix(): string {
+    if (! this._aliasPrefix) {
       if (this.parent && this.relationship) {
-        this._alias = this.parent.alias + '__' + this.relationship.name
+        this._aliasPrefix = this.parent.aliasPrefix + '__' + this.relationshipAlias
       }
       else {
-        this._alias = this.rootTable.name
+        this._aliasPrefix = this.rootTableAlias
       }
     }
 
-    return this._alias
+    return this._aliasPrefix
+  }
+
+  get relationshipAlias(): string {
+    return this.relationship ? this.relationship.table.relationships.indexOf(this.relationship).toString() : ''
+  }
+
+  getColumnAlias(column: Column): string {
+    return column.table.columns.indexOf(column).toString()
   }
 
   /** 
    * The alias for usage in an SQL query when aliasing the joined table. It
    * is the 'alias' property with an appended dot.
    */
-  get joinAlias(): string {
-    if (! this._joinAlias) {
-      this._joinAlias = this.alias + '.'
+  get joinAliasPrefix(): string {
+    if (! this._joinAliasPrefix) {
+      this._joinAliasPrefix = this.aliasPrefix + '.'
     }
 
-    return this._joinAlias
+    return this._joinAliasPrefix
   }
 
   /** 
    * The alias for usage in an SQL query when creating an aliasing a column in a 
    * select statement. It is the 'alias' property with appended double underscore.
    */
-  get columnAlias(): string {
-    if (! this._columnAlias) {
-      this._columnAlias = this.alias + '__'
+  get columnAliasPrefix(): string {
+    if (! this._columnAliasPrefix) {
+      this._columnAliasPrefix = this.aliasPrefix + '_'
     }
 
-    return this._columnAlias
+    return this._columnAliasPrefix
   }
 
   /**
@@ -175,7 +187,7 @@ export class JoinAlias {
     let everyColumnIsNull = true
 
     for (let column of this.table.columns) {
-      let aliasedColumn = this.columnAlias + column.name
+      let aliasedColumn = this.columnAliasPrefix + this.getColumnAlias(column)
 
       if (aliasedColumn in joinedRow) {
         if (unjoinedRow == undefined) {
@@ -213,7 +225,7 @@ export class JoinAlias {
     l.param('criteria', criteria)
     l.param('asDatabaseCriteria', asDatabaseCriteria)
 
-    l.location = [ this.columnAlias ]
+    l.location = [ this.columnAliasPrefix ]
     l.locationSeparator = ' > '
 
     // Kind of a hacky approach to be able to use one the functions which

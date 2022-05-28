@@ -245,12 +245,12 @@ export class QueryTools {
         if (typeof criteria['@orderBy'] == 'string') {
           if (asDatabaseCriteria && table.hasColumn(criteria['@orderBy'])) {
             l.lib('Adding ORDER BY', criteria['@orderBy'])
-            query.orderBy(joinAlias.joinAlias + criteria['@orderBy'])
+            query.orderBy(joinAlias.joinAliasPrefix + criteria['@orderBy'])
           }
           else if (! asDatabaseCriteria && table.hasColumnByProperty(criteria['@orderBy'])) {
             let column = table.getColumnByProperty(criteria['@orderBy'])!
             l.lib(`Adding ORDER BY from property name '${criteria['@orderBy']}'`, column.name)
-            query.orderBy(joinAlias.joinAlias + column.name)
+            query.orderBy(joinAlias.joinAliasPrefix + column.name)
           }
           else {
             l.lib('Not adding ORDER BY because the given column or property is not contained in the table', criteria['@orderBy'])
@@ -263,12 +263,12 @@ export class QueryTools {
             if (typeof orderBy == 'string') {
               if (asDatabaseCriteria && table.hasColumn(orderBy)) {
                 l.lib('Adding ORDER BY', orderBy)
-                query.orderBy(joinAlias.joinAlias + orderBy)
+                query.orderBy(joinAlias.joinAliasPrefix + orderBy)
               }
               else if (! asDatabaseCriteria && table.hasColumnByProperty(orderBy)) {
                 let column = table.getColumnByProperty(orderBy)!
                 l.lib(`Adding ORDER BY from property name '${criteria['@orderBy']}'`, column.name)
-                query.orderBy(joinAlias.joinAlias + column.name)
+                query.orderBy(joinAlias.joinAliasPrefix + column.name)
               }
               else {
                 l.lib('Not adding ORDER BY because the given column or property is not contained in the table', orderBy)
@@ -307,11 +307,11 @@ export class QueryTools {
     
                 if (direction == undefined) {
                   l.lib('Adding ORDER BY', columnName)
-                  query.orderBy(joinAlias.joinAlias + columnName)
+                  query.orderBy(joinAlias.joinAliasPrefix + columnName)
                 }
                 else {
                   l.lib('Adding ORDER BY', columnName)
-                  query.orderBy(joinAlias.joinAlias + columnName + ' ' + direction)
+                  query.orderBy(joinAlias.joinAliasPrefix + columnName + ' ' + direction)
                 }  
               }
               else {
@@ -349,11 +349,11 @@ export class QueryTools {
 
               if (direction == undefined) {
                 l.lib('Adding ORDER BY', columnName)
-                query.orderBy(joinAlias.joinAlias + columnName)
+                query.orderBy(joinAlias.joinAliasPrefix + columnName)
               }
               else {
                 l.lib('Adding ORDER BY', columnName)
-                query.orderBy(joinAlias.joinAlias + columnName + ' ' + direction)
+                query.orderBy(joinAlias.joinAliasPrefix + columnName + ' ' + direction)
               }  
             }
             else {
@@ -417,7 +417,7 @@ export class QueryTools {
           }
 
           if (value['@value'] !== undefined) {
-            let comp = comparison(joinAlias.joinAlias + column.name, operator, value['@value'])
+            let comp = comparison(joinAlias.joinAliasPrefix + column.name, operator, value['@value'])
             
             if (value['@not'] === true) {
               l.lib('Adding comparison with NOT', comp)
@@ -446,7 +446,7 @@ export class QueryTools {
           }
 
           if (! atLeastOneComparison) {
-            let comp = comparison(joinAlias.joinAlias + column.name, value)
+            let comp = comparison(joinAlias.joinAliasPrefix + column.name, value)
             l.lib('Adding comparison', comp)
             sqlCondition.push(comp)
           }
@@ -489,7 +489,7 @@ export class QueryTools {
                 l.lib('Adding logical operator', logical)
                 subCondition.push(logical)
 
-                let comp = comparison(joinAlias.joinAlias + column.name, operator, arrayValue['@value'])
+                let comp = comparison(joinAlias.joinAliasPrefix + column.name, operator, arrayValue['@value'])
                 
                 if (arrayValue['@not'] === true) {
                   l.lib('Adding comparison with NOT', comp)
@@ -509,7 +509,7 @@ export class QueryTools {
           }
         }
         else {
-          let comp = comparison(joinAlias.joinAlias + column.name, value)
+          let comp = comparison(joinAlias.joinAliasPrefix + column.name, value)
           l.lib('Adding comparison with default operator =', comp)
           sqlCondition.push(comp)
         }
@@ -539,7 +539,7 @@ export class QueryTools {
 
             let relationshipJoinAlias = joinAlias.join(relationship)
 
-            query.join('LEFT', otherTable.name, relationshipJoinAlias.alias, joinAlias.joinAlias + thisId.name + ' = ' + relationshipJoinAlias.joinAlias + otherId.name)
+            query.join('LEFT', otherTable.name, relationshipJoinAlias.aliasPrefix, joinAlias.joinAliasPrefix + thisId.name + ' = ' + relationshipJoinAlias.joinAliasPrefix + otherId.name)
             l.lib('Added LEFT JOIN to query', query._join!.pieces![query._join!.pieces!.length - 1])
 
             l.calling('Filling query with the relationship criteria', relationshipCriteria)
@@ -563,9 +563,10 @@ export class QueryTools {
         if (from instanceof From) {
           let fromTable = this.schema.getTable(from.table)
       
-          for (let column of fromTable.columns) {
+          for (let i = 0; i < fromTable.columns.length; i++) {
+            let column = fromTable.columns[i]
             let alias = from.alias != undefined && from.alias.length > 0 ? from.alias : undefined
-            query.select((alias != undefined ? alias + '.' : '') + column.name + ' ' + (alias != undefined ? '"' + alias + '__' + column.name + '"' : ''))
+            query.select((alias != undefined ? alias + '.' : '') + column.name + ' ' + (alias != undefined ? '"' + alias + '_' + i + '"' : ''))
           }
         }
       }
@@ -576,10 +577,11 @@ export class QueryTools {
         if (join instanceof Join) {
           let joinTable = this.schema.getTable(join.table)
     
-          for (let column of joinTable.columns) {
+          for (let i = 0; i < joinTable.columns.length; i++) {
+            let column = joinTable.columns[i]
             let alias = join.alias != undefined && join.alias.length > 0 ? join.alias : undefined
-            query.select((alias != undefined ? alias + '.' : '') + column.name + ' ' + (alias != undefined ? '"' + alias + '__' + column.name + '"' : ''))
-          }  
+            query.select((alias != undefined ? alias + '.' : '') + column.name + ' ' + (alias != undefined ? '"' + alias + '_' + i + '"' : ''))
+          }
         }
       }
     }
@@ -613,7 +615,7 @@ export class QueryTools {
     }
 
     let query = new Query
-    query.from(table.name, table.name)
+    query.from(table.name, new JoinAlias(table).rootTableAlias)
     this.addCriteria(table, query, criteria, asDatabaseCriteria)
     this.selectAllColumnsExplicitly(query)
     return query
@@ -646,7 +648,7 @@ export class QueryTools {
     }
 
     let query = new Query
-    query.from(table.name, table.name).select('COUNT(*) as count')
+    query.from(table.name, new JoinAlias(table).rootTableAlias).select('COUNT(*) as count')
     this.addCriteria(table, query, criteria, asDatabaseCriteria)
     return query
   }  

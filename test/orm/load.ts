@@ -1,7 +1,7 @@
 import * as chai from 'chai'
 import * as chaiAsPromised from 'chai-as-promised'
 import 'mocha'
-import { Orm } from '../../src'
+import { Orm, Schema } from '../../src'
 import { Object1, Object2, schema } from '../testSchema'
 
 chai.use(chaiAsPromised)
@@ -597,5 +597,94 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
 
       expect(rows.length).to.equal(0)
     })
+
+    // PostgreSQL has a 63 character limit for table names and aliases
+    // MySQL has a 64 character limit for table names and aliases
+    // This test checks if it is successful to load a row from tables with very long names
+    it('should load data from tables with a very long name', async function() {
+      await queryFn('DROP TABLE IF EXISTS very_long_table_name_with_63_characters_of_length_0123456789abc')
+      await queryFn('CREATE TABLE very_long_table_name_with_63_characters_of_length_0123456789abc (column1 INTEGER)')
+      await queryFn('INSERT INTO very_long_table_name_with_63_characters_of_length_0123456789abc (column1) VALUES (1)')
+
+      let schema = new Schema
+      schema.addTable('very_long_table_name_with_63_characters_of_length_0123456789abc', {
+        columns: {
+          'column1': 'property1'
+        },
+        newInstance: () => new VeryLongTableNameTestClass
+      })
+
+      let orm = new Orm(schema, db)
+
+      let entities = await orm.load(queryFn, VeryLongTableNameTestClass, {
+        property1: 1
+      })
+
+      expect(entities.length).to.equal(1)
+      expect(entities[0]).to.deep.equal({
+        property1: 1
+      })
+
+      await queryFn('DROP TABLE very_long_table_name_with_63_characters_of_length_0123456789abc')
+    })
+
+    // PostgreSQL has a 63 character limit for table names and aliases
+    // MySQL has a 64 character limit for table names and aliases
+    // This test checks if it is successful to load a row from tables with very long names
+    it('should load data from tables with a long name and its relationships', async function() {
+      await queryFn('DROP TABLE IF EXISTS very_long_table_name_with_63_characters_of_length_0123456789abc')
+      await queryFn('DROP TABLE IF EXISTS very_long_table_name_with_63_characters_of_length_defghijklmnop')
+      await queryFn('CREATE TABLE very_long_table_name_with_63_characters_of_length_0123456789abc (column1 INTEGER)')
+      await queryFn('CREATE TABLE very_long_table_name_with_63_characters_of_length_defghijklmnop (column1 INTEGER)')
+      await queryFn('INSERT INTO very_long_table_name_with_63_characters_of_length_0123456789abc (column1) VALUES (1)')
+      await queryFn('INSERT INTO very_long_table_name_with_63_characters_of_length_defghijklmnop (column1) VALUES (1)')
+
+      let schema = new Schema
+      schema.addTable('very_long_table_name_with_63_characters_of_length_0123456789abc', {
+        columns: {
+          'column1': 'property1'
+        },
+        relationships: {
+          'relationship1': {
+            manyToOne: true,
+            thisId: 'column1',
+            otherTable: 'very_long_table_name_with_63_characters_of_length_defghijklmnop',
+            otherId: 'column1'
+          }
+        },
+        newInstance: () => new VeryLongTableNameTestClass
+      })
+
+      schema.addTable('very_long_table_name_with_63_characters_of_length_defghijklmnop', {
+        columns: {
+          'column1': 'property1'
+        },
+        newInstance: () => new VeryLongTableNameTestClass
+      })
+
+      let orm = new Orm(schema, db)
+
+      let entities = await orm.load(queryFn, schema.getTable('very_long_table_name_with_63_characters_of_length_0123456789abc'), {
+        relationship1: {
+          '@load': true,
+          property1: 1
+        }
+      })
+
+      expect(entities.length).to.equal(1)
+      expect(entities[0]).to.deep.equal({
+        property1: 1,
+        relationship1: {
+          property1: 1
+        }
+      })
+
+      await queryFn('DROP TABLE very_long_table_name_with_63_characters_of_length_0123456789abc')
+      await queryFn('DROP TABLE very_long_table_name_with_63_characters_of_length_defghijklmnop')
+    })
   })
+}
+
+class VeryLongTableNameTestClass {
+  property1?: number
 }

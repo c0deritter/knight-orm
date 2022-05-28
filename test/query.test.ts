@@ -149,7 +149,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
-      expect(query._where!.mysql()).to.equal('table1.column1 = ?')
+      expect(query._where!.mysql()).to.equal('t.column1 = ?')
       expect(query._where!.values()).to.deep.equal(['a'])
     })
   
@@ -162,7 +162,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
-      expect(query._where!.mysql()).to.equal('table1.column1 = ? AND table1.column2 = ?')
+      expect(query._where!.mysql()).to.equal('t.column1 = ? AND t.column2 = ?')
       expect(query._where!.values()).to.deep.equal(['a',1])
     })
   
@@ -176,7 +176,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
-      expect(query._where!.mysql()).to.equal('NOT (table1.column1 = ? AND table1.column2 = ?)')
+      expect(query._where!.mysql()).to.equal('NOT (t.column1 = ? AND t.column2 = ?)')
       expect(query._where!.values()).to.deep.equal(['a',1])
     })
   
@@ -191,7 +191,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
-      expect(query._where!.mysql()).to.equal('table1.column1 <> ?')
+      expect(query._where!.mysql()).to.equal('t.column1 <> ?')
       expect(query._where!.values()).to.deep.equal(['a'])
     })
   
@@ -207,7 +207,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
-      expect(query._where!.mysql()).to.equal('NOT table1.column1 <> ?')
+      expect(query._where!.mysql()).to.equal('NOT t.column1 <> ?')
       expect(query._where!.values()).to.deep.equal(['a'])
     })
   
@@ -223,7 +223,7 @@ describe('query', function() {
       let query1 = new Query
       queryTools.addCriteria(schema.getTable('table1'), query1, criteria1)
       
-      expect(query1._where!.mysql()).to.equal('table1.column1 <> ? AND table1.column2 = ?')
+      expect(query1._where!.mysql()).to.equal('t.column1 <> ? AND t.column2 = ?')
       expect(query1._where!.values()).to.deep.equal(['a',1])
 
       let criteria2 = {
@@ -237,7 +237,7 @@ describe('query', function() {
       let query2 = new Query
       queryTools.addCriteria(schema.getTable('table1'), query2, criteria2)
       
-      expect(query2._where!.mysql()).to.equal('table1.column1 = ? AND table1.column2 <> ?')
+      expect(query2._where!.mysql()).to.equal('t.column1 = ? AND t.column2 <> ?')
       expect(query2._where!.values()).to.deep.equal(['a',1])
     })
   
@@ -278,7 +278,7 @@ describe('query', function() {
       let query1 = new Query
       queryTools.addCriteria(schema.getTable('table1'), query1, criteria1)
   
-      expect(query1._where!.mysql()).to.equal('table1.column1 IS NULL')
+      expect(query1._where!.mysql()).to.equal('t.column1 IS NULL')
       expect(query1._where!.values()).to.deep.equal([])
   
       let criteria2 = {
@@ -291,7 +291,7 @@ describe('query', function() {
       let query2 = new Query
       queryTools.addCriteria(schema.getTable('table1'), query2, criteria2)
       
-      expect(query2._where!.mysql()).to.equal('table1.column1 IS NULL')
+      expect(query2._where!.mysql()).to.equal('t.column1 IS NULL')
       expect(query2._where!.values()).to.deep.equal([])
 
       let criteria3 = {
@@ -304,7 +304,7 @@ describe('query', function() {
       let query3 = new Query
       queryTools.addCriteria(schema.getTable('table1'), query3, criteria3)
       
-      expect(query3._where!.mysql()).to.equal('table1.column1 IS NOT NULL')
+      expect(query3._where!.mysql()).to.equal('t.column1 IS NOT NULL')
       expect(query3._where!.values()).to.deep.equal([])
 
       let criteria4 = {
@@ -317,7 +317,7 @@ describe('query', function() {
       let query4 = new Query
       queryTools.addCriteria(schema.getTable('table1'), query4, criteria4)
       
-      expect(query4._where!.mysql()).to.equal('table1.column1 IS NOT NULL')
+      expect(query4._where!.mysql()).to.equal('t.column1 IS NOT NULL')
       expect(query4._where!.values()).to.deep.equal([])
     })
   
@@ -329,7 +329,7 @@ describe('query', function() {
       let query1 = new Query
       queryTools.addCriteria(schema.getTable('table1'), query1, criteria1)
       
-      expect(query1._where!.mysql()).to.equal('table1.column1 IN (?, ?, ?, ?)')
+      expect(query1._where!.mysql()).to.equal('t.column1 IN (?, ?, ?, ?)')
       expect(query1._where!.values()).to.deep.equal([1,2,3,4])
 
       let criteria2 = {
@@ -339,7 +339,7 @@ describe('query', function() {
       let query2 = new Query
       queryTools.addCriteria(schema.getTable('table1'), query2, criteria2)
       
-      expect(query2._where!.mysql()).to.equal('table1.column1 IN (?, ?, ?, ?)')
+      expect(query2._where!.mysql()).to.equal('t.column1 IN (?, ?, ?, ?)')
       expect(query2._where!.values()).to.deep.equal(['a', 'b', 'c', 'd'])
   
       let date1 = new Date
@@ -352,7 +352,7 @@ describe('query', function() {
       let query3 = new Query
       queryTools.addCriteria(schema.getTable('table1'), query3, criteria3)
       
-      expect(query3._where!.mysql()).to.equal('table1.column1 IN (?, ?)')
+      expect(query3._where!.mysql()).to.equal('t.column1 IN (?, ?)')
       expect(query3._where!.values()).to.deep.equal([date1, date2])
     })
 
@@ -374,7 +374,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
-      expect(query._where!.mysql()).to.equal('(table1.column2 < ? OR NOT table1.column2 > ?)')
+      expect(query._where!.mysql()).to.equal('(t.column2 < ? OR NOT t.column2 > ?)')
       expect(query._where!.values()).to.deep.equal([1, 10])
     })
   
@@ -391,7 +391,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
-      expect(query._where!.mysql()).to.equal('(table1.column2 < ?)')
+      expect(query._where!.mysql()).to.equal('(t.column2 < ?)')
       expect(query._where!.values()).to.deep.equal([1])
     })
   
@@ -433,7 +433,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
-      expect(query._where!.mysql()).to.equal('(table1.column2 < ?)')
+      expect(query._where!.mysql()).to.equal('(t.column2 < ?)')
       expect(query._where!.values()).to.deep.equal([1])
     })
   
@@ -529,7 +529,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
       
-      expect(query._where!.mysql()).to.equal('(table1.column2 > ? AND NOT table1.column2 < ?)')
+      expect(query._where!.mysql()).to.equal('(t.column2 > ? AND NOT t.column2 < ?)')
       expect(query._where!.values()).to.deep.equal([1, 10])
     })
 
@@ -539,7 +539,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
-      expect(query._where!.mysql()).to.equal('table1.column1 = ? AND table1.column2 = ?')
+      expect(query._where!.mysql()).to.equal('t.column1 = ? AND t.column2 = ?')
       expect(query._where!.values()).to.deep.equal(['a', 1])
     })
   
@@ -549,7 +549,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
-      expect(query._where!.mysql()).to.equal('table1.column1 = ? AND table1.column2 = ?')
+      expect(query._where!.mysql()).to.equal('t.column1 = ? AND t.column2 = ?')
       expect(query._where!.values()).to.deep.equal(['a', 1])
     })
   
@@ -560,7 +560,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
   
-      expect(query._where!.mysql()).to.equal('table1.column1 = ?')
+      expect(query._where!.mysql()).to.equal('t.column1 = ?')
       expect(query._where!.values()).to.deep.equal([now])
     })
 
@@ -577,9 +577,9 @@ describe('query', function() {
       expect(query._join!.pieces!.length).to.equal(1)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
       expect((query._join!.pieces![0] as Join).table).to.equal('many_to_many_table2')
-      expect((query._join!.pieces![0] as Join).alias).to.equal('table1__manyToManyObject2')
-      expect((query._join!.pieces![0] as Join).on).to.equal('table1.id = table1__manyToManyObject2.table1_id')
-      expect(query._where!.mysql()).to.equal('table1__manyToManyObject2.column1 = ?')
+      expect((query._join!.pieces![0] as Join).alias).to.equal('t__8')
+      expect((query._join!.pieces![0] as Join).on).to.equal('t.id = t__8.table1_id')
+      expect(query._where!.mysql()).to.equal('t__8.column1 = ?')
       expect(query._where!.values()).to.deep.equal(['a'])
     })
 
@@ -597,9 +597,9 @@ describe('query', function() {
       expect(query._join!.pieces!.length).to.equal(1)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
       expect((query._join!.pieces![0] as Join).table).to.equal('many_to_many_table2')
-      expect((query._join!.pieces![0] as Join).alias).to.equal('table1__manyToManyObject2')
-      expect((query._join!.pieces![0] as Join).on).to.equal('table1.id = table1__manyToManyObject2.table1_id')
-      expect(query._where!.mysql()).to.equal('table1__manyToManyObject2.column1 = ?')
+      expect((query._join!.pieces![0] as Join).alias).to.equal('t__8')
+      expect((query._join!.pieces![0] as Join).on).to.equal('t.id = t__8.table1_id')
+      expect(query._where!.mysql()).to.equal('t__8.column1 = ?')
       expect(query._where!.values()).to.deep.equal(['a'])
     })
 
@@ -634,13 +634,13 @@ describe('query', function() {
       expect(query._join!.pieces!.length).to.equal(2)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
       expect((query._join!.pieces![0] as Join).table).to.equal('many_to_many_table2')
-      expect((query._join!.pieces![0] as Join).alias).to.equal('table1__manyToManyObject2')
-      expect((query._join!.pieces![0] as Join).on).to.equal('table1.id = table1__manyToManyObject2.table1_id')
+      expect((query._join!.pieces![0] as Join).alias).to.equal('t__8')
+      expect((query._join!.pieces![0] as Join).on).to.equal('t.id = t__8.table1_id')
       expect((query._join!.pieces![1] as Join).type).to.equal('LEFT')
       expect((query._join!.pieces![1] as Join).table).to.equal('table1')
-      expect((query._join!.pieces![1] as Join).alias).to.equal('table1__manyToManyObject2__object1')
-      expect((query._join!.pieces![1] as Join).on).to.equal('table1__manyToManyObject2.table1_id = table1__manyToManyObject2__object1.id')
-      expect(query._where!.mysql()).to.equal('table1__manyToManyObject2.column1 = ? AND table1__manyToManyObject2__object1.column1 = ?')
+      expect((query._join!.pieces![1] as Join).alias).to.equal('t__8__0')
+      expect((query._join!.pieces![1] as Join).on).to.equal('t__8.table1_id = t__8__0.id')
+      expect(query._where!.mysql()).to.equal('t__8.column1 = ? AND t__8__0.column1 = ?')
       expect(query._where!.values()).to.deep.equal(['a','b'])
     })
 
@@ -661,9 +661,9 @@ describe('query', function() {
       expect(query._join!.pieces!.length).to.equal(1)
       expect((query._join!.pieces![0] as Join).type).to.equal('LEFT')
       expect((query._join!.pieces![0] as Join).table).to.equal('many_to_many_table2')
-      expect((query._join!.pieces![0] as Join).alias).to.equal('table1__manyToManyObject2')
-      expect((query._join!.pieces![0] as Join).on).to.equal('table1.id = table1__manyToManyObject2.table1_id')
-      expect(query._where!.mysql()).to.equal('table1__manyToManyObject2.column1 = ?')
+      expect((query._join!.pieces![0] as Join).alias).to.equal('t__8')
+      expect((query._join!.pieces![0] as Join).on).to.equal('t.id = t__8.table1_id')
+      expect(query._where!.mysql()).to.equal('t__8.column1 = ?')
       expect(query._where!.values()).to.deep.equal(['a'])
     })
 
@@ -685,7 +685,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
-      expect(query._where!.mysql()).to.equal('(table1.column1 = ? AND table1.column2 = ?) XOR (table1.column1 = ? AND table1.column2 = ?)')
+      expect(query._where!.mysql()).to.equal('(t.column1 = ? AND t.column2 = ?) XOR (t.column1 = ? AND t.column2 = ?)')
       expect(query._where!.values()).to.deep.equal(['a',1,'b',2])
     })
 
@@ -711,7 +711,7 @@ describe('query', function() {
       let query = new Query
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
-      expect(query._where!.mysql()).to.equal('(table1.column1 = ? AND table1.column2 = ?) XOR ((table1.column1 = ? AND table1.column2 = ?) OR (table1.column1 = ? AND table1.column2 = ?))')
+      expect(query._where!.mysql()).to.equal('(t.column1 = ? AND t.column2 = ?) XOR ((t.column1 = ? AND t.column2 = ?) OR (t.column1 = ? AND t.column2 = ?))')
       expect(query._where!.values()).to.deep.equal(['a',1,'b',2,'c',3])
     })
 
@@ -736,10 +736,10 @@ describe('query', function() {
       expect(query._join!.pieces![0]).to.deep.equal({
         type: 'LEFT',
         table: 'table2',
-        alias: 'table1__manyToOneObject2',
-        on: 'table1.many_to_one_object2_id = table1__manyToOneObject2.id'
+        alias: 't__1',
+        on: 't.many_to_one_object2_id = t__1.id'
       })
-      expect(query._where!.mysql()).to.equal('(table1__manyToOneObject2.column1 = ?) OR (table1__manyToOneObject2.column1 = ?)')
+      expect(query._where!.mysql()).to.equal('(t__1.column1 = ?) OR (t__1.column1 = ?)')
       expect(query._where!.values()).to.deep.equal(['a','b'])
     })
 
@@ -752,7 +752,7 @@ describe('query', function() {
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
-      expect(query._orderBy!.sql('mysql')).to.equal('table1.column1')
+      expect(query._orderBy!.sql('mysql')).to.equal('t.column1')
     })
 
     it('should not add an order by condition if the column is invalid', function() {
@@ -778,7 +778,7 @@ describe('query', function() {
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
-      expect(query._orderBy!.sql('mysql')).to.equal('table1.column1, table1__manyToManyObject2.column1')
+      expect(query._orderBy!.sql('mysql')).to.equal('t.column1, t__8.column1')
     })
 
     it('should add multiple order by conditions', function() {
@@ -790,7 +790,7 @@ describe('query', function() {
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
-      expect(query._orderBy!.sql('mysql')).to.equal('table1.column1, table1.column2')
+      expect(query._orderBy!.sql('mysql')).to.equal('t.column1, t.column2')
     })
 
     it('should alias multiple order by conditions in case of a relationship', function() {
@@ -805,7 +805,7 @@ describe('query', function() {
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
-      expect(query._orderBy!.sql('mysql')).to.equal('table1.column1, table1.column2, table1__manyToManyObject2.column1')
+      expect(query._orderBy!.sql('mysql')).to.equal('t.column1, t.column2, t__8.column1')
     })
 
     it('should not add multiple order by conditions if they are invalid', function() {
@@ -831,7 +831,7 @@ describe('query', function() {
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
-      expect(query._orderBy!.sql('mysql')).to.equal('table1.column1 DESC')
+      expect(query._orderBy!.sql('mysql')).to.equal('t.column1 DESC')
     })
 
     it('should alias an order by condition with a given direction in case of a relationship', function() {
@@ -852,7 +852,7 @@ describe('query', function() {
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
-      expect(query._orderBy!.sql('mysql')).to.equal('table1.column1 DESC, table1__manyToManyObject2.column1 ASC')
+      expect(query._orderBy!.sql('mysql')).to.equal('t.column1 DESC, t__8.column1 ASC')
     })
 
     it('should not add an order by condition with a given direction if the column is invalid', function() {
@@ -887,7 +887,7 @@ describe('query', function() {
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
-      expect(query._orderBy!.sql('mysql')).to.equal('table1.column1 DESC, table1.column2 ASC')
+      expect(query._orderBy!.sql('mysql')).to.equal('t.column1 DESC, t.column2 ASC')
     })
 
     it('should alias multiple order by conditions with a given direction in case of a relationship', function() {
@@ -916,7 +916,7 @@ describe('query', function() {
       queryTools.addCriteria(schema.getTable('table1'), query, criteria)
 
       expect(query._orderBy).to.be.not.undefined
-      expect(query._orderBy!.sql('mysql')).to.equal('table1.column1 DESC, table1.column2 ASC, table1__manyToManyObject2.column1 ASC')
+      expect(query._orderBy!.sql('mysql')).to.equal('t.column1 DESC, t.column2 ASC, t__8.column1 ASC')
     })
 
     it('should not add multiple order by conditions with a given direction if the columns are invalid', function() {
@@ -1018,7 +1018,7 @@ describe('query', function() {
     it('should handle a simple select query', function() {
       let criteria = { property1: 'a', property2: 1 }
       let query = queryTools.buildLoadQuery(schema.getTable('table1'), criteria)
-      expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.column3 "table1__column3", table1.many_to_one_object1_id "table1__many_to_one_object1_id", table1.many_to_one_object2_id "table1__many_to_one_object2_id", table1.one_to_one_object1_id "table1__one_to_one_object1_id", table1.one_to_one_object2_id "table1__one_to_one_object2_id", table1.one_to_many_object1_many_to_one_id "table1__one_to_many_object1_many_to_one_id" FROM table1 table1 WHERE table1.column1 = ? AND table1.column2 = ?')
+      expect(query.mysql()).to.equal('SELECT t.id "t_0", t.column1 "t_1", t.column2 "t_2", t.column3 "t_3", t.many_to_one_object1_id "t_4", t.many_to_one_object2_id "t_5", t.one_to_one_object1_id "t_6", t.one_to_one_object2_id "t_7", t.one_to_many_object1_many_to_one_id "t_8" FROM table1 t WHERE t.column1 = ? AND t.column2 = ?')
     })
   
     it('should handle inter table relationships', function() {
@@ -1038,28 +1038,28 @@ describe('query', function() {
       let query = queryTools.buildLoadQuery(schema.getTable('table1'), criteria)
   
       expect(query._select!.pieces!.length).to.equal(20)
-      expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
-      expect(query._select!.pieces![1]).to.equal('table1.column1 "table1__column1"')
-      expect(query._select!.pieces![2]).to.equal('table1.column2 "table1__column2"')
-      expect(query._select!.pieces![3]).to.equal('table1.column3 "table1__column3"')
-      expect(query._select!.pieces![4]).to.equal('table1.many_to_one_object1_id "table1__many_to_one_object1_id"')
-      expect(query._select!.pieces![5]).to.equal('table1.many_to_one_object2_id "table1__many_to_one_object2_id"')
-      expect(query._select!.pieces![6]).to.equal('table1.one_to_one_object1_id "table1__one_to_one_object1_id"')
-      expect(query._select!.pieces![7]).to.equal('table1.one_to_one_object2_id "table1__one_to_one_object2_id"')
-      expect(query._select!.pieces![8]).to.equal('table1.one_to_many_object1_many_to_one_id "table1__one_to_many_object1_many_to_one_id"')
-      expect(query._select!.pieces![9]).to.equal('table1__manyToManyObject2.table1_id "table1__manyToManyObject2__table1_id"')
-      expect(query._select!.pieces![10]).to.equal('table1__manyToManyObject2.table2_id "table1__manyToManyObject2__table2_id"')
-      expect(query._select!.pieces![11]).to.equal('table1__manyToManyObject2.column1 "table1__manyToManyObject2__column1"')
-      expect(query._select!.pieces![12]).to.equal('table1__manyToManyObject2.column2 "table1__manyToManyObject2__column2"')
-      expect(query._select!.pieces![13]).to.equal('table1__manyToManyObject2.column3 "table1__manyToManyObject2__column3"')
-      expect(query._select!.pieces![14]).to.equal('table1__manyToManyObject2__object2.id "table1__manyToManyObject2__object2__id"')
-      expect(query._select!.pieces![15]).to.equal('table1__manyToManyObject2__object2.column1 "table1__manyToManyObject2__object2__column1"')
-      expect(query._select!.pieces![16]).to.equal('table1__manyToManyObject2__object2.column2 "table1__manyToManyObject2__object2__column2"')
-      expect(query._select!.pieces![17]).to.equal('table1__manyToManyObject2__object2.column3 "table1__manyToManyObject2__object2__column3"')
-      expect(query._select!.pieces![18]).to.equal('table1__manyToManyObject2__object2.one_to_one_object1_id "table1__manyToManyObject2__object2__one_to_one_object1_id"')
-      expect(query._select!.pieces![19]).to.equal('table1__manyToManyObject2__object2.one_to_many_object2_many_to_one_id "table1__manyToManyObject2__object2__one_to_many_object2_many_to_one_id"')
+      expect(query._select!.pieces![0]).to.equal('t.id "t_0"')
+      expect(query._select!.pieces![1]).to.equal('t.column1 "t_1"')
+      expect(query._select!.pieces![2]).to.equal('t.column2 "t_2"')
+      expect(query._select!.pieces![3]).to.equal('t.column3 "t_3"')
+      expect(query._select!.pieces![4]).to.equal('t.many_to_one_object1_id "t_4"')
+      expect(query._select!.pieces![5]).to.equal('t.many_to_one_object2_id "t_5"')
+      expect(query._select!.pieces![6]).to.equal('t.one_to_one_object1_id "t_6"')
+      expect(query._select!.pieces![7]).to.equal('t.one_to_one_object2_id "t_7"')
+      expect(query._select!.pieces![8]).to.equal('t.one_to_many_object1_many_to_one_id "t_8"')
+      expect(query._select!.pieces![9]).to.equal('t__8.table1_id "t__8_0"')
+      expect(query._select!.pieces![10]).to.equal('t__8.table2_id "t__8_1"')
+      expect(query._select!.pieces![11]).to.equal('t__8.column1 "t__8_2"')
+      expect(query._select!.pieces![12]).to.equal('t__8.column2 "t__8_3"')
+      expect(query._select!.pieces![13]).to.equal('t__8.column3 "t__8_4"')
+      expect(query._select!.pieces![14]).to.equal('t__8__1.id "t__8__1_0"')
+      expect(query._select!.pieces![15]).to.equal('t__8__1.column1 "t__8__1_1"')
+      expect(query._select!.pieces![16]).to.equal('t__8__1.column2 "t__8__1_2"')
+      expect(query._select!.pieces![17]).to.equal('t__8__1.column3 "t__8__1_3"')
+      expect(query._select!.pieces![18]).to.equal('t__8__1.one_to_one_object1_id "t__8__1_4"')
+      expect(query._select!.pieces![19]).to.equal('t__8__1.one_to_many_object2_many_to_one_id "t__8__1_5"')
   
-      expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.column3 "table1__column3", table1.many_to_one_object1_id "table1__many_to_one_object1_id", table1.many_to_one_object2_id "table1__many_to_one_object2_id", table1.one_to_one_object1_id "table1__one_to_one_object1_id", table1.one_to_one_object2_id "table1__one_to_one_object2_id", table1.one_to_many_object1_many_to_one_id "table1__one_to_many_object1_many_to_one_id", table1__manyToManyObject2.table1_id "table1__manyToManyObject2__table1_id", table1__manyToManyObject2.table2_id "table1__manyToManyObject2__table2_id", table1__manyToManyObject2.column1 "table1__manyToManyObject2__column1", table1__manyToManyObject2.column2 "table1__manyToManyObject2__column2", table1__manyToManyObject2.column3 "table1__manyToManyObject2__column3", table1__manyToManyObject2__object2.id "table1__manyToManyObject2__object2__id", table1__manyToManyObject2__object2.column1 "table1__manyToManyObject2__object2__column1", table1__manyToManyObject2__object2.column2 "table1__manyToManyObject2__object2__column2", table1__manyToManyObject2__object2.column3 "table1__manyToManyObject2__object2__column3", table1__manyToManyObject2__object2.one_to_one_object1_id "table1__manyToManyObject2__object2__one_to_one_object1_id", table1__manyToManyObject2__object2.one_to_many_object2_many_to_one_id "table1__manyToManyObject2__object2__one_to_many_object2_many_to_one_id" FROM table1 table1 LEFT JOIN many_to_many_table2 table1__manyToManyObject2 ON table1.id = table1__manyToManyObject2.table1_id LEFT JOIN table2 table1__manyToManyObject2__object2 ON table1__manyToManyObject2.table2_id = table1__manyToManyObject2__object2.id WHERE table1.id = ? AND table1.column1 = ? AND table1__manyToManyObject2.column1 = ? AND table1__manyToManyObject2__object2.column1 = ?')
+      expect(query.mysql()).to.equal('SELECT t.id "t_0", t.column1 "t_1", t.column2 "t_2", t.column3 "t_3", t.many_to_one_object1_id "t_4", t.many_to_one_object2_id "t_5", t.one_to_one_object1_id "t_6", t.one_to_one_object2_id "t_7", t.one_to_many_object1_many_to_one_id "t_8", t__8.table1_id "t__8_0", t__8.table2_id "t__8_1", t__8.column1 "t__8_2", t__8.column2 "t__8_3", t__8.column3 "t__8_4", t__8__1.id "t__8__1_0", t__8__1.column1 "t__8__1_1", t__8__1.column2 "t__8__1_2", t__8__1.column3 "t__8__1_3", t__8__1.one_to_one_object1_id "t__8__1_4", t__8__1.one_to_many_object2_many_to_one_id "t__8__1_5" FROM table1 t LEFT JOIN many_to_many_table2 t__8 ON t.id = t__8.table1_id LEFT JOIN table2 t__8__1 ON t__8.table2_id = t__8__1.id WHERE t.id = ? AND t.column1 = ? AND t__8.column1 = ? AND t__8__1.column1 = ?')
     })
 
     it('should join one-to-many relationships which are criteria-less', function() {
@@ -1072,28 +1072,28 @@ describe('query', function() {
       let query = queryTools.buildLoadQuery(schema.getTable('table1'), criteria)
   
       expect(query._select!.pieces!.length).to.equal(20)
-      expect(query._select!.pieces![0]).to.equal('table1.id "table1__id"')
-      expect(query._select!.pieces![1]).to.equal('table1.column1 "table1__column1"')
-      expect(query._select!.pieces![2]).to.equal('table1.column2 "table1__column2"')
-      expect(query._select!.pieces![3]).to.equal('table1.column3 "table1__column3"')
-      expect(query._select!.pieces![4]).to.equal('table1.many_to_one_object1_id "table1__many_to_one_object1_id"')
-      expect(query._select!.pieces![5]).to.equal('table1.many_to_one_object2_id "table1__many_to_one_object2_id"')
-      expect(query._select!.pieces![6]).to.equal('table1.one_to_one_object1_id "table1__one_to_one_object1_id"')
-      expect(query._select!.pieces![7]).to.equal('table1.one_to_one_object2_id "table1__one_to_one_object2_id"')
-      expect(query._select!.pieces![8]).to.equal('table1.one_to_many_object1_many_to_one_id "table1__one_to_many_object1_many_to_one_id"')
-      expect(query._select!.pieces![9]).to.equal('table1__manyToManyObject2.table1_id "table1__manyToManyObject2__table1_id"')
-      expect(query._select!.pieces![10]).to.equal('table1__manyToManyObject2.table2_id "table1__manyToManyObject2__table2_id"')
-      expect(query._select!.pieces![11]).to.equal('table1__manyToManyObject2.column1 "table1__manyToManyObject2__column1"')
-      expect(query._select!.pieces![12]).to.equal('table1__manyToManyObject2.column2 "table1__manyToManyObject2__column2"')
-      expect(query._select!.pieces![13]).to.equal('table1__manyToManyObject2.column3 "table1__manyToManyObject2__column3"')
-      expect(query._select!.pieces![14]).to.equal('table1__manyToManyObject2__object2.id "table1__manyToManyObject2__object2__id"')
-      expect(query._select!.pieces![15]).to.equal('table1__manyToManyObject2__object2.column1 "table1__manyToManyObject2__object2__column1"')
-      expect(query._select!.pieces![16]).to.equal('table1__manyToManyObject2__object2.column2 "table1__manyToManyObject2__object2__column2"')
-      expect(query._select!.pieces![17]).to.equal('table1__manyToManyObject2__object2.column3 "table1__manyToManyObject2__object2__column3"')
-      expect(query._select!.pieces![18]).to.equal('table1__manyToManyObject2__object2.one_to_one_object1_id "table1__manyToManyObject2__object2__one_to_one_object1_id"')
-      expect(query._select!.pieces![19]).to.equal('table1__manyToManyObject2__object2.one_to_many_object2_many_to_one_id "table1__manyToManyObject2__object2__one_to_many_object2_many_to_one_id"')
+      expect(query._select!.pieces![0]).to.equal('t.id "t_0"')
+      expect(query._select!.pieces![1]).to.equal('t.column1 "t_1"')
+      expect(query._select!.pieces![2]).to.equal('t.column2 "t_2"')
+      expect(query._select!.pieces![3]).to.equal('t.column3 "t_3"')
+      expect(query._select!.pieces![4]).to.equal('t.many_to_one_object1_id "t_4"')
+      expect(query._select!.pieces![5]).to.equal('t.many_to_one_object2_id "t_5"')
+      expect(query._select!.pieces![6]).to.equal('t.one_to_one_object1_id "t_6"')
+      expect(query._select!.pieces![7]).to.equal('t.one_to_one_object2_id "t_7"')
+      expect(query._select!.pieces![8]).to.equal('t.one_to_many_object1_many_to_one_id "t_8"')
+      expect(query._select!.pieces![9]).to.equal('t__8.table1_id "t__8_0"')
+      expect(query._select!.pieces![10]).to.equal('t__8.table2_id "t__8_1"')
+      expect(query._select!.pieces![11]).to.equal('t__8.column1 "t__8_2"')
+      expect(query._select!.pieces![12]).to.equal('t__8.column2 "t__8_3"')
+      expect(query._select!.pieces![13]).to.equal('t__8.column3 "t__8_4"')
+      expect(query._select!.pieces![14]).to.equal('t__8__1.id "t__8__1_0"')
+      expect(query._select!.pieces![15]).to.equal('t__8__1.column1 "t__8__1_1"')
+      expect(query._select!.pieces![16]).to.equal('t__8__1.column2 "t__8__1_2"')
+      expect(query._select!.pieces![17]).to.equal('t__8__1.column3 "t__8__1_3"')
+      expect(query._select!.pieces![18]).to.equal('t__8__1.one_to_one_object1_id "t__8__1_4"')
+      expect(query._select!.pieces![19]).to.equal('t__8__1.one_to_many_object2_many_to_one_id "t__8__1_5"')
 
-      expect(query.mysql()).to.equal('SELECT table1.id "table1__id", table1.column1 "table1__column1", table1.column2 "table1__column2", table1.column3 "table1__column3", table1.many_to_one_object1_id "table1__many_to_one_object1_id", table1.many_to_one_object2_id "table1__many_to_one_object2_id", table1.one_to_one_object1_id "table1__one_to_one_object1_id", table1.one_to_one_object2_id "table1__one_to_one_object2_id", table1.one_to_many_object1_many_to_one_id "table1__one_to_many_object1_many_to_one_id", table1__manyToManyObject2.table1_id "table1__manyToManyObject2__table1_id", table1__manyToManyObject2.table2_id "table1__manyToManyObject2__table2_id", table1__manyToManyObject2.column1 "table1__manyToManyObject2__column1", table1__manyToManyObject2.column2 "table1__manyToManyObject2__column2", table1__manyToManyObject2.column3 "table1__manyToManyObject2__column3", table1__manyToManyObject2__object2.id "table1__manyToManyObject2__object2__id", table1__manyToManyObject2__object2.column1 "table1__manyToManyObject2__object2__column1", table1__manyToManyObject2__object2.column2 "table1__manyToManyObject2__object2__column2", table1__manyToManyObject2__object2.column3 "table1__manyToManyObject2__object2__column3", table1__manyToManyObject2__object2.one_to_one_object1_id "table1__manyToManyObject2__object2__one_to_one_object1_id", table1__manyToManyObject2__object2.one_to_many_object2_many_to_one_id "table1__manyToManyObject2__object2__one_to_many_object2_many_to_one_id" FROM table1 table1 LEFT JOIN many_to_many_table2 table1__manyToManyObject2 ON table1.id = table1__manyToManyObject2.table1_id LEFT JOIN table2 table1__manyToManyObject2__object2 ON table1__manyToManyObject2.table2_id = table1__manyToManyObject2__object2.id')
+      expect(query.mysql()).to.equal('SELECT t.id "t_0", t.column1 "t_1", t.column2 "t_2", t.column3 "t_3", t.many_to_one_object1_id "t_4", t.many_to_one_object2_id "t_5", t.one_to_one_object1_id "t_6", t.one_to_one_object2_id "t_7", t.one_to_many_object1_many_to_one_id "t_8", t__8.table1_id "t__8_0", t__8.table2_id "t__8_1", t__8.column1 "t__8_2", t__8.column2 "t__8_3", t__8.column3 "t__8_4", t__8__1.id "t__8__1_0", t__8__1.column1 "t__8__1_1", t__8__1.column2 "t__8__1_2", t__8__1.column3 "t__8__1_3", t__8__1.one_to_one_object1_id "t__8__1_4", t__8__1.one_to_many_object2_many_to_one_id "t__8__1_5" FROM table1 t LEFT JOIN many_to_many_table2 t__8 ON t.id = t__8.table1_id LEFT JOIN table2 t__8__1 ON t__8.table2_id = t__8__1.id')
     })
   })
 })
