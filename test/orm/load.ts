@@ -186,9 +186,9 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       await orm.store(queryFn, Object1, { property1: 'a', manyToOneObject1: { property2: 3 }})
       
       let rows = await orm.load(queryFn, Object1, {
-        property1: 'a',
+        property1: 'b',
         manyToOneObject1: {
-          property2: 1
+          property2: 2
         }
       })
 
@@ -239,17 +239,17 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       await orm.store(queryFn, Object1, { property1: 'a', manyToOneObject1: { property2: 3 }})
 
       let rows = await orm.load(queryFn, Object1, {
-        property1: 'a',
+        property1: 'b',
         manyToOneObject1: {
           '@load': true,
-          property2: 1
+          property2: 2
         }
       })
 
       expect(rows.length).to.equal(1)
 
       expect(rows[0]).to.deep.equal({
-        id: 1,
+        id: 2,
         property1: 'a',
         property2: null,
         property3: null,
@@ -278,10 +278,10 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       await orm.store(queryFn, Object1, { property1: 'a', manyToOneObject1: { property2: 3 }})
 
       let rows = await orm.load(queryFn, Object1, {
-        property1: 'a',
+        property1: 'b',
         manyToOneObject1: {
           '@loadSeparately': true,
-          property2: 1
+          property2: 2
         }
       })
 
@@ -311,11 +311,11 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       })
 
       expect(rows[1]).to.deep.equal({
-        id: 3,
+        id: 4,
         property1: 'a',
         property2: null,
         property3: null,
-        manyToOneObject1Id: 2,
+        manyToOneObject1Id: 3,
         manyToOneObject2Id: null,
         oneToOneObject1Id: null,
         oneToOneObject2Id: null,
@@ -324,11 +324,11 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       })
 
       expect(rows[2]).to.deep.equal({
-        id: 5,
+        id: 6,
         property1: 'a',
         property2: null,
         property3: null,
-        manyToOneObject1Id: 4,
+        manyToOneObject1Id: 5,
         manyToOneObject2Id: null,
         oneToOneObject1Id: null,
         oneToOneObject2Id: null,
@@ -343,9 +343,9 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       await orm.store(queryFn, Object1, { property1: 'a', oneToManyObject1: [ { property1: 'h' }, { property1: 'i' } ]})
 
       let rows = await orm.load(queryFn, Object1, {
-        property1: 'a',
+        property1: 'b',
         oneToManyObject1: {
-          property1: 'd'
+          property1: 'e'
         }
       })
 
@@ -370,10 +370,10 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       await orm.store(queryFn, Object1, { property1: 'a', oneToManyObject1: [ { property1: 'h' }, { property1: 'i' } ]})
 
       let rows = await orm.load(queryFn, Object1, {
-        property1: 'a',
+        property1: 'b',
         oneToManyObject1: {
           '@load': true,
-          property1: 'd'
+          property1: 'e'
         }
       })
 
@@ -411,10 +411,10 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
       await orm.store(queryFn, Object1, { property1: 'a', oneToManyObject1: [ { property1: 'h' }, { property1: 'i' } ]})
 
       let rows = await orm.load(queryFn, Object1, {
-        property1: 'a',
+        property1: 'b',
         oneToManyObject1: {
           '@loadSeparately': true,
-          property1: 'd'
+          property1: 'e'
         }
       })
 
@@ -479,18 +479,18 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
 
       let rows = await orm.load(queryFn, Object1, [
         {
-          property1: 'a',
+          property1: 'b',
           manyToOneObject1: {
             '@load': true,
-            property2: 1
+            property2: 2
           }
         },
         'OR',
         {
-          property1: 'a',
+          property1: 'b',
           oneToManyObject1: {
             '@loadSeparately': true,
-            property1: 'd'
+            property1: 'e'
           }
         }
       ])
@@ -527,7 +527,7 @@ export function loadTests(db: string, queryFn: (sqlString: string, values?: any[
             manyToOneObject2Id: null,
             oneToOneObject1Id: null,
             oneToOneObject2Id: null,
-            oneToManyObject1ManyToOneId: 1
+            oneToManyObject1ManyToOneId: 2
           }
         ]
       })
