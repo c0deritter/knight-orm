@@ -1,10 +1,10 @@
 import { expect } from 'chai'
 import 'mocha'
-import { JoinAlias } from '../src/join'
+import { Alias } from '../src/alias'
 import { schema } from './testSchema'
 
-describe('join', function() {
-  describe('JoinAlias', function () {
+describe('alias', function() {
+  describe('Alias', function () {
     describe('unjoinRows', function() {
       it('should unjoin simple rows', function() {
         let rows = [
@@ -21,8 +21,8 @@ describe('join', function() {
         ]
   
         let criteria = {}
-        let joinAlias = new JoinAlias(schema.getTable('table1'))
-        let instances = joinAlias.unjoinRows(rows, criteria)
+        let alias = new Alias(schema.getTable('table1'))
+        let instances = alias.unjoinRows(rows, criteria)
   
         expect(instances.length).to.equal(2)
         expect(instances[0]).to.deep.equal({
@@ -46,8 +46,8 @@ describe('join', function() {
         ]
   
         let criteria = {}
-        let joinAlias = new JoinAlias(schema.getTable('table1'))
-        let instances = joinAlias.unjoinRows(rows, criteria)
+        let alias = new Alias(schema.getTable('table1'))
+        let instances = alias.unjoinRows(rows, criteria)
   
         expect(instances.length).to.equal(1)
         expect(instances[0]).to.deep.equal({
@@ -65,8 +65,8 @@ describe('join', function() {
         ]
   
         let criteria = {}
-        let joinAlias = new JoinAlias(schema.getTable('table1'))
-        let instances = joinAlias.unjoinRows(rows, criteria)
+        let alias = new Alias(schema.getTable('table1'))
+        let instances = alias.unjoinRows(rows, criteria)
   
         expect(instances.length).to.equal(0)
       })
@@ -92,8 +92,8 @@ describe('join', function() {
         ]
   
         let criteria = { manyToOneObject1: { '@load': true }}
-        let joinAlias = new JoinAlias(schema.getTable('table1'))
-        let unjoinedRows = joinAlias.unjoinRows(rows, criteria)
+        let alias = new Alias(schema.getTable('table1'))
+        let unjoinedRows = alias.unjoinRows(rows, criteria)
   
         expect(unjoinedRows.length).to.equal(2)
   
@@ -133,8 +133,8 @@ describe('join', function() {
         ]
   
         let criteria = { manyToOneObject1: { '@load': true }}
-        let joinAlias = new JoinAlias(schema.getTable('table1'))
-        let unjoinedRows = joinAlias.unjoinRows(rows, criteria)
+        let alias = new Alias(schema.getTable('table1'))
+        let unjoinedRows = alias.unjoinRows(rows, criteria)
   
         expect(unjoinedRows.length).to.equal(1)
   
@@ -174,8 +174,8 @@ describe('join', function() {
         ]
   
         let criteria = { oneToManyObject1: { '@load': true }}
-        let joinAlias = new JoinAlias(schema.getTable('table1'))
-        let instances = joinAlias.unjoinRows(rows, criteria)
+        let alias = new Alias(schema.getTable('table1'))
+        let instances = alias.unjoinRows(rows, criteria)
   
         expect(instances.length).to.equal(2)
         expect(instances[0]).to.deep.equal({
@@ -216,17 +216,17 @@ describe('join', function() {
         let rows = [
           {
             t_0: 1,
-            t__oneToManyObject1__id: null,
-            t__oneToManyObject1__column1: null,
-            t__oneToManyObject1__column2: null,
-            t__oneToManyObject1__column3: null,
-            t__oneToManyObject1__one_to_many_object1_many_to_one_id: null,
+            t__4__0: null,
+            t__4__1: null,
+            t__4__2: null,
+            t__4__3: null,
+            t__4__4: null,
           }
         ]
   
         let criteria = { oneToManyObject1: { '@load': true }}
-        let joinAlias = new JoinAlias(schema.getTable('table1'))
-        let instances = joinAlias.unjoinRows(rows, criteria)
+        let alias = new Alias(schema.getTable('table1'))
+        let instances = alias.unjoinRows(rows, criteria)
   
         expect(instances.length).to.equal(1)
 

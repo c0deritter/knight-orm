@@ -1,5 +1,5 @@
 export * from './criteria'
-export * from './join'
+export * from './alias'
 export * from './orm'
 export * from './query'
 export * from './object'

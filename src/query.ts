@@ -1,7 +1,7 @@
 import { Criteria, isCriteriaComparison, Operator } from 'knight-criteria'
 import { Log } from 'knight-log'
 import { comparison, Condition, From, Join, Query } from 'knight-sql'
-import { JoinAlias, Orm, Table } from '.'
+import { Alias, Orm, Table } from '.'
 import { Schema } from './schema'
 
 let log = new Log('knight-orm/query.ts')
@@ -164,7 +164,7 @@ export class QueryTools {
    * @param query A knight-sql query object
    * @param criteria The criteria
    * @param asDatabaseCriteria Set to true if the criteria reference database columns instead of object properties
-   * @param joinAlias An internal parameter which is used to create the appropriate aliases for joined tables
+   * @param alias An internal parameter which is used to create the appropriate aliases for joined tables
    * @param sqlCondition An internal parameter which is a knight-sql condition that is used to sourround parts of the condition with brackets
    */
   addCriteria(
@@ -172,13 +172,13 @@ export class QueryTools {
     query: Query, 
     criteria: Criteria | undefined, 
     asDatabaseCriteria = false, 
-    joinAlias?: JoinAlias, 
+    alias?: Alias, 
     sqlCondition?: Condition
   ) {
     let l = queryToolsLog.mt('addCriteria')
     l.param('query', query)
     l.param('criteria', criteria)
-    l.param('joinAlias', joinAlias)
+    l.param('joinAlias', alias)
     l.param('condition', sqlCondition)
 
     if (criteria == undefined) {
@@ -194,8 +194,8 @@ export class QueryTools {
       table = classNameOrTable
     }
 
-    if (joinAlias == undefined) {
-      joinAlias = new JoinAlias(table)
+    if (alias == undefined) {
+      alias = new Alias(table)
     }
 
     if (sqlCondition == undefined) {
@@ -234,7 +234,7 @@ export class QueryTools {
         sqlCondition.push(subCondition)
 
         l.calling('Add sub criteria through recursion', arrayValue)
-        this.addCriteria(table, query, arrayValue as any, asDatabaseCriteria, joinAlias, subCondition)
+        this.addCriteria(table, query, arrayValue as any, asDatabaseCriteria, alias, subCondition)
         l.called('Added sub criteria through recursion')
       }
     }
@@ -245,12 +245,12 @@ export class QueryTools {
         if (typeof criteria['@orderBy'] == 'string') {
           if (asDatabaseCriteria && table.hasColumn(criteria['@orderBy'])) {
             l.lib('Adding ORDER BY', criteria['@orderBy'])
-            query.orderBy(joinAlias.joinAliasPrefix + criteria['@orderBy'])
+            query.orderBy(alias.joinAliasPrefix + criteria['@orderBy'])
           }
           else if (! asDatabaseCriteria && table.hasColumnByProperty(criteria['@orderBy'])) {
             let column = table.getColumnByProperty(criteria['@orderBy'])!
             l.lib(`Adding ORDER BY from property name '${criteria['@orderBy']}'`, column.name)
-            query.orderBy(joinAlias.joinAliasPrefix + column.name)
+            query.orderBy(alias.joinAliasPrefix + column.name)
           }
           else {
             l.lib('Not adding ORDER BY because the given column or property is not contained in the table', criteria['@orderBy'])
@@ -263,12 +263,12 @@ export class QueryTools {
             if (typeof orderBy == 'string') {
               if (asDatabaseCriteria && table.hasColumn(orderBy)) {
                 l.lib('Adding ORDER BY', orderBy)
-                query.orderBy(joinAlias.joinAliasPrefix + orderBy)
+                query.orderBy(alias.joinAliasPrefix + orderBy)
               }
               else if (! asDatabaseCriteria && table.hasColumnByProperty(orderBy)) {
                 let column = table.getColumnByProperty(orderBy)!
                 l.lib(`Adding ORDER BY from property name '${criteria['@orderBy']}'`, column.name)
-                query.orderBy(joinAlias.joinAliasPrefix + column.name)
+                query.orderBy(alias.joinAliasPrefix + column.name)
               }
               else {
                 l.lib('Not adding ORDER BY because the given column or property is not contained in the table', orderBy)
@@ -307,11 +307,11 @@ export class QueryTools {
     
                 if (direction == undefined) {
                   l.lib('Adding ORDER BY', columnName)
-                  query.orderBy(joinAlias.joinAliasPrefix + columnName)
+                  query.orderBy(alias.joinAliasPrefix + columnName)
                 }
                 else {
                   l.lib('Adding ORDER BY', columnName)
-                  query.orderBy(joinAlias.joinAliasPrefix + columnName + ' ' + direction)
+                  query.orderBy(alias.joinAliasPrefix + columnName + ' ' + direction)
                 }  
               }
               else {
@@ -349,11 +349,11 @@ export class QueryTools {
 
               if (direction == undefined) {
                 l.lib('Adding ORDER BY', columnName)
-                query.orderBy(joinAlias.joinAliasPrefix + columnName)
+                query.orderBy(alias.joinAliasPrefix + columnName)
               }
               else {
                 l.lib('Adding ORDER BY', columnName)
-                query.orderBy(joinAlias.joinAliasPrefix + columnName + ' ' + direction)
+                query.orderBy(alias.joinAliasPrefix + columnName + ' ' + direction)
               }  
             }
             else {
@@ -417,7 +417,7 @@ export class QueryTools {
           }
 
           if (value['@value'] !== undefined) {
-            let comp = comparison(joinAlias.joinAliasPrefix + column.name, operator, value['@value'])
+            let comp = comparison(alias.joinAliasPrefix + column.name, operator, value['@value'])
             
             if (value['@not'] === true) {
               l.lib('Adding comparison with NOT', comp)
@@ -446,7 +446,7 @@ export class QueryTools {
           }
 
           if (! atLeastOneComparison) {
-            let comp = comparison(joinAlias.joinAliasPrefix + column.name, value)
+            let comp = comparison(alias.joinAliasPrefix + column.name, value)
             l.lib('Adding comparison', comp)
             sqlCondition.push(comp)
           }
@@ -489,7 +489,7 @@ export class QueryTools {
                 l.lib('Adding logical operator', logical)
                 subCondition.push(logical)
 
-                let comp = comparison(joinAlias.joinAliasPrefix + column.name, operator, arrayValue['@value'])
+                let comp = comparison(alias.joinAliasPrefix + column.name, operator, arrayValue['@value'])
                 
                 if (arrayValue['@not'] === true) {
                   l.lib('Adding comparison with NOT', comp)
@@ -509,7 +509,7 @@ export class QueryTools {
           }
         }
         else {
-          let comp = comparison(joinAlias.joinAliasPrefix + column.name, value)
+          let comp = comparison(alias.joinAliasPrefix + column.name, value)
           l.lib('Adding comparison with default operator =', comp)
           sqlCondition.push(comp)
         }
@@ -537,9 +537,9 @@ export class QueryTools {
             let thisId = relationship.thisId
             let otherId = relationship.otherId
 
-            let relationshipJoinAlias = joinAlias.join(relationship)
+            let relationshipJoinAlias = alias.join(relationship)
 
-            query.join('LEFT', otherTable.name, relationshipJoinAlias.aliasPrefix, joinAlias.joinAliasPrefix + thisId.name + ' = ' + relationshipJoinAlias.joinAliasPrefix + otherId.name)
+            query.join('LEFT', otherTable.name, relationshipJoinAlias.aliasPrefix, alias.joinAliasPrefix + thisId.name + ' = ' + relationshipJoinAlias.joinAliasPrefix + otherId.name)
             l.lib('Added LEFT JOIN to query', query._join!.pieces![query._join!.pieces!.length - 1])
 
             l.calling('Filling query with the relationship criteria', relationshipCriteria)
@@ -615,7 +615,7 @@ export class QueryTools {
     }
 
     let query = new Query
-    query.from(table.name, new JoinAlias(table).rootTableAlias)
+    query.from(table.name, new Alias(table).rootTableAlias)
     this.addCriteria(table, query, criteria, asDatabaseCriteria)
     this.selectAllColumnsExplicitly(query)
     return query
@@ -648,7 +648,7 @@ export class QueryTools {
     }
 
     let query = new Query
-    query.from(table.name, new JoinAlias(table).rootTableAlias).select('COUNT(*) as count')
+    query.from(table.name, new Alias(table).rootTableAlias).select('COUNT(*) as count')
     this.addCriteria(table, query, criteria, asDatabaseCriteria)
     return query
   }  

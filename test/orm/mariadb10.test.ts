@@ -35,8 +35,8 @@ describe('Orm (MariaDb 10)', function() {
     await pool.query('DROP TABLE IF EXISTS many_to_many_table2 CASCADE')
   })
 
-  // storeRowTests('mariadb', queryFn)
-  // storeInstanceTests('mariadb', queryFn)
-  // loadTests('mariadb', queryFn)
-  // remainingTests('mariadb', queryFn)
+  storeRowTests('mariadb', queryFn)
+  storeInstanceTests('mariadb', queryFn)
+  loadTests('mariadb', queryFn)
+  remainingTests('mariadb', queryFn)
 })

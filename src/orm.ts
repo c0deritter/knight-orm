@@ -3,7 +3,7 @@ import { Criteria } from 'knight-criteria'
 import { Log } from 'knight-log'
 import sql, { comparison, Query } from 'knight-sql'
 import { CriteriaTools } from './criteria'
-import { JoinAlias } from './join'
+import { Alias } from './alias'
 import { ObjectTools } from './object'
 import { InsertUpdateDeleteResult, QueryTools, SelectResult } from './query'
 import { Schema, Table } from './schema'
@@ -947,10 +947,10 @@ export class Orm {
 
     l.dev('Received rows', joinedRows)
   
-    let joinAlias = new JoinAlias(table)
+    let alias = new Alias(table)
   
     l.calling('Unjoining rows for criteria...')
-    let objects = joinAlias.unjoinRows(joinedRows, criteria, asDatabaseCriteria)
+    let objects = alias.unjoinRows(joinedRows, criteria, asDatabaseCriteria)
     l.called('Unjoined objects for criteria...', criteria)
     l.dev('Unjoined objects', objects)
   

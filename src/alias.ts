@@ -3,14 +3,14 @@ import { Log } from 'knight-log'
 import { ObjectTools } from '.'
 import { Column, Relationship, Table } from './schema'
 
-let log = new Log('knight-orm/join.ts')
+let log = new Log('knight-orm/alias.ts')
 
-let joinAliasLogger = log.cls('JoinAlias')
+let joinAliasLogger = log.cls('Alias')
 
 /**
  * A class for creating an alias when joining tables in an SQL query.
  * 
- * The initial JoinAlias instance creates a root alias for the table
+ * The initial Alias instance creates a root alias for the table
  * which is stated in an SQL FROM clause. If the table name is 'user'
  * then the resulting alias is 'user'.
  * 
@@ -27,7 +27,7 @@ let joinAliasLogger = log.cls('JoinAlias')
  * using the 'columnAlias' property of this class. This is the key
  * for unjoining rows.
  */
-export class JoinAlias {
+export class Alias {
 
   /**
    * The table as it was stated in the FROM clause.
@@ -35,9 +35,9 @@ export class JoinAlias {
   rootTable: Table
 
   /**
-   * A parent JoinAlias instance or null if it is the root alias.
+   * A parent Alias instance or null if it is the root alias.
    */
-  parent: JoinAlias|null
+  parent: Alias|null
 
   /**
    * The relationship for which the instance create an alias for.
@@ -60,10 +60,10 @@ export class JoinAlias {
    * This constructor is used for creating a join alias, either using
    * the root alias as its base or any join alias.
    * 
-   * @param parent Any JoinAlias instance
+   * @param parent Any Alias instance
    * @param relationship The relationship which is joined
    */
-  constructor(parent: JoinAlias, relationship: Relationship)
+  constructor(parent: Alias, relationship: Relationship)
 
   constructor(...args: any[]) {
     if (args.length == 1) {
@@ -82,13 +82,13 @@ export class JoinAlias {
       let arg1 = args[0]
       let arg2 = args[1]
 
-      if (arg1 instanceof JoinAlias && arg2 instanceof Relationship) {
+      if (arg1 instanceof Alias && arg2 instanceof Relationship) {
         this.rootTable = arg1.rootTable
         this.parent = arg1
         this.relationship = arg2
       }
       else {
-        throw new Error('Expected first parameter to be of instance \'JoinAliasSchema\' and second to be of instance \'Relationship\'.')
+        throw new Error('Expected first parameter to be of instance \'AliasSchema\' and second to be of instance \'Relationship\'.')
       }
     }
     else {
@@ -162,16 +162,15 @@ export class JoinAlias {
   }
 
   /**
-   * Create a new JoinAlias instance by joining a new relationship. The source
+   * Create a new Alias instance by joining a new relationship. The source
    * relationship will be refered by this new instance as the parent. The alias
    * property will contain the parent alias.
    * 
    * @param relationship The relationship to join
-   * @returns A new JoinAlias instance representing the alias for the joined relationship
+   * @returns A new Alias instance representing the alias for the joined relationship
    */
-  join(relationship: Relationship): JoinAlias {
-    let relationshipAliasSchema = new JoinAlias(this, relationship)
-    return relationshipAliasSchema
+  join(relationship: Relationship): Alias {
+    return new Alias(this, relationship)
   }
 
   /**
@@ -260,10 +259,10 @@ export class JoinAlias {
         continue
       }
 
-      let relationshipJoinAlias = this.join(relationship)
+      let relationshipAlias = this.join(relationship)
 
       l.calling('Fetching all relationship rows. Calling unjoinRows again...')
-      let relationshipObjects = relationshipJoinAlias.unjoinRows(
+      let relationshipObjects = relationshipAlias.unjoinRows(
         joinedRows, 
         summarizedCriteria[relationship.name], 
         asDatabaseCriteria
