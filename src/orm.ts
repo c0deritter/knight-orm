@@ -805,6 +805,38 @@ export class Orm {
   }
 
   /**
+   * Stores an object if it does not already exists. The check wether it does or does not
+   * exist is done through given criteria.
+   * 
+   * @param queryFn 
+   * @param classNameOrTable 
+   * @param existCriteria 
+   * @param obj 
+   * @param asDatabaseRow 
+   * @returns 
+   */
+  async storeIfNotExist(
+    queryFn: QueryFn, 
+    classNameOrTable: (new (...args: any[]) => any)|Table,
+    existCriteria: Criteria,
+    obj: any, 
+    asDatabaseRow = false
+  ): Promise<Change[]> {
+    let l = log.mt('storeIfNotExist')
+    l.param('existCriteria', existCriteria)
+    l.param('obj', obj)
+    l.param('asDatabaseRow', asDatabaseRow)
+
+    let count = await this.count(queryFn, classNameOrTable, existCriteria, asDatabaseRow)
+
+    if (count > 0) {
+      return []
+    }
+
+    return this.store(queryFn, classNameOrTable, obj, asDatabaseRow)
+  }
+
+  /**
    * Deletes the given object.
    * 
    * If the primary key is not set it will throw an error.
